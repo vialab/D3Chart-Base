@@ -1,0 +1,17 @@
+{
+  "name": "ngram_viewer",
+  "version": "1.0.0",
+  "description": "Ngram Viewer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-eslint": "^10.0.2",
+    "eslint": "^6.1.0",
+    "eslint-config-google": "^0.13.0",
+    "eslint-plugin-vue": "^5.2.3"
+  }
+}

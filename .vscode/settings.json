@@ -1,0 +1,19 @@
+{
+    "python.pythonPath": "C:\\Users\\Nate\\.conda\\envs\\ne-vis\\python.exe",
+    "python.condaPath": "C:\\Users\\Nate\\.conda\\envs\\ne-vis\\python.exe",
+    "python.linting.enabled": true,
+    "terminal.integrated.shell.windows": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    // "terminal.integrated.shell.windows": "C:\\WINDOWS\\System32\\cmd.exe",
+    "files.exclude": {
+        "**/.classpath": true,
+        "**/.project": true,
+        "**/.settings": true,
+        "**/.factorypath": true
+    },
+
+    "javascript.referencesCodeLens.enabled": true,
+    // "jshint.options": {"esversion": 6},
+    "jshint.config": ".vscode/.jshintrc",
+    "eslint.enable": true,
+    "colorHelper.disableGpu": 1
+}
