@@ -1,4 +1,4 @@
-# D3Chart-Base
+# LeadLag-Chart
 Mostly a Javascript class wrapping/abstracting D3 V5 code to create a general purpose chart.
 
 Specifically the JavaScript class to handle it all is `ngram_viewer/static/js/ngram.js`. That class is used in 'main.js'.
