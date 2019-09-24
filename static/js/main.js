@@ -5,9 +5,8 @@ $(function () {
 	$('#newsearch').submit(function (event) {
 		event.stopPropagation();
 		event.preventDefault();
-
-		postJSON('unigramdata', {}, function (result) {
-
+		postJSON('/query-dimensions', {query: document.getElementById('query-field').value}, function (result) {
+			console.log(result);
 			// result.lines[0].rawdata.push(
 			// 	// {x: 2020, y: 0.0000304810305345002}
 			// 	{
@@ -29,8 +28,6 @@ $(function () {
 	});
 
 
-
-
 	// Create chart on page & data load.
 	postJSON('unigramdata', {}, function (result) {
 		// console.log(result)
@@ -43,22 +40,24 @@ $(function () {
 		}
 
 		chartObj.updateXScale(xmin, xmax);
-		chartObj.updateYScale(result.ydomain[0], result.ydomain[1]);
+		chartObj.updateYScale(0, 100);
 
 
 
-		chartObj.updateLines(result.lines);
-
-		let yearlead = leadlag(result.lines[0].rawdata, result.lines[1].rawdata) + 1; // always seems to be 1 off. 
-
-		console.log('Test0 Leads Test1 by ', yearlead, 'years');
-
-		leadChart = new D3Chart('#leadlag', true);
-		leadChart.updateXScale(xmin, xmax);
-		leadChart.updateYScale(-0.0005, 0.0005);
-		// leadChart.updateYScale(result.ydomain[0], result.ydomain[1]);
-		leadChart.updateLines(result.lines);
+		//chartObj.updateLines(null);
+//
+		//let yearlead = leadlag(result.lines[0].rawdata, result.lines[1].rawdata) + 1; // always seems to be 1 off. 
+//
+		//console.log('Test0 Leads Test1 by ', yearlead, 'years');
+//
+		//leadChart = new D3Chart('#leadlag', true);
+		//leadChart.updateXScale(xmin, xmax);
+		//leadChart.updateYScale(-0.0005, 0.0005);
+		//// leadChart.updateYScale(result.ydomain[0], result.ydomain[1]);
+		//leadChart.updateLines(result.lines);
 
 
 	});
+
+
 });

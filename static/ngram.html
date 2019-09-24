@@ -1,6 +1,3 @@
-{% extends "base.html" %}
-{% block content %}
-
 <div class="row">
 	<div class="col-lg-1 mt-3">
 	</div>
@@ -35,20 +32,17 @@
 	<!-- <div class="w-25"></div> -->
 	<!-- <div class='col'></div> -->
 	<!-- <div class='col-lg'></div> -->
-	<div class="col-lg-5 mt-1">
+	<div class="col-lg-5 mt-3" style="width: 800px">
 		<form id="newsearch">
-
-
 			<div class="input-group mb-3">
 				<div class="input-group-prepend">
-					<span class="input-group-text" id="inputGroup-sizing">N-Gram</span>
+					<span class="input-group-text" id="inputGroup-sizing">Lead Lag</span>
 				</div>
-
-				<input id="ngram-search-text" type="text" class="form-control" aria-label="Small"
-					aria-describedby="inputGroup-sizing">
-
+				<div style="width:70%">
+					<input id="query-field" type="text" class="form-control", aria-label="Small" aria-label="LeadLag Query">
+				</div>
 				<div class="input-group-append">
-					<button id="ngram-search" class="btn btn-primary" type="submit">Update Charts</button>
+					<button id="query-search" class="btn btn-primary" type="submit">Query</button>
 				</div>
 				<!-- </div>
 
@@ -94,9 +88,16 @@
 </div>
 
 <!-- Load in the d3 library -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+type="text/css" />
+<link href="./css/main.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+</script>
 <script src="https://d3js.org/d3.v5.min.js"></script>
-<script src="{{ url_for('static', filename='js/ngram.js') }}"></script>
-<script src="{{ url_for('static', filename='js/leadlag.js') }}"></script>
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
-{% endblock content %}
+<!--<script src="{{ url_for('static', filename='js/ngram.js') }}"></script>>
+<script src="{{ url_for('static', filename='js/leadlag.js') }}"></script>>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>-->
+<script src="./js/ngram.js"></script>
+<script src="./js/leadlag.js"></script>
+<script src="./js/main.js"></script>
