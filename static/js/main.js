@@ -6,7 +6,7 @@ $(function () {
 		event.stopPropagation();
 		event.preventDefault();
 		postJSON('/query-dimensions', {query: document.getElementById('query-field').value}, function (result) {
-			console.log(result);
+			console.log(result.body);
 			// result.lines[0].rawdata.push(
 			// 	// {x: 2020, y: 0.0000304810305345002}
 			// 	{
@@ -22,7 +22,7 @@ $(function () {
 			// chartObj.smoothing = 8;
 			// chartObj.updateXScale(xmin,xmax);
 
-			chartObj.updateLines(result.lines);
+			//chartObj.updateLines(result.lines);
 		});
 
 	});

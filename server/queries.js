@@ -1,3 +1,4 @@
+//https://docs.dimensions.ai/dsl/
 const request = require("request");
 const callLimit = require("./apicallrestrict");
 //use the exampleconfiglogin and input your credentials there
@@ -23,7 +24,6 @@ request.post(api_url_auth, function(error, resp) {
 
 //main query call for the dataset
   const queryDimensions = async (req, resp) => {
-      console.log(req.body);
     if (timer.incrementCalls()) {
       const options = {
         url: api_url,
@@ -39,10 +39,14 @@ request.post(api_url_auth, function(error, resp) {
           console.log(error);
           throw error;
         }
-        console.log(res);
         resp.send(res);
       });
     }
   };
   
   module.exports = queryDimensions;
+
+
+
+  ///////////////////////////////Query//////////////////////
+  //research_orgs.country_name="Gambia"====country tag/////

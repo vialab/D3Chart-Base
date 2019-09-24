@@ -7,13 +7,15 @@ module.exports = class CallReferenceTimer {
     }
   
     incrementCalls() {
-      if (this.checkTime()) {
+      if (!this.checkTime()) {
         if (this.numberOfCalls > this.maxNumberOfCalls) {
           return false;
         }
         this.numberOfCalls += 1;
+        console.log(this.numberOfCalls);
         return true;
       } else {
+          console.log(this.currentTime);
         this.currentTime = this.getTime();
         this.numberOfCalls = 1;
         return true;
@@ -21,7 +23,7 @@ module.exports = class CallReferenceTimer {
     }
   
     checkTime() {
-      return this.currentTime + this.timeStep < this.getTime();
+      return this.currentTime + this.timeStep > this.getTime();
     }
   
     getTime() {
