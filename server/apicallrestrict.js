@@ -1,32 +1,32 @@
 module.exports = class CallReferenceTimer {
-    constructor() {
-      this.currentTime = this.getTime();
-      this.numberOfCalls = 0;
-      this.maxNumberOfCalls = 30;
-      this.timeStep = 60;
-    }
-  
-    incrementCalls() {
-      if (!this.checkTime()) {
-        if (this.numberOfCalls > this.maxNumberOfCalls) {
-          return false;
-        }
-        this.numberOfCalls += 1;
-        console.log(this.numberOfCalls);
-        return true;
-      } else {
-          console.log(this.currentTime);
-        this.currentTime = this.getTime();
-        this.numberOfCalls = 1;
-        return true;
+  constructor() {
+    this.numberOfCalls = 0;
+    this.maxNumberOfCalls = 30;
+    this.timeStep = 60;
+    this.nextInterval = this.getTime() + this.timeStep;
+  }
+
+  incrementCalls() {
+    if (!this.checkTime()) {
+      if (this.numberOfCalls > this.maxNumberOfCalls) {
+        return false;
       }
+      this.numberOfCalls += 1;
+      return true;
+    } else {
+      this.setInterval();
+      this.numberOfCalls = 1;
+      return true;
     }
-  
-    checkTime() {
-      return this.currentTime + this.timeStep > this.getTime();
-    }
-  
-    getTime() {
-      return Math.floor(Date.now() / 1000);
-    }
-  };
+  }
+  setInterval() {
+    this.nextInterval = this.getTime() + this.timeStep;
+  }
+  checkTime() {
+    return this.getTime() > this.nextInterval;
+  }
+
+  getTime() {
+    return Math.floor(Date.now() / 1000);
+  }
+};

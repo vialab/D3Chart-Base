@@ -19,7 +19,7 @@ class D3Chart {
 		maxTicks: 10,
 		clamp: true,
 		prefix: '',
-		suffix: '%',
+		suffix: '',
 	};
 
 	chart = {
