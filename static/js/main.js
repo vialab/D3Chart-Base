@@ -1,29 +1,32 @@
-var chartObj;
-var leadChart;
 $(function() {
+  //the chart object contains all of the d3 graphing
+  var chartObj;
+  //the lead chart contains all of the d3 graphing
+  var leadChart;
   $("#newsearch").submit(function(event) {
     let buttonID = "query-search";
-    let fieldID  = "query-field";
+    let fieldID = "query-field";
     event.stopPropagation();
     event.preventDefault();
     let tmpButton = document.getElementById(buttonID);
 
     tmpButton.innerHTML = `<span class="spinner-grow spinner-grow-sm"></span>`;
-    tmpButton.disabled=true;
-    if(tmpButton.classList.contains("animate")){tmpButton.classList.remove("animate");}
+    tmpButton.disabled = true;
+    if (tmpButton.classList.contains("animate")) {
+      tmpButton.classList.remove("animate");
+    }
     var query = document.getElementById(fieldID).value;
     postJSON("/query-dimensions", { query: query }, function(result) {
-      var lines=[];
-      try{
-      lines[0] = Object.values(JSON.parse(result.body).year);
-      }catch(e)
-      {
-         //animate button to display error
-          let tmpButton = document.getElementById(buttonID);
-          tmpButton.innerHTML = "Query";
-          tmpButton.disabled=false;
-          tmpButton.classList.toggle("animate");
-          return;
+      var lines = [];
+      try {
+        lines[0] = Object.values(JSON.parse(result.body).year);
+      } catch (e) {
+        //animate button to display error
+        let tmpButton = document.getElementById(buttonID);
+        tmpButton.innerHTML = "Query";
+        tmpButton.disabled = false;
+        tmpButton.classList.toggle("animate");
+        return;
       }
       //replace the geotag to everything but Canada
       query = query.replace(`~"Canada" `, `!="Canada" `);
@@ -32,7 +35,7 @@ $(function() {
       postJSON("/query-dimensions", { query: query }, function(result) {
         //set button to query as the previous query is finished
         document.getElementById(buttonID).innerHTML = "Query";
-        document.getElementById(buttonID).disabled=false;
+        document.getElementById(buttonID).disabled = false;
         lines[1] = Object.values(JSON.parse(result.body).year);
         lines[0].sort(function(first, second) {
           return first.id - second.id;
@@ -49,7 +52,7 @@ $(function() {
         chartObj.updateYScale(linedata.ydomain[0], linedata.ydomain[1]);
         chartObj.updateLines(linedata.lines);
         let yearlead =
-        leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata) + 1;
+          leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata) + 1;
         console.log(yearlead);
       });
     });
@@ -90,10 +93,9 @@ $(function() {
     return result;
   }
 
-  
   /**
    * gets default view for the graphs. The data being presented has no meaning.
-   * @inner  
+   * @inner
    * @param {JSON} res - format {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
    */
   postJSON("/default-view", {}, function(res) {
@@ -111,7 +113,7 @@ $(function() {
     //
     let yearlead =
       leadlag(result.lines[0].rawdata, result.lines[1].rawdata) + 1; // always seems to be 1 off.
-      console.log(yearlead);
+    console.log(yearlead);
     leadChart = new D3Chart("#leadlag", true);
     leadChart.updateXScale(xmin, xmax);
     leadChart.updateYScale(-0.0005, 0.0005);
