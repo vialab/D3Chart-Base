@@ -1,5 +1,6 @@
 const bodyParser = require("body-parser");
 const queryDimensions = require("./queries");
+const defaultData = require("./defaultData.json");
 
 module.exports =app=>
 {
@@ -14,8 +15,12 @@ module.exports =app=>
 
     app.post("/unigramdata", (req, res)=>{
         console.log('request for unigram data');
-        res.json({test:1});
     });
 
     app.post("/query-dimensions", queryDimensions);
+
+    app.post("/default-view", (req, res)=>
+    {
+        res.json(defaultData);
+    });
 }

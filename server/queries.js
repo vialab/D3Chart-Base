@@ -23,6 +23,10 @@ request.post(api_url_auth, function(error, resp) {
 }).body = JSON.stringify(login);
 
 //main query call for the dataset
+/**
+ * @param  {JSON} req - format {query:}
+ * @param  {} resp
+ */
 const queryDimensions = async (req, resp) => {
   if (timer.incrementCalls()) {
     const options = {
