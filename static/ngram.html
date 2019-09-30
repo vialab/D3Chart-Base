@@ -9,11 +9,22 @@
 			<div id="ngramchart"></div>
 			<!-- <div id="ngramchart2"></div> -->
 		</div>
-		<div class="text-center">
-			<!-- <h4>N-Gram Viewer Demo</h4> -->
-			<!-- <div id="ngramchart"></div> -->
-			<div id="leadlag"></div>
-		</div>
+		<form id="newsearch">
+			<div class="input-group mb-3">
+				<div class="input-group-prepend">
+					<span class="input-group-text" id="inputGroup-sizing">Lead Lag</span>
+				</div>
+				<div style="width:70%">
+					<input id="query-field" type="text" class="form-control", aria-label="Small" aria-label="LeadLag Query" placeholder="Query">
+				</div>
+				<div class="input-group-append">
+					<button id="query-search" class="btn btn-primary" type="submit">Query</button>
+				</div>
+				<label class="switch">
+					<input type="checkbox" id="leadLagToggle">
+					<span class="slider"></span>
+				  </label>
+		</form>
 		<!-- <hr> -->
 	</div>
 
@@ -33,46 +44,6 @@
 	<!-- <div class='col'></div> -->
 	<!-- <div class='col-lg'></div> -->
 	<div class="col-lg-5 mt-3" style="width: 800px">
-		<form id="newsearch">
-			<div class="input-group mb-3">
-				<div class="input-group-prepend">
-					<span class="input-group-text" id="inputGroup-sizing">Lead Lag</span>
-				</div>
-				<div style="width:70%">
-					<input id="query-field" type="text" class="form-control", aria-label="Small" aria-label="LeadLag Query" placeholder="Query">
-				</div>
-				<div class="input-group-append">
-					<button id="query-search" class="btn btn-primary" type="submit">Query</button>
-				</div>
-				<!-- </div>
-
-			<div class="form-group form-row">
-				<label for="filtercategoryselect" class="col-sm-2 col-form-label pl-2">From</label>
-
-				<div class="col-sm-3">
-					<select id="filtercategoryselect" class="form-control">
-						<option selected value="all">All</option>
-						{% for item in filtercategories %}
-						<option value="{{item}}">{{item}}</option>
-						{% endfor %}
-					</select>
-				</div>
-
-				<div class="col-sm-1 text-center">
-					<label class="col-form-label my-auto py-2">:</label>
-				</div>
-
-				<div class="col-sm-3">
-					<select id="filtercategorycountry" class="form-control d-none">
-						<option selected value="all">All</option>
-						{% for item in countries %}
-						<option value="{{item}}">{{item}}</option>
-						{% endfor %}
-					</select>
-				</div>
-
-			</div> -->
-		</form>
 		<!-- Checkbox for absolute vs percentage relative -->
 	</div>
 

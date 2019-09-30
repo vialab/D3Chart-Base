@@ -535,7 +535,7 @@ class D3Chart {
 		if (data != null) {
 			this.data = data;
 		}
-
+		console.log(data);
 		for (let idx in this.data) {
 			let line = this.data[idx];
 			line.data = movingAverage(line.rawdata, this.smoothing);

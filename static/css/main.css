@@ -1,85 +1,140 @@
 .centered {
-    display: inline-block;
-    margin: 0 auto;
-    text-align: center;
+  display: inline-block;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .slice {
-    font-size: 12pt;
-    font-family: Verdana;
-    fill: white;
-    font-weight: bold;
-    cursor: pointer;
+  font-size: 12pt;
+  font-family: Verdana;
+  fill: white;
+  font-weight: bold;
+  cursor: pointer;
 }
-
+#newsearch {
+  padding-left: 100px;
+}
 .legend-group {
-    fill: black;
+  fill: black;
 }
 
 #ngramchart {
-    /* width: 10px; */
-    width: auto;
-    height: 400px;
+  /* width: 10px; */
+  width: auto;
+  height: 800px;
 }
 
 #leadlag {
-    /* width: 10px; */
-    width: auto;
-    height: 400px;
+  /* width: 10px; */
+  width: auto;
+  height: 400px;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  padding-left: 50px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+  padding-left: 50px;
+}
 
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+}
 
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196f3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
 
 /* 13. Basic Styling with CSS */
 
 /* Style the lines by removing the fill and applying a stroke */
 .line {
-    fill: none;
-    /* stroke: #ffab00; */
-    stroke-width: 1;
+  fill: none;
+  /* stroke: #ffab00; */
+  stroke-width: 1;
 }
 
 .overlay {
-    fill: none;
-    pointer-events: all;
+  fill: none;
+  pointer-events: all;
 }
 
 /* Style the dots by assigning a fill and stroke */
 .dot {
-    fill: #ffab00;
-    stroke: #fff;
-    width: 4px;
-    height: 4px;
+  fill: #ffab00;
+  stroke: #fff;
+  width: 4px;
+  height: 4px;
 }
 
 .focus circle {
-    fill: none;
-    stroke: steelblue;
+  fill: none;
+  stroke: steelblue;
 }
 
-.btn-primary.animate
-{
-    animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
-    transform: translate3d(0,0,0);
-    backface-visibility: hidden;
-    perspective: 1000px;
+.btn-primary.animate {
+  animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 @keyframes shake {
-    10%, 90% {
-      transform: translate3d(-1px, 0, 0);
-    }
-    
-    20%, 80% {
-      transform: translate3d(2px, 0, 0);
-    }
-  
-    30%, 50%, 70% {
-      transform: translate3d(-4px, 0, 0);
-    }
-  
-    40%, 60% {
-      transform: translate3d(4px, 0, 0);
-    }
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
   }
+
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}

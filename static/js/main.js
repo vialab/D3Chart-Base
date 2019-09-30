@@ -3,6 +3,34 @@ $(function() {
   var chartObj;
   //the lead chart contains all of the d3 graphing
   var leadChart;
+  let checked = false;
+  let lead = 0;
+  let linedata = null;
+  $("#leadLagToggle").change(function(event) {
+    checked = !checked;
+    if (checked) {
+      if (linedata != null) {
+        let temp = shift(linedata.lines[0], lead);
+        chartObj.updateLines([
+          {
+            name: "Canada",
+            rawdata: temp,
+            data: temp
+          },
+          {
+            name: "!Canada",
+            rawdata: linedata.lines[1].rawdata,
+            data: linedata.lines[1].data
+          }
+        ]);
+      }
+    } else {
+      if (linedata != null) {
+        chartObj.updateLines(linedata.lines);
+      }
+    }
+  });
+
   $("#newsearch").submit(function(event) {
     let buttonID = "query-search";
     let fieldID = "query-field";
@@ -17,7 +45,6 @@ $(function() {
     }
     var query = document.getElementById(fieldID).value;
     let url = "/query-dimensions";
-
     Promise.all([
       d3.json(url, {
         method: "POST",
@@ -55,6 +82,15 @@ $(function() {
           "Content-type": "application/json; charset=UTF-8"
         }
       })
+      //d3.json(url, {
+      //  method: "POST",
+      //  body: JSON.stringify({
+      //    query: `search publications for "Malaria" return year return category_bra`
+      //  }),
+      //  headers: {
+      //    "Content-type": "application/json; charset=UTF-8"
+      //  }
+      //})
     ]).then(function(values) {
       console.log(values);
       var lines = [];
@@ -63,6 +99,7 @@ $(function() {
         lines[1] = Object.values(JSON.parse(values[2].body).year);
         lines[2] = Object.values(JSON.parse(values[1].body).year);
         lines[3] = Object.values(JSON.parse(values[0].body).year);
+        //console.log(values[4].body);
       } catch (e) {
         //animate button to display error
         let tmpButton = document.getElementById(buttonID);
@@ -91,52 +128,25 @@ $(function() {
       );
       chartObj.updateYScale(linedata.ydomain[0], linedata.ydomain[1]);
       chartObj.updateLines(linedata.lines);
-      let yearlead =
-        leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata) + 1;
-      console.log(yearlead);
+      lead = leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata);
+      console.log(lead);
     });
-    //postJSON("/query-dimensions", { query: query }, function(result) {
-    //  var lines = [];
-    //  try {
-    //    lines[0] = Object.values(JSON.parse(result.body).year);
-    //  } catch (e) {
-    //    //animate button to display error
-    //    let tmpButton = document.getElementById(buttonID);
-    //    tmpButton.innerHTML = "Query";
-    //    tmpButton.disabled = false;
-    //    tmpButton.classList.toggle("animate");
-    //    return;
-    //  }
-    //  //replace the geotag to everything but Canada
-    //  query = query.replace(`="Canada" `, `!="Canada" `);
-    //  console.log(query);
-    //  //second query with !Canada
-    //  postJSON("/query-dimensions", { query: query }, function(result) {
-    //    //set button to query as the previous query is finished
-    //    document.getElementById(buttonID).innerHTML = "Query";
-    //    document.getElementById(buttonID).disabled = false;
-    //    lines[1] = Object.values(JSON.parse(result.body).year);
-    //    lines[0].sort(function(first, second) {
-    //      return first.id - second.id;
-    //    });
-    //    lines[1].sort(function(first, second) {
-    //      return first.id - second.id;
-    //    });
-    //    normalize(lines);
-    //    linedata = convertToLineData(lines);
-    //    chartObj.smoothing = 1;
-    //    chartObj.updateXScale(
-    //      new Date(linedata.xdomain[0], 0),
-    //      new Date(linedata.xdomain[1], 0)
-    //    );
-    //    chartObj.updateYScale(linedata.ydomain[0], linedata.ydomain[1]);
-    //    chartObj.updateLines(linedata.lines);
-    //    let yearlead =
-    //      leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata) + 1;
-    //    console.log(yearlead);
-    //  });
-    //});
   });
+
+  function shift(line, offset) {
+    let result = [];
+    console.log();
+    for (let i = offset; i < line.rawdata.length; i++) {
+      result.push({ x: line.rawdata[i - offset].x, y: line.rawdata[i].y });
+    }
+    for (let i = 0; i < offset; i++) {
+      result.push({
+        x: line.rawdata[i + (line.rawdata.length - offset)].x,
+        y: line.rawdata[i].y
+      });
+    }
+    return result;
+  }
 
   function normalize(lines) {
     let size = 0;
@@ -202,13 +212,5 @@ $(function() {
     chartObj.updateYScale(result.ydomain[0], result.ydomain[1]);
 
     chartObj.updateLines(result.lines);
-    //
-    let yearlead =
-      leadlag(result.lines[0].rawdata, result.lines[1].rawdata) + 1; // always seems to be 1 off.
-    console.log(yearlead);
-    leadChart = new D3Chart("#leadlag", true);
-    leadChart.updateXScale(xmin, xmax);
-    leadChart.updateYScale(-0.0005, 0.0005);
-    leadChart.updateLines(result.lines);
   });
 });
