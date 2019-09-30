@@ -29,6 +29,7 @@ request.post(api_url_auth, function(error, resp) {
  */
 const queryDimensions = async (req, resp) => {
   if (timer.incrementCalls()) {
+    console.log(req.body.query);
     const options = {
       url: api_url,
       method: "POST",
