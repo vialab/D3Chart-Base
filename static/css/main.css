@@ -20,8 +20,9 @@
 
 #ngramchart {
   /* width: 10px; */
-  width: auto;
+  width: 70%;
   height: 800px;
+  float: left;
 }
 
 #leadlag {
@@ -137,4 +138,11 @@ input:checked + .slider:before {
   60% {
     transform: translate3d(4px, 0, 0);
   }
+}
+
+#multicharts {
+  float: right;
+  width: 30%;
+  height: 800px;
+  overflow-y: scroll;
 }

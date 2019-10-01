@@ -6,7 +6,7 @@ class D3Chart {
 		scale: null,
 		isTime: true,
 		maxTicks: 15,
-		minTicks: 4,
+		minTicks: 1,
 		clamp: true,
 		leftBisect: d3.bisector(data => data.x).left,
 		rightBisect: d3.bisector(data => data.x).right,
@@ -29,7 +29,7 @@ class D3Chart {
 	}
 
 	legend = {
-		width: 164,
+		width: 146,
 		title: 'Legend',
 		padding: {
 			title: 32,
@@ -65,13 +65,13 @@ class D3Chart {
 	height;
 
 	margin = {
-		top: 50,
-		right: 50,
-		bottom: 50,
-		left: 86,
+		top: 25,
+		right: 25,
+		bottom: 25,
+		left: 50,
 	};
 	padding = {
-		legendPadding: 24,
+		legendPadding: 0,
 		mouseEffectPadding: 12,
 		// mouseEffectPadding: 0,
 	}
@@ -279,9 +279,6 @@ class D3Chart {
 				this.X.maxTicks = 10;
 			}
 
-			// this.X.axis.tickSizeOuter(12);
-			// this.X.axis.tickPadding(16)
-
 			let spread = interval.count(xmin, xmax),
 				every = Math.ceil(spread / Math.min(this.X.maxTicks, spread)),
 				formatter = d3.timeFormat(endFormat),
@@ -451,11 +448,6 @@ class D3Chart {
 		this.legendBase = this.svg.append('g')
 			.attr('class', 'legend-group');
 
-		this.legend.outline = this.legendBase
-			.append('rect')
-			.attr('class', 'legend-outline')
-			.style('fill', 'none');
-
 		this.legend.clipArea = this.legendBase
 			.append('clipPath')
 			.attr('id', 'legend-clip')
@@ -475,15 +467,15 @@ class D3Chart {
 	 */
 	updateLegend() {
 		this.legendBase
-			.attr('transform', `translate(${this.chartWidth+this.padding.legendPadding+0.5},0.5)`);
+			.attr('transform', `translate(${this.padding.legendPadding+0.5},0.5)`);
 
-		this.legend.outline
-			.attr('stroke-width', this.legend.outlineWidth)
-			.attr('stroke', this.legend.outlineColour)
-			.attr('x', 0)
-			.attr('y', 0)
-			.attr('width', this.legend.width)
-			.attr('height', this.legend.padding.title + this.legend.padding.top + (this.legend.spacing.itemSpacing + this.legend.spacing.itemSize) * this.data.length);
+		//this.legend.outline
+		//	.attr('stroke-width', this.legend.outlineWidth)
+		//	.attr('stroke', this.legend.outlineColour)
+		//	.attr('x', 0)
+		//	.attr('y', 0)
+		//	.attr('width', this.legend.width)
+		//	.attr('height', this.legend.padding.title + this.legend.padding.top + (this.legend.spacing.itemSpacing + this.legend.spacing.itemSize) * this.data.length);
 
 		this.legend.clipArea
 			.attr('x', this.legend.padding.left)
@@ -605,11 +597,13 @@ class D3Chart {
 			.on('mouseout', () => { // on mouse out hide line, circles and text
 				this.chart.mouseLine.style('opacity', '0');
 				this.svg.selectAll('.mouse-per-line').style('opacity', '0');
+				this.legendBase.attr('opacity', 0);
 				// this.svg.selectAll('#tooltip').style('display', 'none');
 			})
 			.on('mouseover', () => { // on mouse in show line, circles and text
 				this.chart.mouseLine.style('opacity', '1');
 				this.svg.selectAll('.mouse-per-line').style('opacity', '1');
+				this.legendBase.attr('opacity', 1);
 				// this.svg.selectAll('#tooltip').style('display', 'block');
 			})
 			.on('mousemove', () => { // update tooltip content, line, circles and text when mouse moves
@@ -718,7 +712,7 @@ class D3Chart {
 	 */
 	setWidth(width) {
 		this.width = width;
-		this.chartWidth = this.width - this.margin.left - this.margin.right - this.legend.width;
+		this.chartWidth = this.width - this.margin.left - this.margin.right;
 	}
 	/**
 	 * Returns base width
@@ -748,6 +742,14 @@ class D3Chart {
 	setHeight(height) {
 		this.height = height;
 		this.chartHeight = height - this.margin.top - this.margin.bottom;
+	}
+	setBaseHeight(height)
+	{
+		this.base.attr('height', height);
+	}
+	setBaseWidth(width)
+	{
+		this.base.attr('width', width);
 	}
 	/**
 	 * Returns base height
