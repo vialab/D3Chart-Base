@@ -1,8 +1,6 @@
 $(function() {
   //the chart object contains all of the d3 graphing
   var chartObj;
-  //the lead chart contains all of the d3 graphing
-  var leadChart;
   let checked = false;
   let lead = 0;
   let linedata = null;
@@ -45,94 +43,7 @@ $(function() {
       tmpButton.classList.remove("animate");
     }
     var query = document.getElementById(fieldID).value;
-    let url = "/query-dimensions";
-    //Promise.all([
-    //  d3.json(url, {
-    //    method: "POST",
-    //    body: JSON.stringify({
-    //      query: `search publications where research_org_country_names!="Canada" return year`
-    //    }),
-    //    headers: {
-    //      "Content-type": "application/json; charset=UTF-8"
-    //    }
-    //  }),
-    //  d3.json(url, {
-    //    method: "POST",
-    //    body: JSON.stringify({
-    //      query: `search publications where research_org_country_names="Canada" return year`
-    //    }),
-    //    headers: {
-    //      "Content-type": "application/json; charset=UTF-8"
-    //    }
-    //  }),
-    //  d3.json(url, {
-    //    method: "POST",
-    //    body: JSON.stringify({
-    //      query: `search publications for "${query}" where research_org_country_names!="Canada" return year`
-    //    }),
-    //    headers: {
-    //      "Content-type": "application/json; charset=UTF-8"
-    //    }
-    //  }),
-    //  d3.json(url, {
-    //    method: "POST",
-    //    body: JSON.stringify({
-    //      query: `search publications for "${query}" where research_org_country_names="Canada" return year`
-    //    }),
-    //    headers: {
-    //      "Content-type": "application/json; charset=UTF-8"
-    //    }
-    //  }),
-    //  d3.json(url, {
-    //    method: "POST",
-    //    body: JSON.stringify({
-    //      query: `search publications in title_abstract_only for "Malaria" return category_bra return year sort by count`
-    //    }),
-    //    headers: {
-    //      "Content-type": "application/json; charset=UTF-8"
-    //    }
-    //  })
-    //]).then(function(values) {
-    //  console.log(values);
-    //  var lines = [];
-    //  try {
-    //    lines[0] = Object.values(JSON.parse(values[3].body).year);
-    //    lines[1] = Object.values(JSON.parse(values[2].body).year);
-    //    lines[2] = Object.values(JSON.parse(values[1].body).year);
-    //    lines[3] = Object.values(JSON.parse(values[0].body).year);
-    //    console.log(values[4].body);
-    //  } catch (e) {
-    //    //animate button to display error
-    //    let tmpButton = document.getElementById(buttonID);
-    //    tmpButton.innerHTML = "Query";
-    //    tmpButton.disabled = false;
-    //    tmpButton.classList.toggle("animate");
-    //    return;
-    //  }
-    //  //set button to query as the previous query is finished
-    //  document.getElementById(buttonID).innerHTML = "Query";
-    //  document.getElementById(buttonID).disabled = false;
-    //  //sort the return data
-    //  for (let i = 0; i < lines.length; i++) {
-    //    lines[i].sort(function(first, second) {
-    //      return first.id - second.id;
-    //    });
-    //  }
-    //  normalize(lines);
-    //  console.log([lines[0], lines[1]]);
-    //  linedata = convertToLineData([lines[0], lines[1]]);
-    //  console.log(linedata);
-    //  chartObj.smoothing = 1;
-    //  chartObj.updateXScale(
-    //    new Date(linedata.xdomain[0], 0),
-    //    new Date(linedata.xdomain[1], 0)
-    //  );
-    //  chartObj.updateYScale(linedata.ydomain[0], linedata.ydomain[1]);
-    //  chartObj.updateLines(linedata.lines);
-    //  lead = leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata);
-    //  console.log(lead);
-    //});
-    Promise.all(queryDim(2016, 2018, query)).then(function(values) {
+    Promise.all(queryDim(2015, 2018, query)).then(function(values) {
       console.log(values);
       var lines = [];
       let totals = [];
@@ -146,15 +57,29 @@ $(function() {
         lines[1] = result.canada.keyWordTotal;
         let keys = [...result.canada.categories.keys()];
         for (let i = 0; i < keys.length; i++) {
+          normalize(
+            [
+              result.notCanada.categories.get(keys[i]),
+              result.canada.categories.get(keys[i])
+            ],
+            lines
+          );
+        }
+        for (let i = 0; i < keys.length; i++) {
           subGraphData.push(
             convertToLineData([
               result.canada.categories.get(keys[i]),
               result.notCanada.categories.get(keys[i])
             ])
           );
+          subGraphData[i].graphName = keys[i];
         }
         console.log(subGraphData.length);
-        createMultiGraphs(subGraphData, multiCharts, { x: 393, y: 800 });
+        for (let i = 0; i < multiCharts.length; i++) {
+          multiCharts[i].cleanup();
+        }
+        multiCharts = [];
+        createMultiGraphs(subGraphData, multiCharts, "multicharts");
       } catch (e) {
         console.log(e);
         //animate button to display error
@@ -184,9 +109,12 @@ $(function() {
     });
   });
 
+  /**
+   * @param  {Array} line - [{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]
+   * @param  {Number} offset - the offset to shift the raw data elements by. For example if we shift this array [1,2,3] by 1 it becomes [3,1,2]
+   */
   function shift(line, offset) {
     let result = [];
-    console.log();
     for (let i = offset; i < line.rawdata.length; i++) {
       result.push({ x: line.rawdata[i - offset].x, y: line.rawdata[i].y });
     }
@@ -198,32 +126,57 @@ $(function() {
     }
     return result;
   }
-  function createMultiGraphs(data, graphContainer, area) {
-    let height = area.y / data.length;
 
+  /**
+   * @param  {Object} data - format {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
+   * @param  {Array} graphContainer - This array or list will contain the charts
+   * @param  {String} containgElement - A string of the element's id that will contain the graphs
+   */
+  function createMultiGraphs(data, graphContainer, containingElement) {
+    let containerHeight = document.getElementById(containingElement)
+      .clientHeight;
+    let height = containerHeight / data.length;
+    let maxY = 0;
+    let minY = 1;
     for (let i = 0; i < data.length; i++) {
-      graphContainer.push(new D3Chart("#multicharts", true, false));
-      graphContainer[i].setHeight(height);
-      graphContainer[i].setBaseHeight(height);
-      graphContainer[i].smoothing = 1;
-      graphContainer[i].updateXScale(
+      maxY = Math.max(data[i].ydomain[1], maxY);
+      minY = Math.min(data[i].ydomain[0], minY);
+    }
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].xdomain[0] == data[i].xdomain[1]) {
+        continue;
+      }
+      graphContainer.push(
+        new D3Chart("#" + containingElement, true, data[i].graphName)
+      );
+      let size = graphContainer.length - 1;
+      graphContainer[size].setHeight(300);
+      graphContainer[size].setBaseHeight(300);
+      graphContainer[size].smoothing = 1;
+      graphContainer[size].updateXScale(
         new Date(data[i].xdomain[0], 0),
         new Date(data[i].xdomain[1], 0)
       );
-      graphContainer[i].updateYScale(data[i].ydomain[0], data[i].ydomain[1]);
-      graphContainer[i].updateLines(data[i].lines);
+      graphContainer[size].updateYScale(minY, maxY);
+      graphContainer[size].updateLines(data[i].lines);
     }
   }
+
+  /**
+   * @param  {Array[Array]} lines - expects [[{count:}], [{count:}]] the array to be normalized
+   * @param  {Array} totals - expects[{count:}]. The elements in this array are used to normalize the lines array
+   */
   function normalize(lines, totals) {
-    let size = 0;
-    if (lines[0].length > lines[1].length) {
-      size = lines[0].length;
-    } else {
-      size = lines[1].length;
+    console.log(lines);
+    if (lines[0] != null) {
+      for (let i = 0; i < lines[0].length; i++) {
+        lines[0][i].count = lines[0][i].count / totals[0][i].count;
+      }
     }
-    for (let i = 0; i < size; i++) {
-      lines[0][i].count = lines[0][i].count / totals[0][i].count;
-      lines[1][i].count = lines[1][i].count / totals[1][i].count;
+    if (lines[1] != null) {
+      for (let i = 0; i < lines[1].length; i++) {
+        lines[1][i].count = lines[1][i].count / totals[1][i].count;
+      }
     }
   }
   /**
@@ -239,28 +192,55 @@ $(function() {
         { name: "!Canada", rawdata: [], data: [] }
       ]
     };
-    result.xdomain[0] = lines[0][0].id;
-    result.xdomain[1] = lines[0][lines[0].length - 1].id;
-    result.ydomain[0] = lines[0][0].count;
-    result.ydomain[1] = lines[0][0].count;
-    for (let j = 0; j < lines.length; j++) {
-      for (let i = 0; i < lines[j].length; i++) {
-        if (lines[j][i].count > result.ydomain[1]) {
-          result.ydomain[1] = lines[j][i].count;
+    if (lines[0] != null) {
+      result.xdomain[0] = lines[0][0].id;
+      result.xdomain[1] = lines[0][lines[0].length - 1].id;
+      result.ydomain[0] = lines[0][0].count;
+      result.ydomain[1] = lines[0][0].count;
+    } else {
+      result.xdomain[0] = lines[1][0].id;
+      result.xdomain[1] = lines[1][lines[1].length - 1].id;
+      result.ydomain[0] = lines[1][0].count;
+      result.ydomain[1] = lines[1][0].count;
+    }
+    if (lines[0] != null) {
+      for (let i = 0; i < lines[0].length; i++) {
+        if (lines[0][i].count > result.ydomain[1]) {
+          result.ydomain[1] = lines[0][i].count;
         }
-        if (lines[j][i].count < result.ydomain[0]) {
-          result.ydomain[0] = lines[j][i].count;
+        if (lines[0][i].count < result.ydomain[0]) {
+          result.ydomain[0] = lines[0][i].count;
         }
-        result.lines[j].rawdata[i] = {
-          x: lines[j][i].id,
-          y: lines[j][i].count
+        result.lines[0].rawdata[i] = {
+          x: lines[0][i].id,
+          y: lines[0][i].count
         };
-        result.lines[j].data[i] = { x: lines[j][i].id, y: lines[j][i].count };
+        result.lines[0].data[i] = { x: lines[0][i].id, y: lines[0][i].count };
+      }
+    }
+    if (lines[1] != null) {
+      for (let i = 0; i < lines[1].length; i++) {
+        if (lines[1][i].count > result.ydomain[1]) {
+          result.ydomain[1] = lines[1][i].count;
+        }
+        if (lines[1][i].count < result.ydomain[0]) {
+          result.ydomain[0] = lines[1][i].count;
+        }
+        result.lines[1].rawdata[i] = {
+          x: lines[1][i].id,
+          y: lines[1][i].count
+        };
+        result.lines[1].data[i] = { x: lines[1][i].id, y: lines[1][i].count };
       }
     }
     return result;
   }
-
+  /**
+   * @param  {Number} minYear - the starting year to query (inclusive)
+   * @param  {Number} maxYear - the maximum year to query (inclusive)
+   * @param  {string} keyword - the keyword to search for
+   * @returns {Array[Promise]}  returns array of promises
+   */
   function queryDim(minYear, maxYear, keyword) {
     let url = "/query-dimensions";
     let promises = [];
@@ -270,7 +250,7 @@ $(function() {
         d3.json(url, {
           method: "POST",
           body: JSON.stringify({
-            query: `search publications in title_abstract_only for "${keyword}" where research_org_country_names!="Canada" and year=${i} return year return category_bra sort by count`
+            query: `search publications in title_abstract_only for "${keyword}" where research_org_country_names!="Canada" and year=${i} return year return category_for sort by count`
           }),
           headers: {
             "Content-type": "application/json; charset=UTF-8"
@@ -281,7 +261,7 @@ $(function() {
         d3.json(url, {
           method: "POST",
           body: JSON.stringify({
-            query: `search publications in title_abstract_only for "${keyword}" where research_org_country_names="Canada" and year=${i} return year return category_bra sort by count`
+            query: `search publications in title_abstract_only for "${keyword}" where research_org_country_names="Canada" and year=${i} return year return category_for sort by count`
           }),
           headers: {
             "Content-type": "application/json; charset=UTF-8"
@@ -315,7 +295,10 @@ $(function() {
 
     return promises;
   }
-
+  /**
+   * @param  {Array[Reponse]} values - an array of response objects
+   * @returns {Object} format { canada: {categories: new Map(), keyWordTotal: [], total: []}, notCanada: {categories: new Map(), keyWordTotal: [], total: []}}
+   */
   function aggregateQuery(values) {
     aggregatedResult = {
       canada: {
@@ -336,40 +319,40 @@ $(function() {
       json = JSON.parse(values[i].body);
       if (canada) {
         aggregatedResult.canada.keyWordTotal.push(json.year[0]);
-        for (let j = 0; j < json.category_bra.length; j++) {
+        for (let j = 0; j < json.category_for.length; j++) {
           if (
-            aggregatedResult.canada.categories.has(json.category_bra[j].name)
+            aggregatedResult.canada.categories.has(json.category_for[j].name)
           ) {
             aggregatedResult.canada.categories
-              .get(json.category_bra[j].name)
-              .push({ id: json.year[0].id, count: json.category_bra[j].count });
+              .get(json.category_for[j].name)
+              .push({ id: json.year[0].id, count: json.category_for[j].count });
           } else {
             aggregatedResult.canada.categories.set(
-              json.category_bra[j].name,
+              json.category_for[j].name,
               []
             );
             aggregatedResult.canada.categories
-              .get(json.category_bra[j].name)
-              .push({ id: json.year[0].id, count: json.category_bra[j].count });
+              .get(json.category_for[j].name)
+              .push({ id: json.year[0].id, count: json.category_for[j].count });
           }
         }
       } else {
         aggregatedResult.notCanada.keyWordTotal.push(json.year[0]);
-        for (let j = 0; j < json.category_bra.length; j++) {
+        for (let j = 0; j < json.category_for.length; j++) {
           if (
-            aggregatedResult.notCanada.categories.has(json.category_bra[j].name)
+            aggregatedResult.notCanada.categories.has(json.category_for[j].name)
           ) {
             aggregatedResult.notCanada.categories
-              .get(json.category_bra[j].name)
-              .push({ id: json.year[0].id, count: json.category_bra[j].count });
+              .get(json.category_for[j].name)
+              .push({ id: json.year[0].id, count: json.category_for[j].count });
           } else {
             aggregatedResult.notCanada.categories.set(
-              json.category_bra[j].name,
+              json.category_for[j].name,
               []
             );
             aggregatedResult.notCanada.categories
-              .get(json.category_bra[j].name)
-              .push({ id: json.year[0].id, count: json.category_bra[j].count });
+              .get(json.category_for[j].name)
+              .push({ id: json.year[0].id, count: json.category_for[j].count });
           }
         }
       }
@@ -386,7 +369,7 @@ $(function() {
   postJSON("/default-view", {}, function(res) {
     result = res;
 
-    chartObj = new D3Chart("#ngramchart", true, false);
+    chartObj = new D3Chart("#ngramchart", true, "Total");
     if (result.xdomain) {
       var xmin = new Date(result.xdomain[0], 0);
       var xmax = new Date(result.xdomain[1], 0);

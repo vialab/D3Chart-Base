@@ -1,8 +1,9 @@
 /// Lead/Lag calculation
-
-// Equation (1) from the paper "Who Leads Whom Topical Lead-Lag Analysis across Corpora" is not implemented, because it's a topic aware proportion of documents in the corpus
-// this is data we hoped to get rom the dimenions analytics API, since the data coming from the server is random normal distributions, we'll pretend those numbers are n-gram occurence percentages
-// E.G: a value of "y=0.00006" where "x=2000" means that for this imaginary n-gram, it occurred 0.00006% of all n-grams for that year, in that corpus.
+/**
+ * @param  {Array} array
+ * @param  {Number} offset - shifts the alignment of the array. For example if we shift this array [1,2,3] by 1 it becomes [3,1,2]
+ * @returns {Array} - a new array that is shifted based on the offset
+ */
 function shift(array, offset) {
   result = [];
   for (let i = offset; i < array.length; i++) {
@@ -13,8 +14,11 @@ function shift(array, offset) {
   }
   return result;
 }
-
-// equation (3)
+/**
+ * @param  {Array} data1 - [{y:}] requires y value
+ * @param  {Array} data2 - [{y:}] requires y value
+ * @returns {Number} the alignment shift for data1 where it best aligns with data2
+ */
 function leadlag(data1, data2) {
   let d1 = Object.values(data1);
   let d2 = Object.values(data2);
@@ -42,7 +46,10 @@ function leadlag(data1, data2) {
 
   return bestOffset;
 }
-
+/**
+ * @param  {Array} array - expects [{y:}]
+ * @returns {Float} returns the mean of the set
+ */
 function mean(array) {
   result = 0;
   for (let i = 0; i < array.length; i++) {
@@ -51,7 +58,11 @@ function mean(array) {
 
   return result / array.length;
 }
-
+/**
+ * @param  {Array} array - expects [{y:}]
+ * @param  {Float} mean - the mean of the array set
+ * @return {Float} the standard deviation of the set
+ */
 function standardDeviation(array, mean) {
   sum = 0;
   for (let i = 0; i < array.length; i++) {

@@ -49,6 +49,7 @@ class D3Chart {
 		outline: null,
 		clipArea: null,
 		titleNode: null,
+		titleText:'legend'
 	}
 
 
@@ -100,12 +101,12 @@ class D3Chart {
 	 * @param {boolean} [isTime=true]
 	 * @memberof D3Chart
 	 */
-	constructor(parent = null, isTime = true) {
+	constructor(parent = null, isTime = true, name='legend') {
 		if (parent != null) {
 			this.setParent(parent);
 		}
 		this.isTime = isTime;
-
+		this.legend.titleText=name;
 		this.transition.trn = d3.transition().delay(this.transition.delay).duration(this.transition.duration).ease(this.transition.ease);
 
 		this.createXScale();
@@ -114,6 +115,11 @@ class D3Chart {
 		this.createLineGenerator();
 	}
 
+	cleanup()
+	{
+		this.svg.remove();
+		this.base.remove();
+	}
 
 	/**
 	 * Creates the svg base in which all of the rest of the chart will be in.
@@ -278,7 +284,7 @@ class D3Chart {
 				endFormat = '%Y-%-m-%-d %H:%M:%S';
 				this.X.maxTicks = 10;
 			}
-
+			console.log(`min: ${xmin}, max: ${xmax}`);
 			let spread = interval.count(xmin, xmax),
 				every = Math.ceil(spread / Math.min(this.X.maxTicks, spread)),
 				formatter = d3.timeFormat(endFormat),
@@ -469,24 +475,15 @@ class D3Chart {
 		this.legendBase
 			.attr('transform', `translate(${this.padding.legendPadding+0.5},0.5)`);
 
-		//this.legend.outline
-		//	.attr('stroke-width', this.legend.outlineWidth)
-		//	.attr('stroke', this.legend.outlineColour)
-		//	.attr('x', 0)
-		//	.attr('y', 0)
-		//	.attr('width', this.legend.width)
-		//	.attr('height', this.legend.padding.title + this.legend.padding.top + (this.legend.spacing.itemSpacing + this.legend.spacing.itemSize) * this.data.length);
-
 		this.legend.clipArea
 			.attr('x', this.legend.padding.left)
 			.attr('y', 0)
 			.attr('width', this.legend.width - this.legend.padding.right - this.legend.padding.left)
 			.attr('height', this.chartHeight);
 
-		this.legend.titleNode.text('Legend')
+		this.legend.titleNode.text(this.legend.titleText)
 			.attr('x', (d, i, nodes) => (this.legend.width / 2) - (d3.select(nodes[i]).node().getComputedTextLength() / 2))
 			.attr('dy', 17);
-
 
 		this.legend.entries = this.legendBase.selectAll('.legend')
 			.data(this.data, d => d.name)
@@ -500,7 +497,12 @@ class D3Chart {
 						this.legend.dataNodes[d.name] = {
 							node: d3.select(nodes[i]),
 							update: (val) => {
-								d3.select(nodes[i]).text(`${d.name}: ${val}`);
+								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr('font-size', '1px');
+								let width = d3.select(nodes[i]).node().getComputedTextLength();
+								console.log(width);
+								width = Math.floor(this.legend.clipArea.attr('width') / width);
+								console.log(d3.select(nodes[i]).node().getBBox().width);
+								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr('font-size', width +'px');
 							},
 						};
 					}),
@@ -597,13 +599,13 @@ class D3Chart {
 			.on('mouseout', () => { // on mouse out hide line, circles and text
 				this.chart.mouseLine.style('opacity', '0');
 				this.svg.selectAll('.mouse-per-line').style('opacity', '0');
-				this.legendBase.attr('opacity', 0);
+				//this.legendBase.attr('opacity', 0);
 				// this.svg.selectAll('#tooltip').style('display', 'none');
 			})
 			.on('mouseover', () => { // on mouse in show line, circles and text
 				this.chart.mouseLine.style('opacity', '1');
 				this.svg.selectAll('.mouse-per-line').style('opacity', '1');
-				this.legendBase.attr('opacity', 1);
+				//this.legendBase.attr('opacity', 1);
 				// this.svg.selectAll('#tooltip').style('display', 'block');
 			})
 			.on('mousemove', () => { // update tooltip content, line, circles and text when mouse moves
@@ -743,13 +745,29 @@ class D3Chart {
 		this.height = height;
 		this.chartHeight = height - this.margin.top - this.margin.bottom;
 	}
+	/**
+	 * @param  {number} height - sets the height of the svg containing the chart
+	 */
 	setBaseHeight(height)
 	{
 		this.base.attr('height', height);
 	}
+	/**
+	 * @param  {number} width - sets the width of the svg containing the chart
+	 */
 	setBaseWidth(width)
 	{
 		this.base.attr('width', width);
+	}
+	/**
+	 * @param  {number} size - uniformly set the graph's size.
+	 */
+	uniformSize(size)
+	{
+		this.setHeight(size);
+		this.setWidth(size);
+		this.setBaseHeight(size);
+		this.setBaseWidth(size);
 	}
 	/**
 	 * Returns base height
