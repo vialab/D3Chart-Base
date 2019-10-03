@@ -49,7 +49,8 @@ class D3Chart {
 		outline: null,
 		clipArea: null,
 		titleNode: null,
-		titleText:'legend'
+		titleText:'legend',
+		legendToChartRatio: 10
 	}
 
 
@@ -478,12 +479,19 @@ class D3Chart {
 		this.legend.clipArea
 			.attr('x', this.legend.padding.left)
 			.attr('y', 0)
-			.attr('width', this.legend.width - this.legend.padding.right - this.legend.padding.left)
-			.attr('height', this.chartHeight);
+			.attr('width', this.chartWidth / this.legend.legendToChartRatio)
+			.attr('height', this.chartHeight / this.legend.legendToChartRatio);
 
 		this.legend.titleNode.text(this.legend.titleText)
-			.attr('x', (d, i, nodes) => (this.legend.width / 2) - (d3.select(nodes[i]).node().getComputedTextLength() / 2))
-			.attr('dy', 17);
+			.attr('x', 0)
+			.attr('dy', 17).attr('font-size', '1px');
+			{
+				let width = this.legend.titleNode.node().getComputedTextLength();
+				width = Math.floor(this.legend.clipArea.attr('width') / width);
+				this.legend.titleNode.text(this.legend.titleText)
+				.attr('x', 0)
+				.attr('dy', 17).attr('font-size', width + 'px');
+			}
 
 		this.legend.entries = this.legendBase.selectAll('.legend')
 			.data(this.data, d => d.name)
@@ -768,6 +776,7 @@ class D3Chart {
 		this.setWidth(size);
 		this.setBaseHeight(size);
 		this.setBaseWidth(size);
+		this.updateLegend();
 	}
 	/**
 	 * Returns base height
