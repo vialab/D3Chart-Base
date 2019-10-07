@@ -5,7 +5,7 @@ class QueryObject {
     source: "",
     index: null,
     keyword: "",
-    country: "",
+    country: [],
     years: "",
     range: "",
     returns: [],
@@ -48,69 +48,96 @@ class QueryObject {
       }
     },
 
-    returns: {}
+    returns: {
+      year: "year"
+    }
   };
-  response = [];
-  route = "./dimensions-query";
+  responses = [];
+  route = "/query-dimensions";
+  currentYear;
+  currentCountry;
   constructor(query) {
     this.rawQuery = query;
+    this.analyzeQuery();
   }
 
   analyzeQuery() {
-    let splitQuery = this.rawQuery.split(":");
-    let currentIndex = 0;
-
-    //sources
-    if (!(splitQuery[currentIndex] in this.reference.sources)) {
-      throw new Error(`${splitQuery[currentIndex]} is not a valid source`);
-    }
-    this.query.source = splitQuery[currentIndex];
-    currentIndex++;
-
-    //indices
-    if (splitQuery[currentIndex] in this.reference.indices[this.query.source]) {
-      this.query.index = splitQuery[currentIndex];
-      currentIndex++;
+    let jsonQuery = JSON.parse(this.rawQuery);
+    //source
+    if ("source" in jsonQuery) {
+      console.log(jsonQuery.source);
+      if (jsonQuery.source in this.reference.sources) {
+        this.query.source = jsonQuery.source;
+      } else {
+        throw new Error(`Invalid Source ${jsonQuery.source}`);
+      }
     } else {
-      //keyword
-      this.query.keyword = splitQuery[currentIndex].split(",");
-      currentIndex++;
+      throw new Error("Requires source");
     }
-
-    //filter
-    let filter;
-    try {
-      filter = JSON.parse(splitQuery[currentIndex]);
-      if ("country" in filter) {
-        this.query.country = filter.country;
-      }
-      if ("year" in filter) {
-        this.query.years = filter.year;
-        if (this.query.years.length < 2) {
-          throw new Error(`invalid number of years for query minimum of two`);
+    //indices
+    if ("indices" in jsonQuery) {
+      for (let index in jsonQuery.indices) {
+        if (!index in this.reference.indices[this.query.source]) {
+          throw new Error(
+            `Invalid index ${index} for source ${this.query.source}`
+          );
         }
-        if (this.query.years.length > 2) {
-          this.query.range = false;
-        } else {
-          this.query.range = true;
-        }
-        currentIndex++;
       }
-    } catch (e) {
-      console.error(e);
-      throw e;
+      this.query.index = jsonQuery.indices;
     }
-
+    //keywords
+    if ("keywords" in jsonQuery) {
+      this.query.keyword = jsonQuery.keyword;
+    }
+    if ("filters" in jsonQuery) {
+      //filter
+      let filter;
+      try {
+        console.log(jsonQuery.filters);
+        filter = jsonQuery.filters;
+        if ("country" in filter) {
+          this.query.country = filter.country;
+        }
+        if ("year" in filter) {
+          this.query.years = filter.year;
+          if (this.query.years.length < 2) {
+            throw new Error(`invalid number of years for query minimum of two`);
+          }
+          if (this.query.years.length > 2) {
+            this.query.range = false;
+          } else {
+            this.query.range = true;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        throw e;
+      }
+    }
     //returns
-    let returns = splitQuery[currentIndex].split(",");
-
-    for (returnElement in returns) {
-      if (!(returnElement in this.query.returns)) {
-        throw new Error(`Error return element ${returnElement}`);
+    if ("returns" in jsonQuery) {
+      for (let returnElement in jsonQuery.returns) {
+        if (!(jsonQuery.returns[returnElement] in this.reference.returns)) {
+          throw new Error(
+            `Error return element ${jsonQuery.returns[returnElement]}`
+          );
+        }
       }
+      this.query.returns = jsonQuery.returns;
+    } else {
+      throw new Error("Invalid query must have return values");
     }
-
-    this.query.returns = returns;
+    this.currentYear = this.query.years[0];
+    this.currentCountry = 0;
+    if (this.query.years.length == 0) {
+      this.currentYear = null;
+    }
+    if (this.query.country.length == 0) {
+      this.currentCountry = null;
+    }
+    console.log(this.currentCountry);
+    console.log(this.buildQuery(this.currentYear, this.currentCountry));
+    this.queryDim(this.currentYear, this.currentCountry);
   }
 
   calculateQueryTime() {
@@ -137,37 +164,84 @@ class QueryObject {
     return totalNumberQueries * this.intervals;
   }
 
-  async query(query, years, countries) {
+  buildQuery(years, countries) {
+    return `search ${
+      this.query.source
+    } ${this.ifIndex()}${this.ifKeyWord()} ${this.ifCountry(
+      countries
+    )}${this.ifYears(years)} ${this.getReturns()}sort by count`;
+  }
+  queryDim(years, countries) {
+    console.log(years + " " + countries);
+    this.responses.push({
+      request: { year: years, country: this.query.country[countries] },
+      response: {}
+    });
+    console.log(this.responses);
     d3.json(this.route, {
       method: "POST",
-      body: JSON.stringify({
-        query: `search ${
-          this.query.source
-        } ${this.ifIndex()} ${this.ifKeyWord()} ${this.ifCountry(
-          countries
-        )} ${this.ifYears(years)} ${this.getReturns()} sort by count`
-      }),
+      body: JSON.stringify({ query: this.buildQuery(years, countries) }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
-    });
+    }).then(this.response.bind(this));
   }
 
+  response(resp, err) {
+    if (err != null) {
+      console.error(err);
+      return;
+    }
+    let response = JSON.parse(resp.body);
+    if ("errors" in response) {
+      console.error(response.errors);
+      return;
+    }
+    const endElement = this.responses.length - 1;
+    this.responses[endElement].response = response;
+    console.log(resp);
+    if (this.currentYear < this.query.years[1]) {
+      this.currentYear++;
+      this.queryDim(this.currentYear, this.currentCountry);
+    } else {
+      if (this.currentCountry < this.query.country.length - 1) {
+        this.currentCountry++;
+        this.currentYear = this.query.years[0];
+        this.queryDim(this.currentYear, this.currentCountry);
+      } else {
+        this.finished();
+      }
+    }
+  }
+
+  finished() {
+    console.log(this.responses);
+  }
   getReturns() {
-    let result = "return ";
-    for (i = 0; i < this.query.returns.length; i++) {
-      result += this.query.returns[i] + " return ";
+    let result = "";
+    for (let i = 0; i < this.query.returns.length; i++) {
+      result += "return " + this.query.returns[i] + " ";
     }
     return `${result}`;
   }
   ifYears(year) {
-    if (!this.query.country.length) {
+    if (year == null) {
+      return ``;
+    }
+    if (this.query.country.length > 0) {
+      return `and year=${year} `;
+    } else {
       return `where year=${year} `;
-    } else `and year=${year} `;
+    }
   }
   ifCountry(index) {
     if (index == null) {
       return ``;
+    }
+    if (this.query.country[index][0] == "!") {
+      return `where research_org_country_names!="${
+        this.query.country[index].split("!")[0]
+      }" `;
     }
     return `where research_org_country_names="${this.query.country[index]}" `;
   }
@@ -181,7 +255,7 @@ class QueryObject {
     if (this.query.index == null) {
       return ``;
     }
-    return `in ${this.query.index}`;
+    return `in ${this.query.index} `;
   }
   format(data) {}
 }

@@ -285,7 +285,6 @@ class D3Chart {
 				endFormat = '%Y-%-m-%-d %H:%M:%S';
 				this.X.maxTicks = 10;
 			}
-			console.log(`min: ${xmin}, max: ${xmax}`);
 			let spread = interval.count(xmin, xmax),
 				every = Math.ceil(spread / Math.min(this.X.maxTicks, spread)),
 				formatter = d3.timeFormat(endFormat),
@@ -507,9 +506,7 @@ class D3Chart {
 							update: (val) => {
 								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr('font-size', '1px');
 								let width = d3.select(nodes[i]).node().getComputedTextLength();
-								console.log(width);
 								width = Math.floor(this.legend.clipArea.attr('width') / width);
-								console.log(d3.select(nodes[i]).node().getBBox().width);
 								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr('font-size', width +'px');
 							},
 						};

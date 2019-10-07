@@ -1,5 +1,8 @@
 $(function() {
   //the chart object contains all of the d3 graphing
+  document.getElementById(
+    "query-field"
+  ).value = `{"source":"", "keywords":"", "filters":{"country":[], "year":[]},"returns":[]}`;
   var chartObj;
   let checked = false;
   let lead = 0;
@@ -36,77 +39,81 @@ $(function() {
     event.stopPropagation();
     event.preventDefault();
     let tmpButton = document.getElementById(buttonID);
-
-    tmpButton.innerHTML = `<span class="spinner-grow spinner-grow-sm"></span>`;
-    tmpButton.disabled = true;
-    if (tmpButton.classList.contains("animate")) {
-      tmpButton.classList.remove("animate");
-    }
+    //
+    //tmpButton.innerHTML = `<span class="spinner-grow spinner-grow-sm"></span>`;
+    //tmpButton.disabled = true;
+    //if (tmpButton.classList.contains("animate")) {
+    //  tmpButton.classList.remove("animate");
+    //}
     var query = document.getElementById(fieldID).value;
-    Promise.all(queryDim(2015, 2018, query)).then(function(values) {
-      console.log(values);
-      var lines = [];
-      let totals = [];
-      let subGraphData = [];
-      try {
-        let result = aggregateQuery(values);
-        console.log(result);
-        totals[0] = JSON.parse(values[values.length - 2].body).year;
-        totals[1] = JSON.parse(values[values.length - 1].body).year;
-        lines[0] = result.notCanada.keyWordTotal;
-        lines[1] = result.canada.keyWordTotal;
-        let keys = [...result.canada.categories.keys()];
-        for (let i = 0; i < keys.length; i++) {
-          normalize(
-            [
-              result.notCanada.categories.get(keys[i]),
-              result.canada.categories.get(keys[i])
-            ],
-            lines
-          );
-        }
-        for (let i = 0; i < keys.length; i++) {
-          subGraphData.push(
-            convertToLineData([
-              result.canada.categories.get(keys[i]),
-              result.notCanada.categories.get(keys[i])
-            ])
-          );
-          subGraphData[i].graphName = keys[i];
-        }
-        console.log(subGraphData.length);
-        for (let i = 0; i < multiCharts.length; i++) {
-          multiCharts[i].cleanup();
-        }
-        multiCharts = [];
-        createMultiGraphs(subGraphData, multiCharts, "multicharts");
-      } catch (e) {
-        console.log(e);
-        //animate button to display error
-        let tmpButton = document.getElementById(buttonID);
-        tmpButton.innerHTML = "Query";
-        tmpButton.disabled = false;
-        tmpButton.classList.toggle("animate");
-        return;
-      }
-      //set button to query as the previous query is finished
-      document.getElementById(buttonID).innerHTML = "Query";
-      document.getElementById(buttonID).disabled = false;
 
-      normalize(lines, totals);
-      console.log([lines[0], lines[1]]);
-      linedata = convertToLineData([lines[0], lines[1]]);
-      console.log(linedata);
-      chartObj.smoothing = 1;
-      chartObj.updateXScale(
-        new Date(linedata.xdomain[0], 0),
-        new Date(linedata.xdomain[1], 0)
-      );
-      chartObj.updateYScale(linedata.ydomain[0], linedata.ydomain[1]);
-      chartObj.updateLines(linedata.lines);
-      lead = leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata);
-      console.log(lead);
-    });
+    let qObject = new QueryObject(query);
+
+    console.log(qObject.query);
+    // Promise.all(queryDim(2015, 2018, query)).then(function(values) {
+    //   console.log(values);
+    //   var lines = [];
+    //   let totals = [];
+    //   let subGraphData = [];
+    //   try {
+    //     let result = aggregateQuery(values);
+    //     console.log(result);
+    //     totals[0] = JSON.parse(values[values.length - 2].body).year;
+    //     totals[1] = JSON.parse(values[values.length - 1].body).year;
+    //     lines[0] = result.notCanada.keyWordTotal;
+    //     lines[1] = result.canada.keyWordTotal;
+    //     let keys = [...result.canada.categories.keys()];
+    //     for (let i = 0; i < keys.length; i++) {
+    //       normalize(
+    //         [
+    //           result.notCanada.categories.get(keys[i]),
+    //           result.canada.categories.get(keys[i])
+    //         ],
+    //         lines
+    //       );
+    //     }
+    //     for (let i = 0; i < keys.length; i++) {
+    //       subGraphData.push(
+    //         convertToLineData([
+    //           result.canada.categories.get(keys[i]),
+    //           result.notCanada.categories.get(keys[i])
+    //         ])
+    //       );
+    //       subGraphData[i].graphName = keys[i];
+    //     }
+    //     console.log(subGraphData.length);
+    //     for (let i = 0; i < multiCharts.length; i++) {
+    //       multiCharts[i].cleanup();
+    //     }
+    //     multiCharts = [];
+    //     createMultiGraphs(subGraphData, multiCharts, "multicharts");
+    //   } catch (e) {
+    //     console.log(e);
+    //     //animate button to display error
+    //     let tmpButton = document.getElementById(buttonID);
+    //     tmpButton.innerHTML = "Query";
+    //     tmpButton.disabled = false;
+    //     tmpButton.classList.toggle("animate");
+    //     return;
+    //   }
+    //   //set button to query as the previous query is finished
+    //   document.getElementById(buttonID).innerHTML = "Query";
+    //   document.getElementById(buttonID).disabled = false;
+    //
+    //   normalize(lines, totals);
+    //   console.log([lines[0], lines[1]]);
+    //   linedata = convertToLineData([lines[0], lines[1]]);
+    //   console.log(linedata);
+    //   chartObj.smoothing = 1;
+    //   chartObj.updateXScale(
+    //     new Date(linedata.xdomain[0], 0),
+    //     new Date(linedata.xdomain[1], 0)
+    //   );
+    //   chartObj.updateYScale(linedata.ydomain[0], linedata.ydomain[1]);
+    //   chartObj.updateLines(linedata.lines);
+    //   lead = leadlag(linedata.lines[0].rawdata, linedata.lines[1].rawdata);
+    //   console.log(lead);
+    // });
   });
 
   /**
