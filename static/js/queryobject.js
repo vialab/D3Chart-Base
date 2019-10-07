@@ -63,23 +63,36 @@ class QueryObject {
 
   analyzeQuery() {
     let jsonQuery = JSON.parse(this.rawQuery);
+    console.log(jsonQuery);
     //source
     if ("source" in jsonQuery) {
-      console.log(jsonQuery.source);
       if (jsonQuery.source in this.reference.sources) {
         this.query.source = jsonQuery.source;
       } else {
-        throw new Error(`Invalid Source ${jsonQuery.source}`);
+        throw new Error(
+          `Invalid Source ${jsonQuery.source}. Examples: ${JSON.stringify(
+            this.reference.sources
+          )}`
+        );
       }
     } else {
-      throw new Error("Requires source");
+      throw new Error(
+        `Requires source. Example sources: ${JSON.stringify(
+          this.reference.sources
+        )}`
+      );
     }
     //indices
     if ("indices" in jsonQuery) {
+      console.log("indices");
       for (let index in jsonQuery.indices) {
-        if (!index in this.reference.indices[this.query.source]) {
+        if (!(index in this.reference.indices[this.query.source])) {
           throw new Error(
-            `Invalid index ${index} for source ${this.query.source}`
+            `Invalid index ${jsonQuery.indices[index]} for source ${
+              this.query.source
+            } examples: ${JSON.stringify(
+              this.reference.indices[this.query.source]
+            )}`
           );
         }
       }

@@ -73,7 +73,7 @@ class D3Chart {
 		left: 50,
 	};
 	padding = {
-		legendPadding: 0,
+		legendPadding: 5,
 		mouseEffectPadding: 12,
 		// mouseEffectPadding: 0,
 	}
@@ -217,9 +217,7 @@ class D3Chart {
 		// Create an axis component with d3.axisBottom
 		this.X.axis = d3.axisBottom(this.X.scale);
 
-		this.X.axisNode = this.svg.append('g')
-			.attr('class', 'x axis')
-			.attr('transform', `translate(0, ${this.chartHeight} )`);
+		this.X.axisNode = this.svg.append('g');
 
 		this.updateXAxis(anim);
 	}
@@ -235,6 +233,9 @@ class D3Chart {
 			this.createXAxis(false);
 			return;
 		}
+		this.X.axisNode.attr('class', 'x-axis')
+			.attr('transform', `translate(0, ${this.chartHeight} )`).attr("font-size", 8);
+
 		this.X.axis.scale(this.X.scale);
 
 		if (this.isTime) {
@@ -720,6 +721,7 @@ class D3Chart {
 	setWidth(width) {
 		this.width = width;
 		this.chartWidth = this.width - this.margin.left - this.margin.right;
+		console.log(this.chartWidth);
 	}
 	/**
 	 * Returns base width
@@ -771,9 +773,16 @@ class D3Chart {
 	{
 		this.setHeight(size);
 		this.setWidth(size);
-		this.setBaseHeight(size);
-		this.setBaseWidth(size);
+		this.updateBase();
+
+		this.updateXScale();
+		
+		this.updateYScale();
+
 		this.updateLegend();
+
+		this.updateLines();
+		this.updateMouseArea();
 	}
 	/**
 	 * Returns base height
@@ -807,7 +816,6 @@ class D3Chart {
 		this.parent = element;
 
 		let parnode = this.parent.node();
-
 		this.setWidth(parnode.clientWidth); // Use the parent's width
 		this.setHeight(parnode.clientHeight); // Use the parent's height
 

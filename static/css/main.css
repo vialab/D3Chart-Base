@@ -146,3 +146,28 @@ input:checked + .slider:before {
   height: 800px;
   overflow-y: scroll;
 }
+
+.multi-container {
+  display: inline-flex;
+  box-sizing: border-box;
+  float: left;
+  height: 100%;
+  width: 100%;
+  overflow-y: unset;
+}
+
+.multi-container:nth-child(n) {
+  width: calc(100% / n);
+}
+.chart multi-container {
+  flex-shrink: 0.5;
+  float: left;
+  height: auto;
+  width: auto;
+}
+.row {
+  box-sizing: border-box;
+  display: inline-flex;
+  height: 100%;
+  width: 100%;
+}
