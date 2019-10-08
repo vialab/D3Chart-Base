@@ -322,11 +322,38 @@ $(function() {
     viewManager.addChart("main-view", result, data => {
       data.chartName = "total3";
     });
+    viewManager.addChart("main-view", result, data => {
+      data.chartName = "total4";
+    });
+    viewManager.addChart("main-view", result, data => {
+      data.chartName = "total5";
+    });
+    viewManager.addChart("main-view", result, data => {
+      data.chartName = "total6";
+    });
+    viewManager.addChart("main-view", result, data => {
+      data.chartName = "total7";
+    });
     viewManager.addChart("sub-view", result, data => {
       data.chartName = "total3";
     });
     viewManager.addChart("sub2-view", result, data => {
       data.chartName = "total3";
+    });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total";
+    });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total2";
+    });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total3";
+    });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total4";
+    });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total5";
     });
     // chartObj = new D3Chart("#ngramchart", true, "Total");
     // if (result.xdomain) {

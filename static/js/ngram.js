@@ -97,14 +97,21 @@ class D3Chart {
 	///////////////////////////////////////////////////////////////
 
 	/**
-	 * Creates an instance of D3Chart. pass it the parent element in which you want the chart to be placed in (string or a d3.select).
 	 * @param {string or d3 selection} [parent=null]
 	 * @param {boolean} [isTime=true]
-	 * @memberof D3Chart
+	 * @param  {} name='legend'
+	 * @param  {x:, y: } size
 	 */
-	constructor(parent = null, isTime = true, name='legend') {
+	constructor(parent = null, isTime = true, name='legend', size = null) {
 		if (parent != null) {
-			this.setParent(parent);
+			if(size !=null)
+			{
+				this.setParent(parent, size);
+			}
+			else
+			{
+				this.setParent(parent);
+			}
 		}
 		this.isTime = isTime;
 		this.legend.titleText=name;
@@ -132,7 +139,9 @@ class D3Chart {
 			this.base.remove();
 		}
 
-		this.base = this.parent.append('svg');
+		this.base = this.parent.append('svg')
+		.attr('viewBox', `0 0 ${this.width} ${this.height}`)
+		.attr("preserveAspectRatio", "none");
 		this.svg = this.base.append('g');
 
 		this.updateBase();
@@ -150,6 +159,7 @@ class D3Chart {
 		this.base //.transition().delay(this.transition.delay).duration(this.transition.duration).ease(this.transition.ease)
 			.attr('width', this.width)
 			.attr('height', this.height);
+			//.attr('viewBox', `0 0 ${this.width} ${this.height}`);
 
 		this.svg //.transition().delay(this.transition.delay).duration(this.transition.duration).ease(this.transition.ease)
 			.attr('transform', `translate(${this.margin.left},${this.margin.top})`);
@@ -479,19 +489,12 @@ class D3Chart {
 		this.legend.clipArea
 			.attr('x', this.legend.padding.left)
 			.attr('y', 0)
-			.attr('width', this.chartWidth / this.legend.legendToChartRatio)
-			.attr('height', this.chartHeight / this.legend.legendToChartRatio);
+			.attr('width', this.legend.width - this.legend.padding.right - this.legend.padding.left)
+			.attr('height', this.chartHeight);
 
 		this.legend.titleNode.text(this.legend.titleText)
 			.attr('x', 0)
-			.attr('dy', 17).attr('font-size', '1px');
-			{
-				let width = this.legend.titleNode.node().getComputedTextLength();
-				width = Math.floor(this.legend.clipArea.attr('width') / width);
-				this.legend.titleNode.text(this.legend.titleText)
-				.attr('x', 0)
-				.attr('dy', 17).attr('font-size', width + 'px');
-			}
+			.attr('dy', 17);
 
 		this.legend.entries = this.legendBase.selectAll('.legend')
 			.data(this.data, d => d.name)
@@ -505,10 +508,7 @@ class D3Chart {
 						this.legend.dataNodes[d.name] = {
 							node: d3.select(nodes[i]),
 							update: (val) => {
-								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr('font-size', '1px');
-								let width = d3.select(nodes[i]).node().getComputedTextLength();
-								width = Math.floor(this.legend.clipArea.attr('width') / width);
-								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr('font-size', width +'px');
+								d3.select(nodes[i]).text(`${d.name}: ${val}`);
 							},
 						};
 					}),
@@ -721,7 +721,6 @@ class D3Chart {
 	setWidth(width) {
 		this.width = width;
 		this.chartWidth = this.width - this.margin.left - this.margin.right;
-		console.log(this.chartWidth);
 	}
 	/**
 	 * Returns base width
@@ -769,20 +768,10 @@ class D3Chart {
 	/**
 	 * @param  {number} size - uniformly set the graph's size.
 	 */
-	uniformSize(size)
+	scale(scale)
 	{
-		this.setHeight(size);
-		this.setWidth(size);
-		this.updateBase();
-
-		this.updateXScale();
-		
-		this.updateYScale();
-
-		this.updateLegend();
-
-		this.updateLines();
-		this.updateMouseArea();
+		this.setBaseWidth(this.width * scale);
+		this.setBaseHeight(this.width * scale);
 	}
 	/**
 	 * Returns base height
@@ -809,15 +798,24 @@ class D3Chart {
 	 * @param {*} element
 	 * @memberof D3Chart
 	 */
-	setParent(element) {
+	setParent(element, size=null) {
 		if (typeof (element) === 'string') {
 			element = d3.select(element);
 		}
+
 		this.parent = element;
 
 		let parnode = this.parent.node();
-		this.setWidth(parnode.clientWidth); // Use the parent's width
-		this.setHeight(parnode.clientHeight); // Use the parent's height
+		if(size !=null)
+		{
+			this.setWidth(size.x); // Use the parent's width
+			this.setHeight(size.y); // Use the parent's height	
+		}
+		else
+		{
+			this.setWidth(parnode.clientWidth); // Use the parent's width
+			this.setHeight(parnode.clientHeight); // Use the parent's height
+		}
 
 		this.createBase();
 	}

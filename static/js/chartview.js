@@ -40,13 +40,17 @@ class ChartView {
     let div = document.createElement("div");
     div.setAttribute("id", `${elementId}`);
     div.setAttribute("class", "chart");
+    const width = this.parent.offsetWidth;
+    const height = this.parent.offsetHeight;
+    let uniformSize = Math.min(width, height);
     this.viewList[view].appendChild(div);
 
     this.charts[view][data.chartName] = { data: null, chart: null };
     this.charts[view][data.chartName].chart = new D3Chart(
       "#" + elementId,
       true,
-      data.chartName
+      data.chartName,
+      { x: uniformSize, y: uniformSize }
     );
     this.charts[view][data.chartName]["data"] = data;
     this.getChart(view, data.chartName).updateXScale(
@@ -76,6 +80,7 @@ class ChartView {
       this.viewList[view] = document.createElement("div");
       this.viewList[view].setAttribute("id", `${view}`);
       this.viewList[view].setAttribute("class", "multi-container");
+      this.viewList[view].setAttribute("itemscale", 1.0);
       this.parent.prepend(this.viewList[view]);
       this.charts[view] = {};
       this.scaleViews();
@@ -92,12 +97,38 @@ class ChartView {
   scaleCharts() {
     for (let key in this.charts) {
       let numOfChartsInView = Object.keys(this.charts[key]).length;
-      let size = Math.min(
-        this.viewList[key].offsetHeight / numOfChartsInView,
-        this.viewList[key].offsetWidth / numOfChartsInView
+      let itemScale = this.viewList[key].getAttribute("itemscale");
+      let size = Math.floor(
+        Math.min(
+          this.viewList[key].clientHeight * itemScale,
+          this.viewList[key].clientWidth * itemScale
+        )
       );
+      let numOfColumns = Math.floor(this.viewList[key].clientWidth / size);
+      console.log(
+        "size: " +
+          size * (numOfChartsInView / numOfColumns) +
+          " container:" +
+          this.viewList[key].offsetHeight
+      );
+      console.log("size:" + size + " width: " + this.viewList[key].clientWidth);
+      if (
+        numOfChartsInView >
+        this.viewList[key].clientHeight / size +
+          this.viewList[key].clientWidth / size
+      ) {
+        this.viewList[key].setAttribute("itemscale", itemScale * 0.5);
+        this.scaleCharts();
+        return;
+      }
       for (let chart in this.charts[key]) {
-        this.charts[key][chart].chart.uniformSize(size);
+        this.charts[key][chart].chart.setBaseWidth(size);
+        this.charts[key][chart].chart.setBaseHeight(size);
+      }
+      let children = document.getElementById(key).children;
+      for (let i = 0; i < children.length; i++) {
+        children[i].style.width = size;
+        children[i].style.height = size;
       }
     }
   }
