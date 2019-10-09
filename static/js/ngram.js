@@ -475,7 +475,19 @@ class D3Chart {
 
 		// this.updateLegend();
 	}
-
+	
+	/**
+	 * @param  {function(e)} callback
+	 */
+	getParentOnClick(callback)
+	{
+		console.log(this.parent.node().id);
+		this.base.on('click', 
+		()=>
+		{
+			callback(this.parent);
+		});
+	}
 
 	/**
 	 * Updates the legend base elements positioning and width, as well as creates/updates/removes the appropriate legend entries corresponding to lines in the chart.

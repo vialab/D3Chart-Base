@@ -154,12 +154,13 @@ input:checked + .slider:before {
   height: 100%;
   width: 100%;
   overflow-y: unset;
+  position: relative;
 }
 
 .chart {
   height: 100%;
   width: 100%;
-  position: relative;
+  position: absolute;
 }
 
 .row {

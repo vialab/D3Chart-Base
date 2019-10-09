@@ -337,6 +337,7 @@ $(function() {
     viewManager.addChart("sub-view", result, data => {
       data.chartName = "total3";
     });
+    viewManager.setMainView("sub-view");
     viewManager.addChart("sub2-view", result, data => {
       data.chartName = "total3";
     });
@@ -355,6 +356,13 @@ $(function() {
     viewManager.addChart("mai2n-view", result, data => {
       data.chartName = "total5";
     });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total6";
+    });
+    viewManager.addChart("mai2n-view", result, data => {
+      data.chartName = "total7";
+    });
+
     // chartObj = new D3Chart("#ngramchart", true, "Total");
     // if (result.xdomain) {
     //   var xmin = new Date(result.xdomain[0], 0);
