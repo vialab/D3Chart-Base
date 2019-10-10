@@ -2,7 +2,7 @@ $(function() {
   //the chart object contains all of the d3 graphing
   document.getElementById(
     "query-field"
-  ).value = `{"source":"", "keywords":"", "filters":{"country":[], "year":[]},"returns":[]}`;
+  ).value = `{"source":"publications", "keywords":"spinach", "filters":{"country":["Canada", "!Canada"], "year":["2017","2018"]},"returns":["year","category_for"]}`;
   var chartObj;
   let checked = false;
   let lead = 0;
@@ -70,41 +70,6 @@ $(function() {
       });
     }
     return result;
-  }
-
-  /**
-   * @param  {Object} data - format {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
-   * @param  {Array} graphContainer - This array or list will contain the charts
-   * @param  {String} containgElement - A string of the element's id that will contain the graphs
-   */
-  function createMultiGraphs(data, graphContainer, containingElement) {
-    let containerHeight = document.getElementById(containingElement)
-      .clientHeight;
-    let height = containerHeight / data.length;
-    let maxY = 0;
-    let minY = 1;
-    for (let i = 0; i < data.length; i++) {
-      maxY = Math.max(data[i].ydomain[1], maxY);
-      minY = Math.min(data[i].ydomain[0], minY);
-    }
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].xdomain[0] == data[i].xdomain[1]) {
-        continue;
-      }
-      graphContainer.push(
-        new D3Chart("#" + containingElement, true, data[i].graphName)
-      );
-      let size = graphContainer.length - 1;
-      graphContainer[size].setHeight(300);
-      graphContainer[size].setBaseHeight(300);
-      graphContainer[size].smoothing = 1;
-      graphContainer[size].updateXScale(
-        new Date(data[i].xdomain[0], 0),
-        new Date(data[i].xdomain[1], 0)
-      );
-      graphContainer[size].updateYScale(minY, maxY);
-      graphContainer[size].updateLines(data[i].lines);
-    }
   }
 
   /**
@@ -180,131 +145,6 @@ $(function() {
     }
     return result;
   }
-  /**
-   * @param  {Number} minYear - the starting year to query (inclusive)
-   * @param  {Number} maxYear - the maximum year to query (inclusive)
-   * @param  {string} keyword - the keyword to search for
-   * @returns {Array[Promise]}  returns array of promises
-   */
-  function queryDim(minYear, maxYear, keyword) {
-    let url = "/query-dimensions";
-    let promises = [];
-    for (let i = minYear; i <= maxYear; i++) {
-      console.log(i);
-      promises.push(
-        d3.json(url, {
-          method: "POST",
-          body: JSON.stringify({
-            query: `search publications in title_abstract_only for "${keyword}" where research_org_country_names!="Canada" and year=${i} return year return category_for sort by count`
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        })
-      );
-      promises.push(
-        d3.json(url, {
-          method: "POST",
-          body: JSON.stringify({
-            query: `search publications in title_abstract_only for "${keyword}" where research_org_country_names="Canada" and year=${i} return year return category_for sort by count`
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        })
-      );
-    }
-    //totals for normalizing that year
-    promises.push(
-      d3.json(url, {
-        method: "POST",
-        body: JSON.stringify({
-          query: `search publications where research_org_country_names!="Canada" and year>=${minYear} and year<=${maxYear} return year`
-        }),
-        headers: {
-          "Content-type": "application/json; charset=UTF-8"
-        }
-      })
-    );
-    promises.push(
-      d3.json(url, {
-        method: "POST",
-        body: JSON.stringify({
-          query: `search publications where research_org_country_names="Canada" and year>=${minYear} and year<=${maxYear} return year`
-        }),
-        headers: {
-          "Content-type": "application/json; charset=UTF-8"
-        }
-      })
-    );
-
-    return promises;
-  }
-  /**
-   * @param  {Array[Reponse]} values - an array of response objects
-   * @returns {{categories: new Map(), keyWordTotal: [], total: []}, notCanada: {categories: new Map(), keyWordTotal: [], total: []}}} format { canada: {categories: new Map(), keyWordTotal: [], total: []}, notCanada: {categories: new Map(), keyWordTotal: [], total: []}}
-   */
-  function aggregateQuery(values) {
-    aggregatedResult = {
-      canada: {
-        categories: new Map(),
-        keyWordTotal: [],
-        total: []
-      },
-      notCanada: {
-        categories: new Map(),
-        keyWordTotal: [],
-        total: []
-      }
-    };
-    canada = false;
-    //the last two elements are total queries used for normalizing
-    endOfYearlyData = values.length - 2;
-    for (let i = 0; i < endOfYearlyData; i++) {
-      json = JSON.parse(values[i].body);
-      if (canada) {
-        aggregatedResult.canada.keyWordTotal.push(json.year[0]);
-        for (let j = 0; j < json.category_for.length; j++) {
-          if (
-            aggregatedResult.canada.categories.has(json.category_for[j].name)
-          ) {
-            aggregatedResult.canada.categories
-              .get(json.category_for[j].name)
-              .push({ id: json.year[0].id, count: json.category_for[j].count });
-          } else {
-            aggregatedResult.canada.categories.set(
-              json.category_for[j].name,
-              []
-            );
-            aggregatedResult.canada.categories
-              .get(json.category_for[j].name)
-              .push({ id: json.year[0].id, count: json.category_for[j].count });
-          }
-        }
-      } else {
-        aggregatedResult.notCanada.keyWordTotal.push(json.year[0]);
-        for (let j = 0; j < json.category_for.length; j++) {
-          if (
-            aggregatedResult.notCanada.categories.has(json.category_for[j].name)
-          ) {
-            aggregatedResult.notCanada.categories
-              .get(json.category_for[j].name)
-              .push({ id: json.year[0].id, count: json.category_for[j].count });
-          } else {
-            aggregatedResult.notCanada.categories.set(
-              json.category_for[j].name,
-              []
-            );
-            aggregatedResult.notCanada.categories
-              .get(json.category_for[j].name)
-              .push({ id: json.year[0].id, count: json.category_for[j].count });
-          }
-        }
-      }
-      canada = !canada;
-    }
-    return aggregatedResult;
-  }
 
   /**
    * gets default view for the graphs. The data being presented has no meaning.
@@ -316,61 +156,6 @@ $(function() {
     viewManager.addChart("main-view", result, data => {
       data.chartName = "total";
     });
-    viewManager.addChart("main-view", result, data => {
-      data.chartName = "total2";
-    });
-    viewManager.addChart("main-view", result, data => {
-      data.chartName = "total3";
-    });
-    viewManager.addChart("main-view", result, data => {
-      data.chartName = "total4";
-    });
-    viewManager.addChart("main-view", result, data => {
-      data.chartName = "total5";
-    });
-    viewManager.addChart("main-view", result, data => {
-      data.chartName = "total6";
-    });
-    viewManager.addChart("main-view", result, data => {
-      data.chartName = "total7";
-    });
-    viewManager.addChart("sub-view", result, data => {
-      data.chartName = "total3";
-    });
-    viewManager.setMainView("sub-view");
-    viewManager.addChart("sub2-view", result, data => {
-      data.chartName = "total3";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total2";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total3";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total4";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total5";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total6";
-    });
-    viewManager.addChart("mai2n-view", result, data => {
-      data.chartName = "total7";
-    });
-
-    // chartObj = new D3Chart("#ngramchart", true, "Total");
-    // if (result.xdomain) {
-    //   var xmin = new Date(result.xdomain[0], 0);
-    //   var xmax = new Date(result.xdomain[1], 0);
-    // }
-    // chartObj.updateXScale(xmin, xmax);
-    // chartObj.updateYScale(result.ydomain[0], result.ydomain[1]);
-    //
-    // chartObj.updateLines(result.lines);
+    viewManager.setMainView("main-view");
   });
 });

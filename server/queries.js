@@ -9,6 +9,7 @@ const login = require("./configlogin.json");
 var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
 let jwt_token = require("../credentials.json");
+const institutes = require("../institutes.json");
 
 console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
@@ -79,5 +80,45 @@ const queryDimensions = async (req, resp) => {
     console.log("Reached API limit");
   }
 };
+
+function sleepFor(sleepDuration) {
+  var now = new Date().getTime();
+  while (new Date().getTime() < now + sleepDuration) {
+    /* do nothing */
+  }
+}
+
+function getData(year) {
+  console.log("year:" + year);
+  sleepFor(5000);
+  if (year == institutes.research_orgs.length) {
+    return;
+  }
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications where research_org_state_codes.name="Quebec" return research_orgs`
+  };
+  console.log(options.body);
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+    console.log(res.body);
+    let jsonBody = JSON.parse(res.body);
+    let outputFileName = `./test.json`;
+    fs.writeFile(outputFileName, JSON.stringify(jsonBody), err => {
+      console.error(err);
+    });
+    year += 1;
+    //getData(year);
+  });
+}
+
+getData(0);
 
 module.exports = queryDimensions;

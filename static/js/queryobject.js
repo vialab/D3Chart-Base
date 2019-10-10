@@ -6,15 +6,19 @@ class QueryObject {
     index: null,
     keyword: "",
     country: [],
-    years: "",
+    years: [],
     range: "",
     returns: [],
     sort: "",
     aggregate: ""
   };
-  reponseList = {
-    category_for: { count: "", name: "" },
-    year: { id: "", count: "" }
+  responseList = {
+    category_for: { x: "year", y: "count", format: this.category_for },
+    year: {
+      x: "id",
+      y: "count",
+      format: this.year
+    }
   };
 
   reference = {
@@ -49,7 +53,8 @@ class QueryObject {
     },
 
     returns: {
-      year: "year"
+      year: "year",
+      category_for: "category_for"
     }
   };
   responses = [];
@@ -187,7 +192,11 @@ class QueryObject {
   queryDim(years, countries) {
     console.log(years + " " + countries);
     this.responses.push({
-      request: { year: years, country: this.query.country[countries] },
+      request: {
+        year: years,
+        country: this.query.country[countries],
+        return: this.query.returns
+      },
       response: {}
     });
     console.log(this.responses);
@@ -210,6 +219,7 @@ class QueryObject {
       console.error(response.errors);
       return;
     }
+    delete response._stats;
     const endElement = this.responses.length - 1;
     this.responses[endElement].response = response;
     console.log(resp);
@@ -229,6 +239,7 @@ class QueryObject {
 
   finished() {
     console.log(this.responses);
+    this.aggregate(this.responses, this.query);
   }
   getReturns() {
     let result = "";
@@ -252,9 +263,9 @@ class QueryObject {
       return ``;
     }
     if (this.query.country[index][0] == "!") {
-      return `where research_org_country_names!="${
-        this.query.country[index].split("!")[0]
-      }" `;
+      return `where research_org_country_names!="${this.query.country[
+        index
+      ].replace("!", "")}" `;
     }
     return `where research_org_country_names="${this.query.country[index]}" `;
   }
@@ -270,5 +281,67 @@ class QueryObject {
     }
     return `in ${this.query.index} `;
   }
-  format(data) {}
+  /**
+   * @param  {{{year: country: returns:},{reponse:}}} data
+   */
+  aggregate(data, query) {
+    let containerByCountry = {};
+    for (let country in query.country) {
+      containerByCountry[query.country[country]] = {};
+      for (let returns in query.returns) {
+        containerByCountry[query.country[country]][query.returns[returns]] = {};
+      }
+    }
+    console.log(containerByCountry);
+    for (let i = 0; i < data.length; i++) {
+      for (let response in query.returns) {
+        response = query.returns[response];
+        console.log(response);
+        let tmp = this.format(
+          data[i].response[response],
+          response,
+          data[i].request.year
+        );
+        for (let key in tmp) {
+          if (key in containerByCountry[data[i].request.country][response]) {
+            containerByCountry[data[i].request.country][response][key].push(
+              tmp[key]
+            );
+          } else {
+            containerByCountry[data[i].request.country][response][key] = [];
+            containerByCountry[data[i].request.country][response][key].push(
+              tmp[key]
+            );
+          }
+        }
+      }
+    }
+    console.log(containerByCountry);
+    return containerByCountry;
+  }
+  format(result, category, year) {
+    //{chartName: xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
+    let tmp = this.responseList[category].format(result, year);
+    console.log(tmp);
+    return tmp;
+  }
+
+  category_for(data, year) {
+    let result = {};
+    for (let i = 0; i < data.length; i++) {
+      let rawData = { x: year, y: data[i].count };
+      result[data[i].name] = [];
+      result[data[i].name].push(rawData);
+    }
+    return result;
+  }
+
+  year(data, year) {
+    result = {};
+    for (let i = 0; i < data.length; i++) {
+      result["year"] = [];
+      result["year"].push([{ x: data[i].id, y: data[i].count }]);
+    }
+    return result;
+  }
 }
