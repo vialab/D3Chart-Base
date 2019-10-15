@@ -50,8 +50,12 @@ $(function() {
     var query = document.getElementById(fieldID).value;
 
     let qObject = new QueryObject(query);
-
-    console.log(qObject.query);
+    qObject.callbackWhenFinished(data => {
+      for (let chart in data) {
+        viewManager.addChart(data[chart].viewName, data[chart]);
+      }
+    });
+    qObject.analyzeQuery();
   });
 
   /**

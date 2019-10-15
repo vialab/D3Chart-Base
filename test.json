@@ -1,0 +1,1 @@
+{"errors":{"query":{"header":"1 QuerySyntaxError found\n","details":["1 ParserError found\n  * [Line 1:34] ('where') mismatched input 'where' expecting 'for'"],"query":"search publications in title_only where research_org_country_names=\"Canada\" return research_orgs"}}}

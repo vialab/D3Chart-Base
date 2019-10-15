@@ -38,7 +38,10 @@ class ChartView {
         return;
       }
     }
-    const elementId = view + "-" + data.chartName;
+    let id = data.chartName.replace(/^[^a-z]+|[^\w:.-]+/gi, "");
+    id = id.replace(".", "");
+    const elementId = view + "-" + id;
+    console.log(elementId);
     let div = document.createElement("div");
     div.setAttribute("id", `${elementId}`);
     div.setAttribute("class", "chart");
@@ -67,7 +70,7 @@ class ChartView {
       data.ydomain[1]
     );
     this.getChart(view, elementId).updateLines(data.lines);
-    this.scaleCharts(this.viewList[view]);
+    this.scaleCharts(this.parent.children);
   }
   getChart(view, chartName) {
     return this.charts[view][chartName]["chart"];
@@ -192,6 +195,8 @@ class ChartView {
       //move node to main view
       this.viewList[parent_id].removeChild(e.node());
       this.viewList[this.mainView.element_id].appendChild(e.node());
+
+      //$("#" + e.node().id).find('svg').animate({ height: "-=100px", width: "-=100px" });
       //move main view node to view the above node came from
       let tempNode = this.viewList[this.mainView.element_id].children[0];
       this.viewList[this.mainView.element_id].removeChild(tempNode);
@@ -211,6 +216,18 @@ class ChartView {
         this.viewList[this.mainView.element_id],
         this.viewList[parent_id]
       ]);
+      //$(this.parent.id)
+      //  .hide()
+      //  .show(0);
+      //$("#" + e.node().id)
+      //  .children("svg")
+      //  .animate({ width: "+=20px", height: "+=20px" }, "fast")
+      //  .animate({ width: "-=20px", height: "-=20px" }, "fast");
+      //
+      //$("#" + tempNode.id)
+      //  .children("svg")
+      //  .animate({ width: "+=20px", height: "+=20px" }, "fast")
+      //  .animate({ width: "-=20px", height: "-=20px" }, "fast");
       console.log(this.charts);
     }
   }

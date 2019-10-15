@@ -1,4 +1,5 @@
 class QueryObject {
+  callback = data => {};
   intervals = 1;
   rawQuery;
   query = {
@@ -54,7 +55,8 @@ class QueryObject {
 
     returns: {
       year: "year",
-      category_for: "category_for"
+      category_for: "category_for",
+      funding_usd: "funding"
     }
   };
   responses = [];
@@ -63,7 +65,6 @@ class QueryObject {
   currentCountry;
   constructor(query) {
     this.rawQuery = query;
-    this.analyzeQuery();
   }
 
   analyzeQuery() {
@@ -237,9 +238,14 @@ class QueryObject {
     }
   }
 
+  callbackWhenFinished(callback) {
+    this.callback = callback;
+  }
   finished() {
     console.log(this.responses);
-    this.aggregate(this.responses, this.query);
+    this.callback(
+      this.createChartData(this.aggregate(this.responses, this.query))
+    );
   }
   getReturns() {
     let result = "";
@@ -305,12 +311,12 @@ class QueryObject {
         for (let key in tmp) {
           if (key in containerByCountry[data[i].request.country][response]) {
             containerByCountry[data[i].request.country][response][key].push(
-              tmp[key]
+              tmp[key][0]
             );
           } else {
             containerByCountry[data[i].request.country][response][key] = [];
             containerByCountry[data[i].request.country][response][key].push(
-              tmp[key]
+              tmp[key][0]
             );
           }
         }
@@ -337,11 +343,91 @@ class QueryObject {
   }
 
   year(data, year) {
-    result = {};
+    result = { year: [] };
     for (let i = 0; i < data.length; i++) {
-      result["year"] = [];
-      result["year"].push([{ x: data[i].id, y: data[i].count }]);
+      result.year.push({ x: data[i].id, y: data[i].count });
     }
     return result;
+  }
+
+  createChartData(aggregatedData) {
+    //{viewName: chartName: xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
+    let listOfCharts = {};
+    for (let country in aggregatedData) {
+      for (let view in aggregatedData[country]) {
+        for (let chart in aggregatedData[country][view]) {
+          if (chart in listOfCharts) {
+            const endXElement = aggregatedData[country][view][chart].length - 1;
+            listOfCharts[chart].lines.push({
+              name: country,
+              rawdata: aggregatedData[country][view][chart],
+              data: aggregatedData[country][view][chart]
+            });
+            listOfCharts[chart].xdomain[0] = Math.min(
+              listOfCharts[chart].xdomain[0],
+              aggregatedData[country][view][chart][0].x
+            );
+            listOfCharts[chart].xdomain[1] = Math.max(
+              listOfCharts[chart].xdomain[1],
+              aggregatedData[country][view][chart][endXElement].x
+            );
+            const yMin = Math.min.apply(
+              Math,
+              aggregatedData[country][view][chart].map(element => {
+                return element.y;
+              })
+            );
+            const yMax = Math.max.apply(
+              Math,
+              aggregatedData[country][view][chart].map(element => {
+                return element.y;
+              })
+            );
+            listOfCharts[chart].ydomain[0] = Math.min(
+              yMin,
+              listOfCharts[chart].ydomain[0]
+            );
+            listOfCharts[chart].ydomain[1] = Math.max(
+              yMin,
+              listOfCharts[chart].ydomain[1]
+            );
+          } else {
+            const endXElement = aggregatedData[country][view][chart].length - 1;
+
+            listOfCharts[chart] = {};
+            listOfCharts[chart] = {
+              viewName: view,
+              chartName: chart,
+              xdomain: [
+                aggregatedData[country][view][chart][0].x,
+                aggregatedData[country][view][chart][endXElement].x
+              ],
+              ydomain: [
+                Math.min.apply(
+                  Math,
+                  aggregatedData[country][view][chart].map(element => {
+                    return element.y;
+                  })
+                ),
+                Math.max.apply(
+                  Math,
+                  aggregatedData[country][view][chart].map(element => {
+                    return element.y;
+                  })
+                )
+              ],
+              lines: [
+                {
+                  name: country,
+                  rawdata: aggregatedData[country][view][chart],
+                  data: aggregatedData[country][view][chart]
+                }
+              ]
+            };
+          }
+        }
+      }
+    }
+    return listOfCharts;
   }
 }
