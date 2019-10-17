@@ -15,6 +15,7 @@ class D3Chart {
 	Y = {
 		axis: null,
 		domain: [0, 1],
+		domainCache:null,
 		scale: null,
 		maxTicks: 10,
 		clamp: true,
@@ -53,7 +54,9 @@ class D3Chart {
 		legendToChartRatio: 10
 	}
 
-
+	normalizeAxis=false;
+	leadData=false;
+	dataCache=[];
 	data = [];
 	smoothing = 1;
 	svg = null;
@@ -66,6 +69,7 @@ class D3Chart {
 	chartWidth;
 	height;
 
+	bars;
 	margin = {
 		top: 25,
 		right: 25,
@@ -547,7 +551,6 @@ class D3Chart {
 		if (data != null) {
 			this.data = data;
 		}
-		console.log(data);
 		for (let idx in this.data) {
 			let line = this.data[idx];
 			line.data = movingAverage(line.rawdata, this.smoothing);
@@ -695,8 +698,29 @@ class D3Chart {
 
 		this.chart.mouseArea.select('rect').raise();
 	}
-
-
+	
+	/**lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]
+	 * @param  {{lines:[{x:number, y:number}]}} values
+	 */
+	addBars(values, yscale=null)
+	{
+		let yScale = yscale;
+		if(yscale==null)
+		{
+			yScale = this.Y.scale;
+		}
+		for(let value in values){
+		console.log(this.lines.node().parentNode.id);
+		this.bars = this.svg.selectAll("bars").data(values[value].rawdata).enter()
+		.insert("rect", "#"+this.lines.node().parentNode.id)
+		.attr("x", (d)=>{return this.X.scale(new Date(d.x, 0))})
+		.attr("y", (d)=>{return yScale(d.y)})
+		.attr("width", this.chartWidth / (this.X.domain[1].getYear() - this.X.domain[0].getYear()))
+		.attr("height", (d)=>{return this.chartHeight - yScale(d.y)})
+		.attr("fill", d3.schemeCategory10[value])
+		.style("opacity", 0.5);
+		}
+	}
 	/**
 	 * Sets the margins of the chart, call without any values to reset to default
 	 *
@@ -780,6 +804,19 @@ class D3Chart {
 	/**
 	 * @param  {number} size - uniformly set the graph's size.
 	 */
+	toggleAxis(domain)
+	{
+		this.normalizeAxis= !this.normalizeAxis;
+		if(this.normalizeAxis)
+		{
+			this.Y.domainCache = this.Y.domain;
+			this.updateYScale(domain[0], domain[1]);
+		}
+		else
+		{
+			this.updateYScale(this.Y.domainCache[0], this.Y.domainCache[1]);
+		}
+	}
 	scale(scale)
 	{
 		this.setBaseWidth(this.width * scale);
@@ -862,6 +899,43 @@ class D3Chart {
 	getSmoothing() {
 		return self.smoothing;
 	}
+  /**
+   * @param  {Array} line - [{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]
+   * @param  {Number} offset - the offset to shift the raw data elements by. For example if we shift this array [1,2,3] by 1 it becomes [3,1,2]
+   */
+  shift(line, offset) {
+    let result = [];
+    for (let i = offset; i < line.rawdata.length; i++) {
+      result.push({ x: line.rawdata[i - offset].x, y: line.rawdata[i].y });
+    }
+    for (let i = 0; i < offset; i++) {
+      result.push({
+        x: line.rawdata[i + (line.rawdata.length - offset)].x,
+        y: line.rawdata[i].y
+      });
+    }
+    return result;
+  }
+	leadLag()
+	{
+		if(this.data[1] == undefined || this.data[0]==undefined)
+		{
+			return;
+		}
+		this.leadData = !this.leadData;
+		if(this.leadData)
+		{
+			this.dataCache = this.data;
+			let offset = leadlag(this.data[0].rawdata,this.data[1].rawdata);
+			let offsetLine = this.shift(this.data[0], offset);
+			this.updateLines([{name: this.data[0].name ,data:offsetLine, rawdata:offsetLine}, this.data[1]]);
+		}
+		else
+		{
+			this.updateLines(this.dataCache);
+		}
+	}
+
 }
 
 /**

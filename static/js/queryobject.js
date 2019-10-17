@@ -2,6 +2,9 @@ class QueryObject {
   callback = data => {};
   intervals = 1;
   rawQuery;
+
+  ifsubQuery = false;
+  subQueries = null;
   query = {
     source: "",
     index: null,
@@ -19,7 +22,8 @@ class QueryObject {
       x: "id",
       y: "count",
       format: this.year
-    }
+    },
+    FOR: { x: "year", y: "funding", format: this.FOR }
   };
 
   reference = {
@@ -56,10 +60,11 @@ class QueryObject {
     returns: {
       year: "year",
       category_for: "category_for",
-      funding_usd: "funding"
+      funding: "FOR"
     }
   };
   responses = [];
+  responseQuery = [];
   route = "/query-dimensions";
   currentYear;
   currentCountry;
@@ -68,7 +73,13 @@ class QueryObject {
   }
 
   analyzeQuery() {
-    let jsonQuery = JSON.parse(this.rawQuery);
+    let queries = this.rawQuery.split("+");
+
+    let jsonQuery = JSON.parse(queries[0]);
+    if (queries.length > 1) {
+      this.subQueries = JSON.parse(queries[1]);
+      this.ifsubQuery = true;
+    }
     console.log(jsonQuery);
     //source
     if ("source" in jsonQuery) {
@@ -106,7 +117,7 @@ class QueryObject {
     }
     //keywords
     if ("keywords" in jsonQuery) {
-      this.query.keyword = jsonQuery.keyword;
+      this.query.keyword = jsonQuery.keywords;
     }
     if ("filters" in jsonQuery) {
       //filter
@@ -188,7 +199,9 @@ class QueryObject {
       this.query.source
     } ${this.ifIndex()}${this.ifKeyWord()} ${this.ifCountry(
       countries
-    )}${this.ifYears(years)} ${this.getReturns()}sort by count`;
+    )}${this.ifYears(
+      years
+    )} ${this.ifFor()}${this.getReturns()}${this.ifAggregate()}`;
   }
   queryDim(years, countries) {
     console.log(years + " " + countries);
@@ -210,6 +223,23 @@ class QueryObject {
     }).then(this.response.bind(this));
   }
 
+  subQuery(subquery) {
+    if ((subquery.source = "grants")) {
+      this.query.source = subquery.source;
+      this.query.returns = ["FOR"];
+    }
+    this.reponseQuery = this.responses;
+    this.responses = [];
+    this.currentYear = this.query.years[0];
+    this.currentCountry = 0;
+    if (this.query.years.length == 0) {
+      this.currentYear = null;
+    }
+    if (this.query.country.length == 0) {
+      this.currentCountry = null;
+    }
+    this.queryDim(this.currentYear, this.currentCountry);
+  }
   response(resp, err) {
     if (err != null) {
       console.error(err);
@@ -221,6 +251,7 @@ class QueryObject {
       return;
     }
     delete response._stats;
+    delete response._warnings;
     const endElement = this.responses.length - 1;
     this.responses[endElement].response = response;
     console.log(resp);
@@ -246,6 +277,18 @@ class QueryObject {
     this.callback(
       this.createChartData(this.aggregate(this.responses, this.query))
     );
+    if (this.ifsubQuery) {
+      this.ifsubQuery = false;
+      this.subQuery(this.subQueries);
+    }
+  }
+  ifAggregate() {
+    if (this.query.source == "publications") {
+      return "sort by count";
+    }
+    if (this.query.source == "grants") {
+      return "aggregate funding";
+    }
   }
   getReturns() {
     let result = "";
@@ -254,26 +297,65 @@ class QueryObject {
     }
     return `${result}`;
   }
+  ifFor(years, country) {
+    if (this.query.source == "grants") {
+      for (let i = 0; i < this.responseQuery.length; i++) {
+        if (
+          this.responseQuery[i].request.year == years &&
+          this.responseQuery[i].request.country == country
+        ) {
+          let result = `(`;
+          for (
+            let j = 0;
+            j < this.reponses[i].responseQuery.category_for.length;
+            j++
+          ) {
+            result += `FOR.name=${this.responseQuery[i].response.category_for[j]} or `;
+          }
+          result += ") ";
+          return result;
+        }
+      }
+    }
+    return "";
+  }
   ifYears(year) {
+    const source = () => {
+      if (this.query.source == "grants") {
+        return "active_year";
+      }
+      if (this.query.source == "publications") {
+        return "year";
+      }
+    };
     if (year == null) {
       return ``;
     }
     if (this.query.country.length > 0) {
-      return `and year=${year} `;
+      return `and ${source()}=${year} `;
     } else {
-      return `where year=${year} `;
+      return `where ${source()}=${year} `;
     }
   }
   ifCountry(index) {
+    const source = () => {
+      if (this.query.source == "grants") {
+        return "research_orgs.name";
+      }
+      if (this.query.source == "publications") {
+        return "research_org_country_names";
+      }
+    };
     if (index == null) {
       return ``;
     }
     if (this.query.country[index][0] == "!") {
-      return `where research_org_country_names!="${this.query.country[
-        index
-      ].replace("!", "")}" `;
+      return `where ${source()}!="${this.query.country[index].replace(
+        "!",
+        ""
+      )}" `;
     }
-    return `where research_org_country_names="${this.query.country[index]}" `;
+    return `where ${source()}="${this.query.country[index]}" `;
   }
   ifKeyWord() {
     if (this.query.keyword == null) {
@@ -302,6 +384,9 @@ class QueryObject {
     for (let i = 0; i < data.length; i++) {
       for (let response in query.returns) {
         response = query.returns[response];
+        if (data[i].response[response] == undefined) {
+          continue;
+        }
         console.log(response);
         let tmp = this.format(
           data[i].response[response],
@@ -350,6 +435,19 @@ class QueryObject {
     return result;
   }
 
+  FOR(data, year) {
+    let result = {};
+    if (data == null) {
+      return;
+    }
+    for (let i = 0; i < data.length; i++) {
+      let rawData = { x: year, y: data[i].funding };
+      result[data[i].name] = [];
+      result[data[i].name].push(rawData);
+    }
+    return result;
+  }
+
   createChartData(aggregatedData) {
     //{viewName: chartName: xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
     let listOfCharts = {};
@@ -388,7 +486,7 @@ class QueryObject {
               listOfCharts[chart].ydomain[0]
             );
             listOfCharts[chart].ydomain[1] = Math.max(
-              yMin,
+              yMax,
               listOfCharts[chart].ydomain[1]
             );
           } else {

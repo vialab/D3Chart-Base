@@ -8,6 +8,7 @@ const login = require("./configlogin.json");
 //var jwt_token;
 var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
+
 let jwt_token = require("../credentials.json");
 //const institutes = require("../institutes.json");
 
@@ -87,5 +88,22 @@ function sleepFor(sleepDuration) {
     /* do nothing */
   }
 }
+
+// const options = {
+//   url: api_url,
+//   method: "POST",
+//   headers: {
+//     Authorization: jwt_token.Authorization
+//   },
+//   body: `search grants where research_orgs.name!="Canada" and active_year=2017 and FOR.name="0604 Genetics" return FOR aggregate funding`
+// };
+
+// request.post(options, (error, res) => {
+//   if (error) {
+//     console.log(error);
+//     throw error;
+//   }
+//   console.log(res.body);
+// });
 
 module.exports = queryDimensions;

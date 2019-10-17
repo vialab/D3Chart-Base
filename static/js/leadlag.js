@@ -22,6 +22,11 @@ function shift(array, offset) {
 function leadlag(data1, data2) {
   let d1 = Object.values(data1);
   let d2 = Object.values(data2);
+  //the length of the lines are not the same thefore, one line has a break in it.
+  //if there is a break in the line they are not comparable in terms for frequency
+  if (d1[0].x - d2[0].x || d1[d1.length - 1].x - d2[d2.length - 1].x) {
+    return 0;
+  }
   let d1Mean = mean(d1);
   let d2Mean = mean(d2);
   let d1STD = standardDeviation(d1, d1Mean);
@@ -39,9 +44,9 @@ function leadlag(data1, data2) {
     if (sum > highestRelation) {
       highestRelation = sum;
       bestOffset = offset;
+      console.log(`sum: ${sum}`);
       console.log(`Offset: ${bestOffset}`);
     }
-    console.log(`Sum: ${sum}`);
   }
 
   return bestOffset;

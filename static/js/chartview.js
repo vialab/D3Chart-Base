@@ -29,7 +29,10 @@ class ChartView {
     if (formatFunction != null) {
       formatFunction(data);
     }
-
+    //skip if there is only one data point
+    if (data.xdomain[0] == data.xdomain[1]) {
+      return;
+    }
     if (!(view in this.viewList)) {
       try {
         this.addView(view);
@@ -107,35 +110,27 @@ class ChartView {
   scaleCharts(views) {
     for (let i = 0; i < views.length; i++) {
       let key = views[i].id;
-      console.log("key: " + key);
       let numOfChartsInView = Object.keys(this.charts[key]).length;
-      let itemScale = this.viewList[key].getAttribute("itemscale");
-      let size = Math.floor(
-        Math.min(
-          this.viewList[key].clientHeight * itemScale,
-          this.viewList[key].clientWidth * itemScale
-        )
-      );
+      let numOfSubDivisions = Math.ceil(Math.sqrt(numOfChartsInView));
 
-      if (
-        numOfChartsInView >
-        this.viewList[key].clientHeight / size +
-          this.viewList[key].clientWidth / size
-      ) {
-        this.viewList[key].setAttribute("itemscale", itemScale * 0.5);
-        this.scaleCharts(views);
-        return;
-      }
+      let width = this.viewList[key].clientWidth / numOfSubDivisions;
+      let height = this.viewList[key].clientHeight / numOfSubDivisions;
+
       for (let chart in this.charts[key]) {
-        this.charts[key][chart].chart.setBaseWidth(size);
-        this.charts[key][chart].chart.setBaseHeight(size);
+        this.charts[key][chart].chart.setBaseWidth(width);
+        this.charts[key][chart].chart.setBaseHeight(height);
       }
-      let children = document.getElementById(key).children;
+      let children = $("#" + key).children();
       for (let i = 0; i < children.length; i++) {
-        children[i].style.width = size;
-        children[i].style.height = size;
+        $("#" + children[i].id)
+          .width(width)
+          .height(height);
       }
-      this.setDivPositions(document.getElementById(key), size, children);
+      this.setDivPositions(
+        { width: width, height: height },
+        children,
+        numOfSubDivisions
+      );
     }
   }
   /**
@@ -143,22 +138,49 @@ class ChartView {
    * @param  {Number} size - uniform size generally Math.min(parent.width/ numOfSiblings, parent.height/numOfSiblings);
    * @param  {Element[]} divs - divs to set position relative to siblings and parent area
    */
-  setDivPositions(parentContainer, size, divs) {
-    const width = parentContainer.clientWidth;
-    const height = parentContainer.clientHeight;
-    const numCol = Math.floor(width / size);
-    const numRow = Math.floor(height / size);
+  setDivPositions(size, divs, subDivisions) {
     let counter = divs.length;
 
-    for (let i = 0; i < numCol; i++) {
-      for (let j = 0; j < numRow; j++) {
+    for (let i = 0; i < subDivisions; i++) {
+      for (let j = 0; j < subDivisions; j++) {
         if (counter > 0) {
-          divs[counter - 1].style.left = size * i;
-          divs[counter - 1].style.top = size * j;
+          divs[counter - 1].style.left = size.width * i;
+          divs[counter - 1].style.top = size.height * j;
           --counter;
         } else {
           return;
         }
+      }
+    }
+  }
+  normalizeChartAxiiByView() {
+    for (let key in this.charts) {
+      let yAxis = { min: null, max: null };
+      let xAxis = { min: null, max: null };
+      let keys = Object.keys(this.charts[key]);
+      yAxis.min = this.charts[key][keys[0]].chart.Y.domain[0];
+      yAxis.max = this.charts[key][keys[0]].chart.Y.domain[1];
+      for (let chart in this.charts[key]) {
+        yAxis.min = Math.min(
+          yAxis.min,
+          this.charts[key][chart].chart.Y.domain[0]
+        );
+        yAxis.max = Math.max(
+          yAxis.max,
+          this.charts[key][chart].chart.Y.domain[1]
+        );
+        xAxis.min = Math.min(
+          xAxis.min,
+          this.charts[key][chart].chart.X.domain[0]
+        );
+        xAxis.max = Math.max(
+          xAxis.max,
+          this.charts[key][chart].chart.X.domain[1]
+        );
+      }
+      for (let chart in this.charts[key]) {
+        this.charts[key][chart].chart.toggleAxis([yAxis.min, yAxis.max]);
+        this.charts[key][chart].chart.updateLines();
       }
     }
   }
@@ -187,6 +209,29 @@ class ChartView {
     }
   }
 
+  clear() {
+    for (let key in this.charts) {
+      for (let chart in this.charts[key]) {
+        this.charts[key][chart].chart.cleanup();
+      }
+    }
+    this.charts = {};
+    for (let i = 0; i < this.parent.children.length; i++) {
+      this.parent.removeChild(this.parent.children[i]);
+    }
+    this.viewList = {};
+    this.mainView = {
+      element_id: null,
+      minViewSize: { x: null, y: null }
+    };
+  }
+  leadLag() {
+    for (let key in this.charts) {
+      for (let chart in this.charts[key]) {
+        this.charts[key][chart].chart.leadLag();
+      }
+    }
+  }
   chartClicked(e) {
     const parent_id = e.node().parentNode.id;
     //compounded ids
@@ -216,18 +261,26 @@ class ChartView {
         this.viewList[this.mainView.element_id],
         this.viewList[parent_id]
       ]);
-      //$(this.parent.id)
-      //  .hide()
-      //  .show(0);
-      //$("#" + e.node().id)
-      //  .children("svg")
-      //  .animate({ width: "+=20px", height: "+=20px" }, "fast")
-      //  .animate({ width: "-=20px", height: "-=20px" }, "fast");
-      //
-      //$("#" + tempNode.id)
-      //  .children("svg")
-      //  .animate({ width: "+=20px", height: "+=20px" }, "fast")
-      //  .animate({ width: "-=20px", height: "-=20px" }, "fast");
+
+      //shake the move graphs
+      let list = document.getElementById(node_id).classList;
+      for (let className in list) {
+        if (className == "shake") {
+          document.getElementById(node_id).classList.remove("shake");
+        }
+      }
+      document.getElementById(node_id).classList.add("shake");
+
+      list = document.getElementById(this.mainView.element_id).classList;
+      for (let className in list) {
+        if (className == "shake") {
+          document
+            .getElementById(this.mainView.element_id)
+            .classList.remove("shake");
+        }
+      }
+      document.getElementById(this.mainView.element_id).classList.add("shake");
+
       console.log(this.charts);
     }
   }

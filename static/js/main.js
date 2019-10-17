@@ -2,7 +2,7 @@ $(function() {
   //the chart object contains all of the d3 graphing
   document.getElementById(
     "query-field"
-  ).value = `{"source":"publications", "keywords":"spinach", "filters":{"country":["Canada", "!Canada"], "year":["2017","2018"]},"returns":["year","category_for"]}`;
+  ).value = `{"source":"publications", "keywords":"cancer", "filters":{"country":["Canada", "!Canada"], "year":["2017","2018"]},"returns":["year","category_for"]}+{"source":"grants"}`;
   var chartObj;
   let checked = false;
   let lead = 0;
@@ -11,70 +11,58 @@ $(function() {
   viewManager.addView("main-view");
   var multiCharts = [];
   $("#leadLagToggle").change(function(event) {
-    checked = !checked;
-    if (checked) {
-      if (linedata != null) {
-        let temp = shift(linedata.lines[0], lead);
-        chartObj.updateLines([
-          {
-            name: "Canada",
-            rawdata: temp,
-            data: temp
-          },
-          {
-            name: "!Canada",
-            rawdata: linedata.lines[1].rawdata,
-            data: linedata.lines[1].data
-          }
-        ]);
-      }
-    } else {
-      if (linedata != null) {
-        chartObj.updateLines(linedata.lines);
-      }
-    }
+    viewManager.leadLag();
   });
 
+  $("#normalize-scale").change(event => {
+    viewManager.normalizeChartAxiiByView();
+  });
   $("#newsearch").submit(function(event) {
     let buttonID = "query-search";
     let fieldID = "query-field";
     event.stopPropagation();
     event.preventDefault();
     let tmpButton = document.getElementById(buttonID);
-    //
-    //tmpButton.innerHTML = `<span class="spinner-grow spinner-grow-sm"></span>`;
-    //tmpButton.disabled = true;
-    //if (tmpButton.classList.contains("animate")) {
-    //  tmpButton.classList.remove("animate");
-    //}
-    var query = document.getElementById(fieldID).value;
 
-    let qObject = new QueryObject(query);
-    qObject.callbackWhenFinished(data => {
-      for (let chart in data) {
-        viewManager.addChart(data[chart].viewName, data[chart]);
-      }
-    });
-    qObject.analyzeQuery();
-  });
-
-  /**
-   * @param  {Array} line - [{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]
-   * @param  {Number} offset - the offset to shift the raw data elements by. For example if we shift this array [1,2,3] by 1 it becomes [3,1,2]
-   */
-  function shift(line, offset) {
-    let result = [];
-    for (let i = offset; i < line.rawdata.length; i++) {
-      result.push({ x: line.rawdata[i - offset].x, y: line.rawdata[i].y });
+    tmpButton.innerHTML = `<span class="spinner-grow spinner-grow-sm"></span>`;
+    tmpButton.disabled = true;
+    if (tmpButton.classList.contains("shake")) {
+      tmpButton.classList.remove("shake");
     }
-    for (let i = 0; i < offset; i++) {
-      result.push({
-        x: line.rawdata[i + (line.rawdata.length - offset)].x,
-        y: line.rawdata[i].y
+    try {
+      viewManager.clear();
+      var query = document.getElementById(fieldID).value;
+
+      let qObject = new QueryObject(query);
+      qObject.callbackWhenFinished(data => {
+        for (let chart in data) {
+          viewManager.addChart(data[chart].viewName, data[chart]);
+        }
+        viewManager.setMainView("year");
+        tmpButton.disabled = false;
+        tmpButton.innerHTML = "Query";
+        if ("FOR" in viewManager.viewList) {
+          for (let chart in viewManager.charts["FOR"]) {
+            for (let catChart in viewManager.charts["category_for"]) {
+              if (
+                viewManager.charts["FOR"][chart].chart.legend.titleText ==
+                viewManager.charts["category_for"][catChart].chart.legend
+                  .titleText
+              ) {
+                viewManager.charts["category_for"][catChart].chart.addBars(
+                  viewManager.charts["FOR"][chart].chart.data,
+                  viewManager.charts["FOR"][chart].chart.Y.scale
+                );
+              }
+            }
+          }
+        }
       });
+      qObject.analyzeQuery();
+    } catch (e) {
+      tmpButton.classList.add("shake");
     }
-    return result;
-  }
+  });
 
   /**
    * @param  {Array[Array]} lines - expects [[{count:}], [{count:}]] the array to be normalized
@@ -93,62 +81,6 @@ $(function() {
       }
     }
   }
-  /**
-   * @param  {Object[]} lines - expects [[{id:, count}],[{id:, count}]] the inner array can have any amount of elements
-   * @returns {Object} - format {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
-   */
-  function convertToLineData(lines) {
-    result = {
-      ydomain: [],
-      xdomain: [],
-      lines: [
-        { name: "Canada", rawdata: [], data: [] },
-        { name: "!Canada", rawdata: [], data: [] }
-      ]
-    };
-    if (lines[0] != null) {
-      result.xdomain[0] = lines[0][0].id;
-      result.xdomain[1] = lines[0][lines[0].length - 1].id;
-      result.ydomain[0] = lines[0][0].count;
-      result.ydomain[1] = lines[0][0].count;
-    } else {
-      result.xdomain[0] = lines[1][0].id;
-      result.xdomain[1] = lines[1][lines[1].length - 1].id;
-      result.ydomain[0] = lines[1][0].count;
-      result.ydomain[1] = lines[1][0].count;
-    }
-    if (lines[0] != null) {
-      for (let i = 0; i < lines[0].length; i++) {
-        if (lines[0][i].count > result.ydomain[1]) {
-          result.ydomain[1] = lines[0][i].count;
-        }
-        if (lines[0][i].count < result.ydomain[0]) {
-          result.ydomain[0] = lines[0][i].count;
-        }
-        result.lines[0].rawdata[i] = {
-          x: lines[0][i].id,
-          y: lines[0][i].count
-        };
-        result.lines[0].data[i] = { x: lines[0][i].id, y: lines[0][i].count };
-      }
-    }
-    if (lines[1] != null) {
-      for (let i = 0; i < lines[1].length; i++) {
-        if (lines[1][i].count > result.ydomain[1]) {
-          result.ydomain[1] = lines[1][i].count;
-        }
-        if (lines[1][i].count < result.ydomain[0]) {
-          result.ydomain[0] = lines[1][i].count;
-        }
-        result.lines[1].rawdata[i] = {
-          x: lines[1][i].id,
-          y: lines[1][i].count
-        };
-        result.lines[1].data[i] = { x: lines[1][i].id, y: lines[1][i].count };
-      }
-    }
-    return result;
-  }
 
   /**
    * gets default view for the graphs. The data being presented has no meaning.
@@ -160,6 +92,12 @@ $(function() {
     viewManager.addChart("main-view", result, data => {
       data.chartName = "total";
     });
+    viewManager
+      .getChart("main-view", "main-view-total")
+      .addBars([
+        { rawdata: [{ x: 2003, y: 0.00025 }, { x: 2004, y: 0.00035 }] },
+        { rawdata: [{ x: 2003, y: 0.0002 }, { x: 2004, y: 0.0003 }] }
+      ]);
     viewManager.setMainView("main-view");
   });
 });
