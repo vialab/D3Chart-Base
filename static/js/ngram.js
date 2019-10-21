@@ -69,6 +69,7 @@ class D3Chart {
 	chartWidth;
 	height;
 
+	shiftClickCallback=(data)=>{};
 	bars;
 	margin = {
 		top: 25,
@@ -495,7 +496,7 @@ class D3Chart {
 		{
 			if(d3.event.shiftKey)
 			{
-				console.log("shift click");
+				this.shiftClickCallback(this);
 				return;
 			}
 			if(d3.event.ctrlKey)
@@ -505,6 +506,11 @@ class D3Chart {
 			}
 			callback(this.parent);
 		});
+	}
+
+	getGraphOnShiftClick(callback)
+	{
+		this.shiftClickCallback=callback;
 	}
 
 

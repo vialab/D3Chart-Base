@@ -8,6 +8,8 @@ class ChartView {
     minViewSize: { x: null, y: null }
   };
 
+  shiftData = {};
+  contributingGraphs = [];
   parent;
   /**
    * @param  {string} Parent - element id that will contain all of the views
@@ -63,6 +65,9 @@ class ChartView {
     this.charts[view][elementId].chart.getParentOnClick(
       this.chartClicked.bind(this)
     );
+    this.charts[view][elementId].chart.getGraphOnShiftClick(
+      this.shiftAggregate.bind(this)
+    );
     this.charts[view][elementId]["data"] = data;
     this.getChart(view, elementId).updateXScale(
       new Date(data.xdomain[0], 0),
@@ -74,6 +79,12 @@ class ChartView {
     );
     this.getChart(view, elementId).updateLines(data.lines);
     this.scaleCharts(this.parent.children);
+
+    this.charts[view][elementId].data = {
+      xdomain: [new Date(data.xdomain[0], 0), new Date(data.xdomain[1], 0)],
+      ydomain: [data.ydomain[0], data.ydomain[1]],
+      lines: data.lines
+    };
   }
   getChart(view, chartName) {
     return this.charts[view][chartName]["chart"];
@@ -283,5 +294,101 @@ class ChartView {
 
       console.log(this.charts);
     }
+  }
+
+  shiftAggregate(graphInfo) {
+    if (graphInfo.parent.node().parentNode.id == this.mainView.element_id) {
+      let key = Object.keys(this.charts[this.mainView.element_id]);
+      this.charts[this.mainView.element_id][key].chart.updateLines([
+        ...this.charts[this.mainView.element_id][key].data.lines
+      ]);
+      for (let i = 0; i < this.contributingGraphs.length; i++) {
+        $(this.contributingGraphs[i]).css("border-width", "0px");
+      }
+      this.contributingGraphs = [];
+      this.shiftData = {};
+      return;
+    }
+    let modify = (currentVal, otherValue) => {
+      return currentVal + otherValue;
+    };
+    if ($("#" + graphInfo.parent.node().id).css("border-width") != "0px") {
+      modify = (currentVal, otherValue) => {
+        return currentVal - otherValue;
+      };
+      let index = this.contributingGraphs.indexOf(
+        "#" + graphInfo.parent.node().id
+      );
+      $("#" + graphInfo.parent.node().id).css("border-width", "0px");
+      if (index > -1) {
+        this.contributingGraphs.splice(index, 1);
+      }
+      if (this.contributingGraphs.length == 0) {
+        let key = Object.keys(this.charts[this.mainView.element_id]);
+        this.charts[this.mainView.element_id][key].chart.updateLines([
+          ...this.charts[this.mainView.element_id][key].data.lines
+        ]);
+        this.shiftData = {};
+        return;
+      }
+    } else {
+      $("#" + graphInfo.parent.node().id).css("border", "2px solid red");
+      this.contributingGraphs.push("#" + graphInfo.parent.node().id);
+    }
+
+    for (let i = 0; i < graphInfo.data.length; i++) {
+      if (!(graphInfo.data[i].name in this.shiftData)) {
+        this.shiftData[graphInfo.data[i].name] = new Map();
+        console.log(this.shiftData);
+      }
+      for (let j = 0; j < graphInfo.data[i].rawdata.length; j++) {
+        if (
+          this.shiftData[graphInfo.data[i].name].has(
+            graphInfo.data[i].rawdata[j].x
+          )
+        ) {
+          let currentVal = this.shiftData[graphInfo.data[i].name].get(
+            graphInfo.data[i].rawdata[j].x
+          );
+          currentVal = modify(currentVal, graphInfo.data[i].rawdata[j].y);
+          this.shiftData[graphInfo.data[i].name].set(
+            graphInfo.data[i].rawdata[j].x,
+            currentVal
+          );
+        } else {
+          this.shiftData[graphInfo.data[i].name].set(
+            graphInfo.data[i].rawdata[j].x,
+            graphInfo.data[i].rawdata[j].y
+          );
+        }
+      }
+    }
+    let key = Object.keys(this.charts[this.mainView.element_id]);
+    let aggregateData = [];
+    const checkA = name => {
+      if (name.includes("a_")) {
+        return name;
+      }
+      return "a_" + name;
+    };
+    for (let name in this.shiftData) {
+      let temp = { name: checkA(name), rawdata: [], data: [] };
+      let keys = [...this.shiftData[name].keys()];
+      for (let i = 0; i < keys.length; i++) {
+        temp.rawdata.push({
+          x: keys[i],
+          y: this.shiftData[name].get(keys[i])
+        });
+        temp.data.push({
+          x: keys[i],
+          y: this.shiftData[name].get(keys[i])
+        });
+      }
+      aggregateData.push(temp);
+    }
+    this.charts[this.mainView.element_id][key].chart.updateLines([
+      ...this.charts[this.mainView.element_id][key].data.lines,
+      ...aggregateData
+    ]);
   }
 }
