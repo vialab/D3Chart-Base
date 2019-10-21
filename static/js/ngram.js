@@ -125,6 +125,10 @@ class D3Chart {
 		this.createYScale();
 
 		this.createLineGenerator();
+		this.svg.on('dragstart',(d)=>
+		{
+			console.log('dragging');
+		});
 	}
 
 	cleanup()
@@ -489,9 +493,20 @@ class D3Chart {
 		this.base.on('click', 
 		()=>
 		{
+			if(d3.event.shiftKey)
+			{
+				console.log("shift click");
+				return;
+			}
+			if(d3.event.ctrlKey)
+			{
+				console.log("control click");
+				return;
+			}
 			callback(this.parent);
 		});
 	}
+
 
 	/**
 	 * Updates the legend base elements positioning and width, as well as creates/updates/removes the appropriate legend entries corresponding to lines in the chart.
@@ -704,6 +719,7 @@ class D3Chart {
 	 */
 	addBars(values, yscale=null)
 	{
+		let padding=0.5;
 		let yScale = yscale;
 		if(yscale==null)
 		{
@@ -713,12 +729,14 @@ class D3Chart {
 		console.log(this.lines.node().parentNode.id);
 		this.bars = this.svg.selectAll("bars").data(values[value].rawdata).enter()
 		.insert("rect", "#"+this.lines.node().parentNode.id)
-		.attr("x", (d)=>{return this.X.scale(new Date(d.x, 0))})
+		.attr("x", (d)=>{return this.X.scale(new Date(d.x, 0)) +
+			 (this.chartWidth / (this.X.domain[1].getYear() -
+			  this.X.domain[0].getYear())/values.length)*value - value*((this.chartWidth / (this.X.domain[1].getYear() - this.X.domain[0].getYear())/values.length)*padding)})
 		.attr("y", (d)=>{return yScale(d.y)})
-		.attr("width", this.chartWidth / (this.X.domain[1].getYear() - this.X.domain[0].getYear()))
+		.attr("width", (this.chartWidth / (this.X.domain[1].getYear() - this.X.domain[0].getYear())/values.length)-(this.chartWidth / (this.X.domain[1].getYear() - this.X.domain[0].getYear())/values.length) * padding)
 		.attr("height", (d)=>{return this.chartHeight - yScale(d.y)})
 		.attr("fill", d3.schemeCategory10[value])
-		.style("opacity", 0.5);
+		.style("opacity", 0.10);
 		}
 	}
 	/**
