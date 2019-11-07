@@ -3,13 +3,8 @@ $(function() {
   document.getElementById(
     "query-field"
   ).value = `{"source":"publications", "keywords":"cancer", "filters":{"country":["Canada", "!Canada"], "year":["2017","2018"]},"returns":["year","category_for"]}+{"source":"grants"}`;
-  var chartObj;
-  let checked = false;
-  let lead = 0;
-  let linedata = null;
   let viewManager = new ChartView("graph-container");
   viewManager.addView("main-view");
-  var multiCharts = [];
   $("#leadLagToggle").change(function(event) {
     viewManager.leadLag();
   });
@@ -65,24 +60,6 @@ $(function() {
   });
 
   /**
-   * @param  {Array[Array]} lines - expects [[{count:}], [{count:}]] the array to be normalized
-   * @param  {Array} totals - expects[{count:}]. The elements in this array are used to normalize the lines array
-   */
-  function normalize(lines, totals) {
-    console.log(lines);
-    if (lines[0] != null) {
-      for (let i = 0; i < lines[0].length; i++) {
-        lines[0][i].count = lines[0][i].count / totals[0][i].count;
-      }
-    }
-    if (lines[1] != null) {
-      for (let i = 0; i < lines[1].length; i++) {
-        lines[1][i].count = lines[1][i].count / totals[1][i].count;
-      }
-    }
-  }
-
-  /**
    * gets default view for the graphs. The data being presented has no meaning.
    * @inner
    * @param {JSON} res - format {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
@@ -99,5 +76,6 @@ $(function() {
         { rawdata: [{ x: 2003, y: 0.0002 }, { x: 2004, y: 0.0003 }] }
       ]);
     viewManager.setMainView("main-view");
+    viewManager.getChart("main-view", "main-view-total").curtainAnimation();
   });
 });

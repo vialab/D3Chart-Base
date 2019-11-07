@@ -11,9 +11,19 @@
   font-weight: bold;
   cursor: pointer;
 }
-#newsearch {
-  padding-left: 100px;
+#query-field {
+  height: 100%;
 }
+#query-div {
+  width: 100%;
+  position: absolute;
+  bottom: 30px;
+}
+#newsearch {
+  margin-left: 15%;
+  width: 70%;
+}
+
 .legend-group {
   fill: black;
 }
@@ -30,13 +40,14 @@
   width: auto;
   height: 400px;
 }
+
 .switch {
   position: relative;
   display: inline-block;
   width: 60px;
-  height: 34px;
-  padding-left: 50px;
+  height: 100%;
 }
+
 .switch input {
   opacity: 0;
   width: 0;
@@ -54,19 +65,19 @@
   background-color: #ccc;
   -webkit-transition: 0.4s;
   transition: 0.4s;
-  padding-left: 50px;
 }
 
 .slider:before {
   position: absolute;
   content: "";
-  height: 26px;
+  height: 95%;
   width: 26px;
-  left: 4px;
-  bottom: 4px;
+  left: 2px;
+  bottom: 2.5%;
   background-color: white;
   -webkit-transition: 0.4s;
   transition: 0.4s;
+  outline: #ccc;
 }
 
 input:checked + .slider {

@@ -745,6 +745,26 @@ class D3Chart {
 		.style("opacity", 0.10);
 		}
 	}
+
+	curtainAnimation()
+	{
+		var curtain = this.svg.append('rect')
+		.attr('x', -1 * this.width)
+		.attr('y', -1 * this.height)
+		.attr('height', this.height)
+		.attr('width', this.width)
+		.attr('class', "curtain")
+		.attr('transform', 'rotate(180)')
+		.style('fill', '#ffffff')
+
+		curtain.transition()
+		.ease(d3.easeLinear)
+		.duration(1000)
+		.attr('width', 0.005 * this.width)
+		.on("end", function(){
+			curtain.remove();
+		 });
+	}
 	/**
 	 * Sets the margins of the chart, call without any values to reset to default
 	 *

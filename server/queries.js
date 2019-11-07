@@ -10,7 +10,6 @@ var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
 
 let jwt_token = require("../credentials.json");
-//const institutes = require("../institutes.json");
 
 console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
@@ -89,21 +88,44 @@ function sleepFor(sleepDuration) {
   }
 }
 
-// const options = {
-//   url: api_url,
-//   method: "POST",
-//   headers: {
-//     Authorization: jwt_token.Authorization
-//   },
-//   body: `search grants where research_orgs.name!="Canada" and active_year=2017 and FOR.name="0604 Genetics" return FOR aggregate funding`
-// };
+function query(year, key) {
+  console.log("sleeping");
+  sleepFor(10000);
+  console.log("query");
 
-// request.post(options, (error, res) => {
-//   if (error) {
-//     console.log(error);
-//     throw error;
-//   }
-//   console.log(res.body);
-// });
-
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications where research_orgs.name="${keys[key]}" and year=${year} return journal limit 1000`
+  };
+  console.log(options);
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+    fs.writeFile(
+      `./${keys[key]}-${year}.json`,
+      JSON.stringify(JSON.parse(res.body)),
+      function(err) {
+        if (err) {
+          throw err;
+        }
+      }
+    );
+    if (year < 2019) {
+      query(++year, key);
+    } else {
+      year = 1950;
+      ++key;
+      if (key < keys.length) {
+        query(year, key);
+      }
+      return;
+    }
+  });
+}
 module.exports = queryDimensions;

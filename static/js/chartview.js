@@ -79,7 +79,10 @@ class ChartView {
     );
     this.getChart(view, elementId).updateLines(data.lines);
     this.scaleCharts(this.parent.children);
-
+    //add draggable
+    $("#" + elementId).draggable();
+    //add drop event
+    //normalize view on drop
     this.charts[view][elementId].data = {
       xdomain: [new Date(data.xdomain[0], 0), new Date(data.xdomain[1], 0)],
       ydomain: [data.ydomain[0], data.ydomain[1]],
@@ -103,6 +106,7 @@ class ChartView {
       this.viewList[view].setAttribute("id", `${view}`);
       this.viewList[view].setAttribute("class", "multi-container");
       this.viewList[view].setAttribute("itemscale", 1.0);
+      this.viewList[view].setAttribute("marginBottom", "20px");
       this.parent.appendChild(this.viewList[view]);
       this.charts[view] = {};
       this.scaleViews(this.parent.children);
@@ -252,11 +256,11 @@ class ChartView {
       this.viewList[parent_id].removeChild(e.node());
       this.viewList[this.mainView.element_id].appendChild(e.node());
 
-      //$("#" + e.node().id).find('svg').animate({ height: "-=100px", width: "-=100px" });
       //move main view node to view the above node came from
       let tempNode = this.viewList[this.mainView.element_id].children[0];
       this.viewList[this.mainView.element_id].removeChild(tempNode);
       this.viewList[parent_id].appendChild(tempNode);
+
       //update charts;
       let mainKey = Object.keys(this.charts[this.mainView.element_id]);
       let tempMainChart = this.charts[this.mainView.element_id][mainKey];
@@ -272,25 +276,9 @@ class ChartView {
         this.viewList[this.mainView.element_id],
         this.viewList[parent_id]
       ]);
-
-      //shake the move graphs
-      let list = document.getElementById(node_id).classList;
-      for (let className in list) {
-        if (className == "shake") {
-          document.getElementById(node_id).classList.remove("shake");
-        }
-      }
-      document.getElementById(node_id).classList.add("shake");
-
-      list = document.getElementById(this.mainView.element_id).classList;
-      for (let className in list) {
-        if (className == "shake") {
-          document
-            .getElementById(this.mainView.element_id)
-            .classList.remove("shake");
-        }
-      }
-      document.getElementById(this.mainView.element_id).classList.add("shake");
+      //curtain animation for the exchanged graphs
+      this.getChart(this.mainView.element_id, node_id).curtainAnimation();
+      this.getChart(parent_id, mainKey).curtainAnimation();
 
       console.log(this.charts);
     }
