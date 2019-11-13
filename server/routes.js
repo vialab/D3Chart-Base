@@ -9,7 +9,7 @@ module.exports = app => {
 
   app.get("/", (req, res) => {
     console.log(__dirname + "/..");
-    res.sendFile("./static/ngram.html", { root: __dirname + "/.." });
+    res.sendFile("./static/index.html", { root: __dirname + "/.." });
   });
 
   app.post("/unigramdata", (req, res) => {
