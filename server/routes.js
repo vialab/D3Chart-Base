@@ -12,6 +12,11 @@ module.exports = app => {
     res.sendFile("./static/index.html", { root: __dirname + "/.." });
   });
 
+  app.get("/graphs", (req, res) => {
+    console.log(__dirname + "/..");
+    res.sendFile("./static/ngram.html", { root: __dirname + "/.." });
+  });
+
   app.post("/unigramdata", (req, res) => {
     console.log("request for unigram data");
   });

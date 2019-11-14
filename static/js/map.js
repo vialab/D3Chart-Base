@@ -9,42 +9,46 @@ $(function() {
     onLoad(json);
   });
 
-  let colorScaleList = [
-    d3.schemeCategory10,
-    d3.schemeAccent,
-    d3.schemeDark2,
-    d3.schemePaired,
-    d3.schemePastel1,
-    d3.schemePastel2,
-    d3.schemeSet1,
-    d3.schemeSet2,
-    d3.schemeSet3,
-    d3.schemeTableau10,
-    d3.schemeBrBG[yearScale.length],
-    d3.schemePRGn[yearScale.length],
-    d3.schemePiYG[yearScale.length],
-    d3.schemePuOr[yearScale.length],
-    d3.schemeRdBu[yearScale.length],
-    d3.schemeRdGy[yearScale.length],
-    d3.schemeRdYlBu[yearScale.length],
-    d3.schemeRdYlGn[yearScale.length],
-    d3.schemeSpectral[yearScale.length],
-    d3.schemeBlues[yearScale.length],
-    d3.schemeGreens[yearScale.length],
-    d3.schemeGreys[yearScale.length],
-    d3.schemeOranges[yearScale.length],
-    d3.schemePurples[yearScale.length],
-    d3.schemeReds[yearScale.length],
-    d3.schemeBuGn[yearScale.length],
-    d3.schemeBuPu[yearScale.length],
-    d3.schemeGnBu[yearScale.length],
-    d3.schemeOrRd[yearScale.length],
-    d3.schemePuBuGn[yearScale.length],
-    d3.schemePuBu[yearScale.length],
-    d3.schemePuRd[yearScale.length],
-    d3.schemeYlGnBu[yearScale.length]
-  ];
+  let colorScaleList = createColorSchemes(yearScale);
 
+  function createColorSchemes(yearScale) {
+    let result = [
+      d3.schemeCategory10,
+      d3.schemeAccent,
+      d3.schemeDark2,
+      d3.schemePaired,
+      d3.schemePastel1,
+      d3.schemePastel2,
+      d3.schemeSet1,
+      d3.schemeSet2,
+      d3.schemeSet3,
+      d3.schemeTableau10,
+      d3.schemeBrBG[yearScale.length],
+      d3.schemePRGn[yearScale.length],
+      d3.schemePiYG[yearScale.length],
+      d3.schemePuOr[yearScale.length],
+      d3.schemeRdBu[yearScale.length],
+      d3.schemeRdGy[yearScale.length],
+      d3.schemeRdYlBu[yearScale.length],
+      d3.schemeRdYlGn[yearScale.length],
+      d3.schemeSpectral[yearScale.length],
+      d3.schemeBlues[yearScale.length],
+      d3.schemeGreens[yearScale.length],
+      d3.schemeGreys[yearScale.length],
+      d3.schemeOranges[yearScale.length],
+      d3.schemePurples[yearScale.length],
+      d3.schemeReds[yearScale.length],
+      d3.schemeBuGn[yearScale.length],
+      d3.schemeBuPu[yearScale.length],
+      d3.schemeGnBu[yearScale.length],
+      d3.schemeOrRd[yearScale.length],
+      d3.schemePuBuGn[yearScale.length],
+      d3.schemePuBu[yearScale.length],
+      d3.schemePuRd[yearScale.length],
+      d3.schemeYlGnBu[yearScale.length]
+    ];
+    return result;
+  }
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
@@ -57,26 +61,13 @@ $(function() {
     let time = Math.random();
     return Math.floor((1 - time) * bottom + time * top);
   }
-
-  function getColor(leadLag, yearSpan) {
-    if (leadLag == 0) {
-      return "#f6edbd";
+  function range(min, max, step) {
+    let result = [];
+    for (let i = min; i <= max; i += step) {
+      result.push(i);
     }
-    if (leadLag < 0) {
-      let negColorScale = d3
-        .scaleLinear()
-        .domain([0, 1])
-        .range(["#b4c8a8", "#008080"]);
-      return negColorScale(Math.abs(leadLag / yearSpan));
-    } else {
-      let posColorScale = d3
-        .scaleLinear()
-        .domain([0, 1])
-        .range(["#edbb8a", "#ca562c"]);
-      return posColorScale(leadLag / yearSpan);
-    }
+    return result;
   }
-
   function createGlyph(scale, coords, trend, svg) {
     let rotation = 0;
     if (trend == "up") {
@@ -106,7 +97,7 @@ $(function() {
     return glyph;
   }
 
-  function createLegend(colorScale, yearScale, svg) {
+  function createLegend(yearScale, svg) {
     let group = svg.append("g");
     let radius = 30;
     let diameter = radius * 2;
@@ -152,9 +143,13 @@ $(function() {
       .attr("text-anchor", "middle");
 
     group.on("click", function() {
-      for (let i = 0; i < colorScaleList.length; ++i) {
-        let swatch = svg.append("g").attr("class", "group");
-        swatch
+      let viableScales = colorScaleList.filter(function(i) {
+        return yearScale.length == i.length;
+      });
+      let swatches = svg.append("g");
+      for (let i = 0; i < viableScales.length; ++i) {
+        let swatch = swatches.append("g").attr("class", "group");
+        let mouseRect = swatch
           .append("rect")
           .attr(
             "x",
@@ -164,14 +159,30 @@ $(function() {
           .attr("width", diameter / 5)
           .attr(
             "height",
-            (colorScaleList[i].length - 1) * diameter + diameter / 5
+            (viableScales[i].length - 1) * diameter + diameter / 5
           )
           .attr("class", "group")
           .style("visibility", "hidden")
-          .on("mouseenter", function() {});
+          .attr("fill", "blue")
+          .attr("opacity", "0.1")
+          .on("mouseenter", function() {
+            d3.select(this).style("visibility", "visible");
+          })
+          .on("mouseout", function() {
+            d3.select(this).style("visibility", "hidden");
+          })
+          .on("click", function() {
+            colorScale = d3
+              .scaleOrdinal()
+              .range(viableScales[i])
+              .domain(yearScale);
+            swatches.remove();
+            group.remove();
+            createLegend(yearScale, svg);
+          });
         swatch
           .selectAll("circle")
-          .data(colorScaleList[i])
+          .data(viableScales[i])
           .enter()
           .append("circle")
           .attr("cx", i * ((diameter + padding) / 5) + diameter + padding)
@@ -181,13 +192,69 @@ $(function() {
           .attr("r", radius / 5)
           .attr("fill", function(d) {
             return d;
+          })
+          .on("mouseenter", function() {
+            mouseRect.style("visibility", "visible");
+          })
+          .on("mouseout", function() {
+            mouseRect.style("visibility", "hidden");
+          })
+          .on("click", function() {
+            colorScale = d3
+              .scaleOrdinal()
+              .range(viableScales[i])
+              .domain(yearScale);
+            swatches.remove();
+            group.remove();
+            createLegend(yearScale, svg);
           });
       }
     });
     return group;
   }
+  function createTimeline(svg, data, margin, bbox) {
+    let renderWindow = svg.append("g");
+    let timeScale = d3
+      .scaleLinear()
+      .domain([data.time.min, data.time.max])
+      .range([margin.left, bbox.width - margin.right]);
 
-  function createTimeline(svg, data) {}
+    let valueScale = d3
+      .scaleLinear()
+      .domain([data.min, data.max])
+      .range([bbox.height, 0]);
+    let axis = renderWindow.append("g").call(
+      d3
+        .axisBottom(timeScale)
+        .ticks(4)
+        .tickFormat(d3.format("d"))
+    );
+    axis.attr(
+      "transform",
+      `translate(${bbox.x}, ${bbox.y + bbox.height - margin.bottom})`
+    );
+    for (let i = 0; i < data.lines.length; ++i) {
+      renderWindow
+        .append("path")
+        .datum(data.lines[i])
+        .attr("fill", "none")
+        .attr("stroke", d3.interpolateSinebow(i / data.lines.length))
+        .attr("stroke-width", 3)
+        .attr("stroke-linecap", "round")
+        .attr(
+          "d",
+          d3
+            .line()
+            .x(function(d) {
+              return timeScale(d.x);
+            })
+            .y(function(d) {
+              return valueScale(d.y);
+            })
+        )
+        .attr("transform", `translate(${bbox.x}, ${bbox.y - margin.bottom})`);
+    }
+  }
 
   function onLoad(json) {
     let oshawaCoords = [-78.865128, 43.89608];
@@ -228,7 +295,7 @@ $(function() {
       .on("mouseover", function(d, i) {
         d3.select(this).style("stroke", "black");
         d3.select(this).style("stroke-width", "5px");
-        d3.select(this).style("fill", `${getColor(getRandom(-10, 10), 10)}`);
+        d3.select(this).style("fill", `${colorScale(getRandom(-4, 4))}`);
       })
       .on("mouseout", function(d, i) {
         d3.select(this).style("stroke", "white");
@@ -257,7 +324,34 @@ $(function() {
       });
     let glyph = createGlyph(45, projection(oshawaCoords), "down", svg);
     //legend
-    let legend = createLegend(colorScale, yearScale, svg);
+    let legend = createLegend(yearScale, svg);
+
+    createTimeline(
+      svg,
+      {
+        min: 0,
+        max: 200,
+        time: { min: 2014, max: 2018 },
+        lines: [
+          [
+            { x: 2014, y: 100 },
+            { x: 2015, y: 150 },
+            { x: 2016, y: 100 },
+            { x: 2017, y: 100 },
+            { x: 2018, y: 80 }
+          ],
+          [
+            { x: 2014, y: 80 },
+            { x: 2015, y: 150 },
+            { x: 2016, y: 10 },
+            { x: 2017, y: 90 },
+            { x: 2018, y: 190 }
+          ]
+        ]
+      },
+      { left: 10, right: 10, bottom: 50 },
+      { width: 400, height: 100, x: 760, y: 869 }
+    );
     new EasyPZ(
       svg.node(),
       function(transform) {

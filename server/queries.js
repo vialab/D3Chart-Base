@@ -89,43 +89,23 @@ function sleepFor(sleepDuration) {
 }
 
 function query(year, key) {
-  console.log("sleeping");
-  sleepFor(10000);
-  console.log("query");
-
   const options = {
     url: api_url,
     method: "POST",
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications where research_orgs.name="${keys[key]}" and year=${year} return journal limit 1000`
+    body: `search publications for "genome" where research_org_country_names="Canada" and year=2016 return publications`
   };
+
   console.log(options);
   request.post(options, (error, res) => {
     if (error) {
       console.log(error);
       throw error;
     }
-    fs.writeFile(
-      `./${keys[key]}-${year}.json`,
-      JSON.stringify(JSON.parse(res.body)),
-      function(err) {
-        if (err) {
-          throw err;
-        }
-      }
-    );
-    if (year < 2019) {
-      query(++year, key);
-    } else {
-      year = 1950;
-      ++key;
-      if (key < keys.length) {
-        query(year, key);
-      }
-      return;
-    }
+    console.log(res.body);
   });
 }
+query(12, 12);
 module.exports = queryDimensions;
