@@ -1,7 +1,8 @@
 const bodyParser = require("body-parser");
 const queryDimensions = require("./queries");
 const defaultData = require("./defaultData.json");
-const metricsDB = require("./metricsdb");
+const locations = require("./geolocation");
+//const metricsDB = require("./metricsdb");
 
 module.exports = app => {
   app.use(bodyParser.json());
@@ -21,7 +22,13 @@ module.exports = app => {
     console.log("request for unigram data");
   });
 
-  app.post("/query-dimensions", queryDimensions);
+  app.post("/query-dimensions", queryDimensions.queryDimensions);
+
+  app.post("/geo-locations", locations.getLocations);
+
+  app.post("/querynotcanada", queryDimensions.queryNotCanada);
+
+  app.post("/querycanada", queryDimensions.queryCanada);
 
   app.post("/default-view", (req, res) => {
     res.json(defaultData);

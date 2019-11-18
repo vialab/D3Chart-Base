@@ -88,14 +88,18 @@ function sleepFor(sleepDuration) {
   }
 }
 
-function query(year, key) {
+const queryNotCanada = async function(req, resp) {
+  if (!("keyword" in req.body) && !("year" in req.body)) {
+    resp.status(400).send({ error: "Must contain keyword and year" });
+    return;
+  }
   const options = {
     url: api_url,
     method: "POST",
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications for "genome" where research_org_country_names="Canada" and year=2016 return publications`
+    body: `search publications for "${keyword}" where research_org_country_names!="Canada" and year=${year} return research_orgs limit 1000`
   };
 
   console.log(options);
@@ -104,8 +108,32 @@ function query(year, key) {
       console.log(error);
       throw error;
     }
-    console.log(res.body);
+    resp.status(200).send(res);
   });
-}
-query(12, 12);
-module.exports = queryDimensions;
+};
+
+const queryCanada = async function(req, resp) {
+  if (!("keyword" in req.body) && !("year" in req.body)) {
+    resp.status(400).send({ error: "Must contain keyword and year" });
+    return;
+  }
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications for "${keyword}" where research_org_country_names="Canada" and year=${year} return research_orgs limit 1000`
+  };
+
+  console.log(options);
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+    resp.status(200).send(res);
+  });
+};
+
+module.exports = { queryDimensions, queryNotCanada, queryCanada };

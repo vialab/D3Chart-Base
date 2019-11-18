@@ -5,6 +5,7 @@ $(function() {
     .scaleOrdinal()
     .range(d3.schemePastel1)
     .domain(yearScale);
+
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
   });
@@ -375,5 +376,34 @@ $(function() {
       },
       ["SIMPLE_PAN"]
     );
+  }
+
+  /**
+   *
+   * @param {[string]} grid_ids
+   * @param {function(response)} callback
+   */
+  function getLocations(grid_ids, callback) {
+    d3.json("/geo-locations", {
+      method: "POST",
+      body: JSON.stringify({ grid_ids: grid_ids }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    }).then(callback);
+  }
+  /**
+   *
+   * @param {{keyword:string, year:number}} params
+   * @param {function(response)} callback
+   */
+  function getNotCanada(params, callback) {
+    d3.json("/geo-locations", {
+      method: "POST",
+      body: JSON.stringify({ keyword: params.keyword, year: params.year }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    }).then(callback);
   }
 });
