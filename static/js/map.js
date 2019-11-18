@@ -1,4 +1,6 @@
 $(function() {
+  let previousQueries = [];
+  let countryNames={};
   let numYears = 4;
   let yearScale = createRange(numYears);
   let colorScale = d3
@@ -9,6 +11,7 @@ $(function() {
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
   });
+  $("#keyword-form").submit(keywordSubmission);
 
   let colorScaleList = createColorSchemes(yearScale);
 
@@ -49,6 +52,117 @@ $(function() {
       d3.schemeYlGnBu[yearScale.length]
     ];
     return result;
+  }
+
+  function keywordSubmission(event) {
+    event.preventDefault();
+    let keyword = $("#search-field").val();
+    let year = { min: 2014, max: 2016 };
+    result = [];
+    for (let i = year.min; i < year.max; ++i) {
+      let response = getNotCanada({ keyword: keyword, year: i });
+      result.push(response);
+    }
+    for (let i = year.min; i < year.max; ++i) {
+      let response = getCanada({ keyword: keyword, year: i });
+      result.push(response);
+    }
+    Promise.all(result).then(function(res) {
+      console.log(res);
+      let result = {
+        countries: { total: {}, sequence: {} },
+        institutions: { total: {}, sequence: {}, grid_id: {} }
+      };
+      let yearSpan = year.max - year.min;
+
+      for (let i = 0; i < yearSpan; ++i) {
+        let data = JSON.parse(res[i].body).research_orgs;
+        for (let j = 0; j < data.length; ++j) {
+          if (data[j].country_name in result.countries.total) {
+            result.countries.total[data[j].country_name] += data[j].count;
+          } else {
+            result.countries.total[data[j].country_name] = 0;
+            result.countries.total[data[j].country_name] += data[j].count;
+            result.countries.sequence[data[j].country_name] = [];
+          }
+          if (data[j].name in result.institutions.total) {
+            result.institutions.total[data[j].name] += data[j].count;
+            result.institutions.sequence[data[j].name].push(data[j].count);
+          } else {
+            result.institutions.total[data[j].name] = data[j].count;
+            result.institutions.sequence[data[j].name] = [];
+            result.institutions.grid_id[data[j].name] = data[j].id;
+            result.institutions.sequence[data[j].name].push(data[j].count);
+          }
+        }
+        //add time sequence
+        for (const key in result.countries.total) {
+          result.countries.sequence[key].push(
+            result.countries.total[key] -
+              result.countries.sequence[key].reduce((a, b) => a + b, 0)
+          );
+        }
+      }
+      result.countries.total["Canada"] = 0;
+      result.countries.sequence["Canada"] = [];
+      for (let i = yearSpan; i < res.length; ++i) {
+        let data = JSON.parse(res[i].body).research_orgs;
+        for (let j = 0; j < data.length; ++j) {
+          result.countries.total["Canada"] += data[j].count;
+        }
+        result.countries.sequence["Canada"].push(
+          result.countries.total["Canada"] -
+            result.countries.sequence["Canada"].reduce((a, b) => a + b, 0)
+        );
+      }
+
+      for (const key in result.countries.total) {
+        for (let i = 0; i < result.countries.sequence[key].length; ++i) {
+          result.countries.sequence[key][i] /= result.countries.total[key];
+        }
+      }
+      for (const key in result.institutions.total) {
+        for (let i = 0; i < result.institutions.sequence[key].length; ++i) {
+          result.institutions.sequence[key][i] /=
+            result.institutions.total[key];
+        }
+      }
+      calculateLeadLag(result);
+    });
+  }
+
+  function calculateLeadLag(data)
+  {
+    let result = [];
+    for(const country in data.countries.sequence)
+    {
+      if(data.countries.sequence[country].length <2)
+      {
+        continue;
+      }
+      if(country != 'Canada')
+      {
+        let leadLag = leadlag(Array.from(data.countries.sequence["Canada"],y=>y={y:y}), Array.from(data.countries.sequence[country],y=>y={y:y}));
+        result.push({leadlag:leadlag, country_name: country});
+      }
+    }
+    colorMap(result);
+  }
+
+  function colorMap(data)
+  {
+    for(let i=0; i < data.length; ++i)
+    {
+      if(data[i].country_name in countryNames)
+      {
+        let acronym = countryNames[data[i].country_name];
+        $(`#country${acronym}`).css({fill: colorScale(data[i].leadlag)});
+      }
+      else
+      {
+        console.log(`${data[i].country_name} does not exist in dictionary`);
+      }
+    }
   }
   function createRange(year) {
     let result = [];
@@ -258,6 +372,11 @@ $(function() {
   }
 
   function onLoad(json) {
+    for(let i=0; i < json.features.length; i++)
+    {
+      countryNames[json.features[i].properties.name] = json.features[i].properties.iso_a3;
+    }
+    console.log(countryNames);
     let oshawaCoords = [-78.865128, 43.89608];
     let scale = 1;
     //projection
@@ -292,7 +411,6 @@ $(function() {
         return "country" + d.properties.iso_a3;
       })
       .attr("class", "country")
-
       .on("mouseover", function(d, i) {
         d3.select(this).style("stroke", "black");
         d3.select(this).style("stroke-width", "5px");
@@ -397,13 +515,25 @@ $(function() {
    * @param {{keyword:string, year:number}} params
    * @param {function(response)} callback
    */
-  function getNotCanada(params, callback) {
-    d3.json("/geo-locations", {
+  async function getNotCanada(params) {
+    let response = await d3.json("/querynotcanada", {
       method: "POST",
       body: JSON.stringify({ keyword: params.keyword, year: params.year }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
-    }).then(callback);
+    });
+    return response;
+  }
+
+  async function getCanada(params) {
+    let response = d3.json("/querycanada", {
+      method: "POST",
+      body: JSON.stringify({ keyword: params.keyword, year: params.year }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    });
+    return response;
   }
 });

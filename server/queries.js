@@ -99,14 +99,12 @@ const queryNotCanada = async function(req, resp) {
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications for "${keyword}" where research_org_country_names!="Canada" and year=${year} return research_orgs limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names!="Canada" and year=${req.body.year} return research_orgs limit 1000`
   };
-
   console.log(options);
   request.post(options, (error, res) => {
     if (error) {
       console.log(error);
-      throw error;
     }
     resp.status(200).send(res);
   });
@@ -123,14 +121,13 @@ const queryCanada = async function(req, resp) {
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications for "${keyword}" where research_org_country_names="Canada" and year=${year} return research_orgs limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="Canada" and year=${req.body.year} return research_orgs limit 1000`
   };
 
   console.log(options);
   request.post(options, (error, res) => {
     if (error) {
       console.log(error);
-      throw error;
     }
     resp.status(200).send(res);
   });
