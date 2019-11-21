@@ -8,6 +8,7 @@ $(function() {
   let svg;
   let projection;
   let timeline;
+  let defs;
   let timelineAttr = {
     margin: { left: 10, right: 10, bottom: 50 },
     bbox: {
@@ -27,46 +28,82 @@ $(function() {
   });
   $("#keyword-form").submit(keywordSubmission);
 
-  let colorScaleList = createColorSchemes(yearScale);
+  let colorScaleList = createColorSchemes();
 
-  function createColorSchemes(yearScale) {
+  function createColorSchemes() {
     let result = [
-      d3.schemeCategory10,
-      d3.schemeDark2,
-      d3.schemePaired,
-      d3.schemePastel1,
-      d3.schemePastel2,
-      d3.schemeSet1,
-      d3.schemeSet2,
-      d3.schemeSet3,
-      d3.schemeTableau10,
-      d3.schemeBrBG[yearScale.length],
-      d3.schemePRGn[yearScale.length],
-      d3.schemePiYG[yearScale.length],
-      d3.schemePuOr[yearScale.length],
-      d3.schemeRdBu[yearScale.length],
-      d3.schemeRdGy[yearScale.length],
-      d3.schemeRdYlBu[yearScale.length],
-      d3.schemeRdYlGn[yearScale.length],
-      d3.schemeSpectral[yearScale.length],
-      d3.schemeBlues[yearScale.length],
-      d3.schemeGreens[yearScale.length],
-      d3.schemeGreys[yearScale.length],
-      d3.schemeOranges[yearScale.length],
-      d3.schemePurples[yearScale.length],
-      d3.schemeReds[yearScale.length],
-      d3.schemeBuGn[yearScale.length],
-      d3.schemeBuPu[yearScale.length],
-      d3.schemeGnBu[yearScale.length],
-      d3.schemeOrRd[yearScale.length],
-      d3.schemePuBuGn[yearScale.length],
-      d3.schemePuBu[yearScale.length],
-      d3.schemePuRd[yearScale.length],
-      d3.schemeYlGnBu[yearScale.length]
+      d3.interpolateBrBG,
+      d3.interpolatePRGn,
+      d3.interpolatePiYG,
+      d3.interpolatePuOr,
+      d3.interpolateRdBu,
+      d3.interpolateRdGy,
+      d3.interpolateRdYlBu,
+      d3.interpolateRdYlGn,
+      d3.interpolateSpectral,
+      d3.interpolateBlues,
+      d3.interpolateGreens,
+      d3.interpolateGreys,
+      d3.interpolateOranges,
+      d3.interpolatePurples,
+      d3.interpolateReds,
+      d3.interpolateTurbo,
+      d3.interpolateViridis,
+      d3.interpolateInferno,
+      d3.interpolateMagma,
+      d3.interpolatePlasma,
+      d3.interpolateCividis,
+      d3.interpolateWarm,
+      d3.interpolateCool,
+      d3.interpolateCubehelixDefault,
+      d3.interpolateBuGn,
+      d3.interpolateBuPu,
+      d3.interpolateGnBu,
+      d3.interpolateOrRd,
+      d3.interpolatePuBuGn,
+      d3.interpolatePuBu,
+      d3.interpolatePuRd,
+      d3.interpolateRdPu,
+      d3.interpolateYlGnBu,
+      d3.interpolateYlGn,
+      d3.interpolateYlOrBr,
+      d3.interpolateYlOrRd,
+      d3.interpolateRainbow,
+      d3.interpolateSinebow
     ];
     return result;
   }
+  function createGradients(colorSchemes) {
+    for (let i = 0; i < colorSchemes.length; ++i) {
+      let gradient = defs
+        .append("linearGradient")
+        .attr("id", `svgGradient${i}`)
+        .attr("x1", "0%")
+        .attr("x2", "100%")
+        .attr("y1", "0%")
+        .attr("y2", "100%");
+      gradient
+        .append("stop")
+        .attr("class", "start")
+        .attr("offset", "0%")
+        .attr("stop-color", colorSchemes[i](0))
+        .attr("stop-opacity", 1);
 
+      for (let j = 1; j < 10; ++j) {
+        gradient
+          .append("stop")
+          .attr("offset", `${j / 10}%`)
+          .attr("stop-color", colorSchemes[i](j / 10))
+          .attr("stop-opacity", 1);
+      }
+      gradient
+        .append("stop")
+        .attr("class", "end")
+        .attr("offset", "100%")
+        .attr("stop-color", colorSchemes[i](10 / 10))
+        .attr("stop-opacity", 1);
+    }
+  }
   function keywordSubmission(event) {
     event.preventDefault();
     let keyword = $("#search-field").val();
@@ -332,7 +369,7 @@ $(function() {
       .attr("y1", coords[1])
       .attr("x2", coords[0] - scale)
       .attr("y2", coords[1])
-      .attr("stroke", "red")
+      .attr("stroke", "black")
       .attr("stroke-width", scale / 5)
       .attr("transform", `rotate(${rotation},${coords[0]},${coords[1]})`);
 
@@ -357,47 +394,84 @@ $(function() {
     let group = svg.append("g");
     group.attr("class", "noselect");
     let radius = 30;
-    let diameter = radius * 2;
-    let padding = 10;
+    let padding = radius * 2;
+    let y = $(window).height() - 20;
+    let x = $(window).width();
+    const end = yearScale.length - 1;
     group
-      .selectAll("circle")
+      .append("rect")
+      .attr("x", x / 2 - (yearScale.length * radius) / 2 - padding)
+      .attr("y", y - (padding + radius))
+      .attr("height", padding + radius - 5)
+      .attr("width", yearScale.length * radius + padding * 2 + 15)
+      .attr("fill", "white")
+      .attr("rx", 15)
+      .attr("border", "5px")
+      .attr("stroke", "black");
+    group
+      .append("circle")
+      .attr("r", radius / 4)
+      .attr("cy", y - (padding - radius / 4))
+      .attr(
+        "cx",
+        x / 2 - (yearScale.length * radius) / 2 + radius / 2 - radius / 2
+      )
+      .attr("fill", colorScale(yearScale[0]));
+
+    group
+      .append("circle")
+      .attr("r", radius / 4)
+      .attr("cy", y - (padding - radius / 4))
+      .attr("cx", x / 2 + (yearScale.length * radius) / 2)
+      .attr("fill", colorScale(yearScale[end]));
+
+    group
+      .selectAll("rect")
       .data(yearScale)
       .enter()
-      .append("circle")
-      .attr("r", radius)
-      .attr("cx", 0)
-      .attr("cy", function(d, i) {
-        return i * diameter + radius;
+      .append("rect")
+      .attr("width", radius)
+      .attr("height", radius / 2)
+      .attr("x", function(d, i) {
+        return i * radius + x / 2 - (yearScale.length * radius) / 2;
       })
+      .attr("y", y - padding)
       .attr("fill", function(d) {
         return colorScale(d);
-      });
-    group.on("mouseenter", function() {
-      group
-        .transition()
-        .attr("transform", "translate(30)")
-        .duration(500);
-      d3.event.stopPropagation();
-    });
-    group.on("mouseleave", function() {
-      group
-        .transition()
-        .attr("transform", "translate(0)")
-        .duration(500);
-    });
+      })
+      .attr("border-top", "3px")
+      .attr("border-bottom", "3px");
+
     group
       .selectAll("text")
       .data(yearScale)
       .enter()
       .append("text")
-      .attr("x", 0)
-      .attr("y", function(d, i) {
-        return i * diameter + radius;
+      .attr("x", function(d, i) {
+        return (
+          i * radius + x / 2 - (yearScale.length * radius) / 2 + radius / 2
+        );
       })
+      .attr("y", y - radius + 6)
       .text(function(d) {
         return d;
       })
       .attr("text-anchor", "middle");
+
+    group
+      .append("text")
+      .attr("x", x / 2 - (yearScale.length / 2) * radius - radius - 16)
+      .attr("y", y - padding + radius / 2)
+      .text("Lag")
+      .style("font", "helvetica")
+      .style("font-size", "20px");
+    group
+      .append("text")
+      .attr("x", x / 2 + (yearScale.length / 2) * radius + radius / 4 + 8)
+      .attr("y", y - padding + radius / 2)
+      .text("Lead")
+      .style("font", "helvetica")
+      .style("font-size", "20px");
 
     group.on("click", function() {
       let viableScales = colorScaleList.filter(function(i) {
@@ -543,8 +617,9 @@ $(function() {
       // set to the same size as the "map-holder" div
       .attr("width", $("#map-holder").width())
       .attr("height", $("#map-holder").height());
-    svg
-      .append("defs")
+    defs = svg.append("defs");
+    createGradients(colorScaleList);
+    defs
       .append("pattern")
       .attr("id", "missing-data")
       .attr("width", 40)
@@ -608,30 +683,7 @@ $(function() {
     //legend
     let legend = createLegend(yearScale, svg);
     console.log($(window).width());
-    timeline = createTimeline(
-      svg,
-      {
-        min: 0,
-        max: 200,
-        time: { min: 2014, max: 2018 },
-        lines: [
-          [
-            { x: 2014, y: 100 },
-            { x: 2015, y: 150 },
-            { x: 2016, y: 100 },
-            { x: 2017, y: 100 }
-          ],
-          [
-            { x: 2014, y: 80 },
-            { x: 2015, y: 150 },
-            { x: 2016, y: 10 },
-            { x: 2017, y: 90 }
-          ]
-        ]
-      },
-      timelineAttr.margin,
-      timelineAttr.bbox
-    );
+
     new EasyPZ(
       svg.node(),
       function(transform) {
