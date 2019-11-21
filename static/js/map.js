@@ -1,12 +1,26 @@
 $(function() {
   let previousQueries = [];
-  let countryNames={};
+  let countryNames = {};
+  let nodes = [];
   let numYears = 4;
   let yearScale = createRange(numYears);
+  let tooltip;
+  let svg;
+  let projection;
+  let timeline;
+  let timelineAttr = {
+    margin: { left: 10, right: 10, bottom: 50 },
+    bbox: {
+      width: 400,
+      height: 100,
+      x: $(window).width() / 2 - 200,
+      y: $(window).height() - 100
+    }
+  };
   let colorScale = d3
     .scaleOrdinal()
-    .range(d3.schemePastel1)
-    .domain(yearScale);
+    .range(d3.schemeYlGnBu[yearScale.length - 1])
+    .domain([-4, 4]);
 
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
@@ -18,7 +32,6 @@ $(function() {
   function createColorSchemes(yearScale) {
     let result = [
       d3.schemeCategory10,
-      d3.schemeAccent,
       d3.schemeDark2,
       d3.schemePaired,
       d3.schemePastel1,
@@ -57,7 +70,7 @@ $(function() {
   function keywordSubmission(event) {
     event.preventDefault();
     let keyword = $("#search-field").val();
-    let year = { min: 2014, max: 2016 };
+    let year = { min: 2012, max: 2018 };
     result = [];
     for (let i = year.min; i < year.max; ++i) {
       let response = getNotCanada({ keyword: keyword, year: i });
@@ -71,12 +84,17 @@ $(function() {
       console.log(res);
       let result = {
         countries: { total: {}, sequence: {} },
-        institutions: { total: {}, sequence: {}, grid_id: {} }
+        institutions: { total: {}, sequence: {}, grid_id: {}, country_name: {} }
       };
       let yearSpan = year.max - year.min;
+      let worldLine = [];
+      let canadaLine = [];
 
       for (let i = 0; i < yearSpan; ++i) {
-        let data = JSON.parse(res[i].body).research_orgs;
+        let worldQuery = JSON.parse(res[i].body);
+        let data = worldQuery.research_orgs;
+        let element = { x: year.min + i, y: worldQuery._stats.total_count };
+        worldLine.push(JSON.parse(JSON.stringify(element)));
         for (let j = 0; j < data.length; ++j) {
           if (data[j].country_name in result.countries.total) {
             result.countries.total[data[j].country_name] += data[j].count;
@@ -93,6 +111,8 @@ $(function() {
             result.institutions.sequence[data[j].name] = [];
             result.institutions.grid_id[data[j].name] = data[j].id;
             result.institutions.sequence[data[j].name].push(data[j].count);
+            result.institutions.country_name[data[j].name] =
+              data[j].country_name;
           }
         }
         //add time sequence
@@ -106,7 +126,13 @@ $(function() {
       result.countries.total["Canada"] = 0;
       result.countries.sequence["Canada"] = [];
       for (let i = yearSpan; i < res.length; ++i) {
-        let data = JSON.parse(res[i].body).research_orgs;
+        let canadaQuery = JSON.parse(res[i].body);
+        let data = canadaQuery.research_orgs;
+        let element = {
+          x: year.min + i - yearSpan,
+          y: canadaQuery._stats.total_count
+        };
+        canadaLine.push(JSON.parse(JSON.stringify(element)));
         for (let j = 0; j < data.length; ++j) {
           result.countries.total["Canada"] += data[j].count;
         }
@@ -127,43 +153,122 @@ $(function() {
             result.institutions.total[key];
         }
       }
+      console.log(worldLine);
+      console.log(canadaLine);
+      timeline.remove();
+      let worldSum = 0;
+      let canadaSum = 0;
+      for (let i = 0; i < worldLine.length; ++i) {
+        worldSum += worldLine[i].y;
+      }
+      for (let i = 0; i < canadaLine.length; ++i) {
+        canadaSum += canadaLine[i].y;
+      }
+      for (let i = 0; i < canadaLine.length; ++i) {
+        canadaLine[i].y /= canadaSum;
+      }
+      for (let i = 0; i < worldLine.length; ++i) {
+        worldLine[i].y /= worldSum;
+      }
+      timeline = createTimeline(
+        svg,
+        {
+          min: 0.0,
+          max: 1.0,
+          time: year,
+          lines: [canadaLine, worldLine]
+        },
+        timelineAttr.margin,
+        timelineAttr.bbox
+      );
       calculateLeadLag(result);
     });
   }
 
-  function calculateLeadLag(data)
-  {
-    let result = [];
-    for(const country in data.countries.sequence)
-    {
-      if(data.countries.sequence[country].length <2)
-      {
+  function calculateLeadLag(data) {
+    let countries = [];
+    let institutions = [];
+    let missingCountries = [];
+    for (const country in data.countries.sequence) {
+      if (
+        data.countries.sequence[country].length !=
+        data.countries.sequence["Canada"].length
+      ) {
+        missingCountries.push(country);
         continue;
       }
-      if(country != 'Canada')
-      {
-        let leadLag = leadlag(Array.from(data.countries.sequence["Canada"],y=>y={y:y}), Array.from(data.countries.sequence[country],y=>y={y:y}));
-        result.push({leadlag:leadlag, country_name: country});
+      if (country != "Canada") {
+        let leadLag = leadlag(
+          Array.from(data.countries.sequence["Canada"], y => (y = { y: y })),
+          Array.from(data.countries.sequence[country], y => (y = { y: y }))
+        );
+        countries.push({ leadlag: leadLag, country_name: country });
       }
     }
-    colorMap(result);
+    for (const institute in data.institutions.sequence) {
+      if (
+        data.institutions.sequence[institute].length !=
+        data.countries.sequence["Canada"].length
+      ) {
+        continue;
+      }
+      let leadLag = leadlag(
+        Array.from(data.countries.sequence["Canada"], y => (y = { y: y })),
+        Array.from(data.institutions.sequence[institute], y => (y = { y: y }))
+      );
+      institutions.push({
+        leadlag: leadLag,
+        id: data.institutions.grid_id[institute],
+        name: institute
+      });
+    }
+    colorMap(countries, missingCountries);
+    colorInstitutions(institutions, data);
   }
 
-  function colorMap(data)
-  {
-    for(let i=0; i < data.length; ++i)
-    {
-      if(data[i].country_name in countryNames)
-      {
+  async function colorInstitutions(data, query) {
+    let location_ids = Array.from(data, x => x.id);
+    let locations = await getLocations(location_ids);
+    console.log(locations);
+    for (let index in locations) {
+      const country_name = query.institutions.country_name[data[index].name];
+      const countryTotal = query.countries.total[country_name];
+      const instituteTotal = query.institutions.total[data[index].name];
+      const end = query.institutions.sequence[data[index].name].length - 1;
+      const trend =
+        query.institutions.sequence[data[index].name][0] -
+        query.institutions.sequence[data[index].name][end];
+      createGlyph(
+        20 * (instituteTotal / countryTotal) + 20,
+        projection([locations[index].lng, locations[index].lat]),
+        trend,
+        svg,
+        {
+          sequence: query.institutions.sequence[data[index].name],
+          total: query.institutions.total[data[index].name],
+          name: data[index].name
+        }
+      );
+    }
+  }
+
+  function colorMap(data, missingData) {
+    for (let i = 0; i < data.length; ++i) {
+      if (data[i].country_name in countryNames) {
         let acronym = countryNames[data[i].country_name];
-        $(`#country${acronym}`).css({fill: colorScale(data[i].leadlag)});
-      }
-      else
-      {
+        $(`#country${acronym}`).css({ fill: colorScale(data[i].leadlag) });
+      } else {
         console.log(`${data[i].country_name} does not exist in dictionary`);
       }
     }
+    for (let i = 0; i < missingData.length; ++i) {
+      if (missingData[i] in countryNames) {
+        let acronym = countryNames[missingData[i]];
+        $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
+      }
+    }
   }
+
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
@@ -176,6 +281,7 @@ $(function() {
     let time = Math.random();
     return Math.floor((1 - time) * bottom + time * top);
   }
+
   function range(min, max, step) {
     let result = [];
     for (let i = min; i <= max; i += step) {
@@ -183,16 +289,36 @@ $(function() {
     }
     return result;
   }
-  function createGlyph(scale, coords, trend, svg) {
+
+  function getOffset(element) {
+    var bound = element.node().getBoundingClientRect();
+    var html = document.documentElement;
+
+    return {
+      top: bound.top + window.pageYOffset - html.clientTop,
+      left: bound.left + window.pageXOffset - html.clientLeft
+    };
+  }
+  /**
+   *
+   * @param {Number} scale
+   * @param {[Number,Number]} coords
+   * @param {Number} trend
+   * @param {Element} svg
+   * @param {{sequence:[Number...], total:Number, name:String}} data
+   * @returns {Element}
+   */
+  function createGlyph(scale, coords, trend, svg, data) {
     let rotation = 0;
-    if (trend == "up") {
-      rotation = -45;
-    }
-    if (trend == "down") {
+    if (trend > 0.05) {
       rotation = 45;
     }
+    if (trend > -0.05) {
+      rotation = -45;
+    }
     let glyph = svg.append("g");
-    glyph
+    glyph.attr("class", "noselect");
+    let circle = glyph
       .append("circle")
       .attr("cx", coords[0])
       .attr("cy", coords[1])
@@ -209,11 +335,27 @@ $(function() {
       .attr("stroke", "red")
       .attr("stroke-width", scale / 5)
       .attr("transform", `rotate(${rotation},${coords[0]},${coords[1]})`);
+
+    circle.on("mouseenter", function() {
+      let rect = getOffset(circle);
+      tooltip
+        .style("visibility", "visible")
+        .style("left", rect.left + scale + "px")
+        .style("top", rect.top + scale + "px")
+        .html(
+          `<p>sequence: ${data.sequence} <br> total: ${data.total} <br> name:${data.name}</p>`
+        );
+    });
+    circle.on("mouseleave", function() {
+      tooltip.style("visibility", "hidden");
+    });
+    nodes.push(glyph);
     return glyph;
   }
 
   function createLegend(yearScale, svg) {
     let group = svg.append("g");
+    group.attr("class", "noselect");
     let radius = 30;
     let diameter = radius * 2;
     let padding = 10;
@@ -308,7 +450,7 @@ $(function() {
           .attr("fill", function(d) {
             return d;
           })
-          .on("mouseenter", function() {
+          .on("mouseover", function() {
             mouseRect.style("visibility", "visible");
           })
           .on("mouseout", function() {
@@ -331,7 +473,7 @@ $(function() {
     let renderWindow = svg.append("g");
     let timeScale = d3
       .scaleLinear()
-      .domain([data.time.min, data.time.max])
+      .domain([data.time.min, data.time.max - 1])
       .range([margin.left, bbox.width - margin.right]);
 
     let valueScale = d3
@@ -369,28 +511,50 @@ $(function() {
         )
         .attr("transform", `translate(${bbox.x}, ${bbox.y - margin.bottom})`);
     }
+    return renderWindow;
   }
 
   function onLoad(json) {
-    for(let i=0; i < json.features.length; i++)
-    {
-      countryNames[json.features[i].properties.name] = json.features[i].properties.iso_a3;
+    for (let i = 0; i < json.features.length; i++) {
+      countryNames[json.features[i].properties.name] =
+        json.features[i].properties.iso_a3;
     }
     console.log(countryNames);
-    let oshawaCoords = [-78.865128, 43.89608];
     let scale = 1;
     //projection
-    let projection = d3.geoMercator().scale($("#map-holder").width());
+    projection = d3.geoMercator().scale($("#map-holder").width());
     //path generation based on projection
     let path = d3.geoPath().projection(projection);
-    console.log(projection(oshawaCoords));
+    tooltip = d3
+      .select("#map-holder")
+      .append("div")
+      .style("position", "absolute")
+      .style("visibility", "hidden")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px");
+
     //main svg
-    let svg = d3
+    svg = d3
       .select("#map-holder")
       .append("svg")
       // set to the same size as the "map-holder" div
       .attr("width", $("#map-holder").width())
       .attr("height", $("#map-holder").height());
+    svg
+      .append("defs")
+      .append("pattern")
+      .attr("id", "missing-data")
+      .attr("width", 40)
+      .attr("height", 25)
+      .attr("patternUnits", "userSpaceOnUse")
+      .append("path")
+      .attr("fill", "none")
+      .attr("stroke", "#335553")
+      .attr("stroke-width", "3")
+      .attr("d", "M0,0 Q10,20  20,10 T 40,0");
     //group containing countries
     let countriesGroup = svg.append("g").attr("id", "map");
     //the rect to be drawn on
@@ -414,7 +578,6 @@ $(function() {
       .on("mouseover", function(d, i) {
         d3.select(this).style("stroke", "black");
         d3.select(this).style("stroke-width", "5px");
-        d3.select(this).style("fill", `${colorScale(getRandom(-4, 4))}`);
       })
       .on("mouseout", function(d, i) {
         d3.select(this).style("stroke", "white");
@@ -441,11 +604,11 @@ $(function() {
               y * scale})scale(${scale})`
           );
       });
-    let glyph = createGlyph(45, projection(oshawaCoords), "down", svg);
+
     //legend
     let legend = createLegend(yearScale, svg);
-
-    createTimeline(
+    console.log($(window).width());
+    timeline = createTimeline(
       svg,
       {
         min: 0,
@@ -456,20 +619,18 @@ $(function() {
             { x: 2014, y: 100 },
             { x: 2015, y: 150 },
             { x: 2016, y: 100 },
-            { x: 2017, y: 100 },
-            { x: 2018, y: 80 }
+            { x: 2017, y: 100 }
           ],
           [
             { x: 2014, y: 80 },
             { x: 2015, y: 150 },
             { x: 2016, y: 10 },
-            { x: 2017, y: 90 },
-            { x: 2018, y: 190 }
+            { x: 2017, y: 90 }
           ]
         ]
       },
-      { left: 10, right: 10, bottom: 50 },
-      { width: 400, height: 100, x: 760, y: 869 }
+      timelineAttr.margin,
+      timelineAttr.bbox
     );
     new EasyPZ(
       svg.node(),
@@ -483,14 +644,16 @@ $(function() {
             transform.scale +
             ")"
         );
-        glyph.attr(
-          "transform",
-          "translate(" +
-            [transform.translateX, transform.translateY] +
-            ")scale(" +
-            transform.scale +
-            ")"
-        );
+        for (let node in nodes) {
+          nodes[node].attr(
+            "transform",
+            "translate(" +
+              [transform.translateX, transform.translateY] +
+              ")scale(" +
+              transform.scale +
+              ")"
+          );
+        }
       },
       ["SIMPLE_PAN"]
     );
@@ -499,16 +662,16 @@ $(function() {
   /**
    *
    * @param {[string]} grid_ids
-   * @param {function(response)} callback
    */
-  function getLocations(grid_ids, callback) {
-    d3.json("/geo-locations", {
+  async function getLocations(grid_ids) {
+    let response = await d3.json("/geo-locations", {
       method: "POST",
       body: JSON.stringify({ grid_ids: grid_ids }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
-    }).then(callback);
+    });
+    return response;
   }
   /**
    *

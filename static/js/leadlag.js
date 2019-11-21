@@ -44,8 +44,8 @@ function leadlag(data1, data2) {
     if (sum > highestRelation) {
       highestRelation = sum;
       bestOffset = offset;
-      console.log(`sum: ${sum}`);
-      console.log(`Offset: ${bestOffset}`);
+      //console.log(`sum: ${sum}`);
+      //console.log(`Offset: ${bestOffset}`);
     }
   }
 
