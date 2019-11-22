@@ -18,10 +18,8 @@ $(function() {
       y: $(window).height() - 100
     }
   };
-  let colorScale = d3
-    .scaleOrdinal()
-    .range(d3.schemeYlGnBu[yearScale.length - 1])
-    .domain([-4, 4]);
+  let colorScale = cmp.colorScale;
+  colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);
 
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
@@ -293,7 +291,7 @@ $(function() {
     for (let i = 0; i < data.length; ++i) {
       if (data[i].country_name in countryNames) {
         let acronym = countryNames[data[i].country_name];
-        $(`#country${acronym}`).css({ fill: colorScale(data[i].leadlag) });
+        $(`#country${acronym}`).css({ fill: colorScale.get(data[i].leadlag) });
       } else {
         console.log(`${data[i].country_name} does not exist in dictionary`);
       }
@@ -393,154 +391,17 @@ $(function() {
   function createLegend(yearScale, svg) {
     let group = svg.append("g");
     group.attr("class", "noselect");
-    let radius = 30;
-    let padding = radius * 2;
-    let y = $(window).height() - 20;
+    let padding = 20;
+    let y = $(window).height();
     let x = $(window).width();
     const end = yearScale.length - 1;
-    group
-      .append("rect")
-      .attr("x", x / 2 - (yearScale.length * radius) / 2 - padding)
-      .attr("y", y - (padding + radius))
-      .attr("height", padding + radius - 5)
-      .attr("width", yearScale.length * radius + padding * 2 + 15)
-      .attr("fill", "white")
-      .attr("rx", 15)
-      .attr("border", "5px")
-      .attr("stroke", "black");
-    group
-      .append("circle")
-      .attr("r", radius / 4)
-      .attr("cy", y - (padding - radius / 4))
-      .attr(
-        "cx",
-        x / 2 - (yearScale.length * radius) / 2 + radius / 2 - radius / 2
-      )
-      .attr("fill", colorScale(yearScale[0]));
 
-    group
-      .append("circle")
-      .attr("r", radius / 4)
-      .attr("cy", y - (padding - radius / 4))
-      .attr("cx", x / 2 + (yearScale.length * radius) / 2)
-      .attr("fill", colorScale(yearScale[end]));
-
-    group
-      .selectAll("rect")
-      .data(yearScale)
-      .enter()
-      .append("rect")
-      .attr("width", radius)
-      .attr("height", radius / 2)
-      .attr("x", function(d, i) {
-        return i * radius + x / 2 - (yearScale.length * radius) / 2;
-      })
-      .attr("y", y - padding)
-      .attr("fill", function(d) {
-        return colorScale(d);
-      })
-      .attr("border-top", "3px")
-      .attr("border-bottom", "3px");
-
-    group
-      .selectAll("text")
-      .data(yearScale)
-      .enter()
-      .append("text")
-      .attr("x", function(d, i) {
-        return (
-          i * radius + x / 2 - (yearScale.length * radius) / 2 + radius / 2
-        );
-      })
-      .attr("y", y - radius + 6)
-      .text(function(d) {
-        return d;
-      })
-      .attr("text-anchor", "middle");
-
-    group
-      .append("text")
-      .attr("x", x / 2 - (yearScale.length / 2) * radius - radius - 16)
-      .attr("y", y - padding + radius / 2)
-      .text("Lag")
-      .style("font", "helvetica")
-      .style("font-size", "20px");
-    group
-      .append("text")
-      .attr("x", x / 2 + (yearScale.length / 2) * radius + radius / 4 + 8)
-      .attr("y", y - padding + radius / 2)
-      .text("Lead")
-      .style("font", "helvetica")
-      .style("font-size", "20px");
-
-    group.on("click", function() {
-      let viableScales = colorScaleList.filter(function(i) {
-        return yearScale.length == i.length;
-      });
-      let swatches = svg.append("g");
-      for (let i = 0; i < viableScales.length; ++i) {
-        let swatch = swatches.append("g").attr("class", "group");
-        let mouseRect = swatch
-          .append("rect")
-          .attr(
-            "x",
-            i * ((diameter + padding) / 5) + diameter + padding - radius / 5
-          )
-          .attr("y", radius - radius / 5)
-          .attr("width", diameter / 5)
-          .attr(
-            "height",
-            (viableScales[i].length - 1) * diameter + diameter / 5
-          )
-          .attr("class", "group")
-          .style("visibility", "hidden")
-          .attr("fill", "blue")
-          .attr("opacity", "0.1")
-          .on("mouseenter", function() {
-            d3.select(this).style("visibility", "visible");
-          })
-          .on("mouseout", function() {
-            d3.select(this).style("visibility", "hidden");
-          })
-          .on("click", function() {
-            colorScale = d3
-              .scaleOrdinal()
-              .range(viableScales[i])
-              .domain(yearScale);
-            swatches.remove();
-            group.remove();
-            createLegend(yearScale, svg);
-          });
-        swatch
-          .selectAll("circle")
-          .data(viableScales[i])
-          .enter()
-          .append("circle")
-          .attr("cx", i * ((diameter + padding) / 5) + diameter + padding)
-          .attr("cy", function(d, j) {
-            return j * diameter + radius;
-          })
-          .attr("r", radius / 5)
-          .attr("fill", function(d) {
-            return d;
-          })
-          .on("mouseover", function() {
-            mouseRect.style("visibility", "visible");
-          })
-          .on("mouseout", function() {
-            mouseRect.style("visibility", "hidden");
-          })
-          .on("click", function() {
-            colorScale = d3
-              .scaleOrdinal()
-              .range(viableScales[i])
-              .domain(yearScale);
-            swatches.remove();
-            group.remove();
-            createLegend(yearScale, svg);
-          });
-      }
-    });
+    let legend = cmp.legend;
+    let legendVis = legend.visualize(colorScale, svg);
+    legendVis.attr(
+      "transform",
+      `translate(${padding},${y - legendVis.node().getBBox().height - padding})`
+    );
     return group;
   }
   function createTimeline(svg, data, margin, bbox) {
