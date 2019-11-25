@@ -50,8 +50,9 @@ class ChartView {
     let div = document.createElement("div");
     div.setAttribute("id", `${elementId}`);
     div.setAttribute("class", "chart");
-    const width = this.parent.offsetWidth;
-    const height = this.parent.offsetHeight;
+    console.log(this.parent.offsetWidth);
+    let width = this.parent.offsetWidth;
+    let height = this.parent.offsetHeight;
     let uniformSize = Math.min(width, height);
     this.viewList[view].appendChild(div);
 
@@ -79,8 +80,6 @@ class ChartView {
     );
     this.getChart(view, elementId).updateLines(data.lines);
     this.scaleCharts(this.parent.children);
-    //add draggable
-    $("#" + elementId).draggable();
     //add drop event
     //normalize view on drop
     this.charts[view][elementId].data = {

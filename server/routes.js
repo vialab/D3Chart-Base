@@ -22,6 +22,8 @@ module.exports = app => {
     console.log("request for unigram data");
   });
 
+  app.post("/querycategories", queryDimensions.queryCategory);
+
   app.post("/query-dimensions", queryDimensions.queryDimensions);
 
   app.post("/geo-locations", locations.getLocations);

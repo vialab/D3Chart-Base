@@ -34,22 +34,24 @@ function leadlag(data1, data2) {
   let highestRelation = 0;
   let bestOffset = 0;
 
-  for (let offset = 0; offset < d1.length; offset++) {
+  for (let offset = 0; offset < d1.length; ++offset) {
     let shiftedArray = shift(d1, offset);
     let sum = 0;
-    for (let i = 0; i < shiftedArray.length; i++) {
+    for (let i = 0; i < shiftedArray.length; ++i) {
       sum +=
         ((shiftedArray[i].y - d1Mean) / d1STD) * ((d2[i].y - d2Mean) / d2STD);
     }
     if (sum > highestRelation) {
       highestRelation = sum;
       bestOffset = offset;
-      //console.log(`sum: ${sum}`);
-      //console.log(`Offset: ${bestOffset}`);
     }
   }
+  if((d1.length-1) + -bestOffset > bestOffset)
+  {
+    return -bestOffset;
+  }
 
-  return bestOffset;
+  return d1.length-1 + -bestOffset;
 }
 /**
  * @param  {Array} array - expects [{y:}]

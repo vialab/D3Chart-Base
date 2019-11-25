@@ -2,13 +2,17 @@ $(function() {
   let previousQueries = [];
   let countryNames = {};
   let nodes = [];
-  let numYears = 4;
+  let numYears = 6;
   let yearScale = createRange(numYears);
+  let yearSpan = { min: 2012, max: 2018 };
   let tooltip;
   let svg;
   let projection;
+  let legend = cmp.legend;
+  let legendVis;
   let timeline;
   let defs;
+  let currentKeyword;
   let timelineAttr = {
     margin: { left: 10, right: 10, bottom: 50 },
     bbox: {
@@ -105,6 +109,7 @@ $(function() {
   function keywordSubmission(event) {
     event.preventDefault();
     let keyword = $("#search-field").val();
+    currentKeyword = keyword;
     let year = { min: 2012, max: 2018 };
     result = [];
     for (let i = year.min; i < year.max; ++i) {
@@ -121,6 +126,7 @@ $(function() {
         countries: { total: {}, sequence: {} },
         institutions: { total: {}, sequence: {}, grid_id: {}, country_name: {} }
       };
+
       let yearSpan = year.max - year.min;
       let worldLine = [];
       let canadaLine = [];
@@ -190,32 +196,7 @@ $(function() {
       }
       console.log(worldLine);
       console.log(canadaLine);
-      timeline.remove();
-      let worldSum = 0;
-      let canadaSum = 0;
-      for (let i = 0; i < worldLine.length; ++i) {
-        worldSum += worldLine[i].y;
-      }
-      for (let i = 0; i < canadaLine.length; ++i) {
-        canadaSum += canadaLine[i].y;
-      }
-      for (let i = 0; i < canadaLine.length; ++i) {
-        canadaLine[i].y /= canadaSum;
-      }
-      for (let i = 0; i < worldLine.length; ++i) {
-        worldLine[i].y /= worldSum;
-      }
-      timeline = createTimeline(
-        svg,
-        {
-          min: 0.0,
-          max: 1.0,
-          time: year,
-          lines: [canadaLine, worldLine]
-        },
-        timelineAttr.margin,
-        timelineAttr.bbox
-      );
+      previousQueries.push(result);
       calculateLeadLag(result);
     });
   }
@@ -224,6 +205,7 @@ $(function() {
     let countries = [];
     let institutions = [];
     let missingCountries = [];
+    let missingInstitutions=[];
     for (const country in data.countries.sequence) {
       if (
         data.countries.sequence[country].length !=
@@ -245,20 +227,26 @@ $(function() {
         data.institutions.sequence[institute].length !=
         data.countries.sequence["Canada"].length
       ) {
+        missingInstitutions.push({id: data.institutions.grid_id[institute], name: institute});
         continue;
       }
       let leadLag = leadlag(
         Array.from(data.countries.sequence["Canada"], y => (y = { y: y })),
         Array.from(data.institutions.sequence[institute], y => (y = { y: y }))
       );
+
       institutions.push({
         leadlag: leadLag,
         id: data.institutions.grid_id[institute],
         name: institute
       });
     }
+    
     colorMap(countries, missingCountries);
-    colorInstitutions(institutions, data);
+    colorInstitutions(institutions, data).then(function() {
+      legendVis.remove();
+      legendVis = createLegend(yearScale, svg);
+    });
   }
 
   async function colorInstitutions(data, query) {
@@ -281,7 +269,8 @@ $(function() {
         {
           sequence: query.institutions.sequence[data[index].name],
           total: query.institutions.total[data[index].name],
-          name: data[index].name
+          name: data[index].name,
+          lead: data[index].leadlag
         }
       );
     }
@@ -359,8 +348,8 @@ $(function() {
       .attr("cy", coords[1])
       .attr("r", scale)
       .attr("stroke", "black")
-      .attr("stroke-width", 3)
-      .attr("fill", "#69a3b2");
+      .attr("stroke-width", scale/ 5)
+      .attr("fill", colorScale.get(data.lead));
     glyph
       .append("line")
       .attr("x1", coords[0] + scale)
@@ -378,13 +367,14 @@ $(function() {
         .style("left", rect.left + scale + "px")
         .style("top", rect.top + scale + "px")
         .html(
-          `<p>sequence: ${data.sequence} <br> total: ${data.total} <br> name:${data.name}</p>`
+          `<p>${data.name}<br>${data.total} papers</p>`
         );
     });
     circle.on("mouseleave", function() {
       tooltip.style("visibility", "hidden");
     });
     nodes.push(glyph);
+    
     return glyph;
   }
 
@@ -393,60 +383,12 @@ $(function() {
     group.attr("class", "noselect");
     let padding = 20;
     let y = $(window).height();
-    let x = $(window).width();
-    const end = yearScale.length - 1;
-
-    let legend = cmp.legend;
-    let legendVis = legend.visualize(colorScale, svg);
+    legendVis = legend.visualize(colorScale, group, `Canada vs the World (${yearSpan.min}-${yearSpan.max-1}), "${currentKeyword}"`);
     legendVis.attr(
       "transform",
       `translate(${padding},${y - legendVis.node().getBBox().height - padding})`
     );
     return group;
-  }
-  function createTimeline(svg, data, margin, bbox) {
-    let renderWindow = svg.append("g");
-    let timeScale = d3
-      .scaleLinear()
-      .domain([data.time.min, data.time.max - 1])
-      .range([margin.left, bbox.width - margin.right]);
-
-    let valueScale = d3
-      .scaleLinear()
-      .domain([data.min, data.max])
-      .range([bbox.height, 0]);
-    let axis = renderWindow.append("g").call(
-      d3
-        .axisBottom(timeScale)
-        .ticks(4)
-        .tickFormat(d3.format("d"))
-    );
-    axis.attr(
-      "transform",
-      `translate(${bbox.x}, ${bbox.y + bbox.height - margin.bottom})`
-    );
-    for (let i = 0; i < data.lines.length; ++i) {
-      renderWindow
-        .append("path")
-        .datum(data.lines[i])
-        .attr("fill", "none")
-        .attr("stroke", d3.interpolateSinebow(i / data.lines.length))
-        .attr("stroke-width", 3)
-        .attr("stroke-linecap", "round")
-        .attr(
-          "d",
-          d3
-            .line()
-            .x(function(d) {
-              return timeScale(d.x);
-            })
-            .y(function(d) {
-              return valueScale(d.y);
-            })
-        )
-        .attr("transform", `translate(${bbox.x}, ${bbox.y - margin.bottom})`);
-    }
-    return renderWindow;
   }
 
   function onLoad(json) {
@@ -479,7 +421,26 @@ $(function() {
       .attr("width", $("#map-holder").width())
       .attr("height", $("#map-holder").height());
     defs = svg.append("defs");
-    createGradients(colorScaleList);
+    var filter = defs.append("filter").attr("id", "dropshadow");
+
+    filter
+      .append("feGaussianBlur")
+      .attr("in", "SourceAlpha")
+      .attr("stdDeviation", 1)
+      .attr("result", "blur");
+
+    filter
+      .append("feOffset")
+      .attr("in", "blur")
+      .attr("dx", 0.5)
+      .attr("dy", 0.5)
+      .attr("result", "offsetBlur");
+
+    var feMerge = filter.append("feMerge");
+
+    feMerge.append("feMergeNode").attr("in", "offsetBlur");
+    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
     defs
       .append("pattern")
       .attr("id", "missing-data")
@@ -520,29 +481,132 @@ $(function() {
         d3.select(this).style("stroke-width", "1px");
       })
       .on("click", function(d, i) {
-        console.log(d3.zoomTransform(countriesGroup.node()));
-        let bbox = d3
-          .select(this)
-          .node()
-          .getBBox();
-        let x = bbox.x + bbox.width / 2;
-        let y = bbox.y + bbox.height / 2;
-        console.log(`${x} ${y}`);
-        countriesGroup
-          .transition()
-          .duration(800)
-          .attr(
-            "transform",
-            `translate(${$("#map-holder").width() / 2 - x * scale}, ${$(
-              "#map-holder"
-            ).height() /
-              2 -
-              y * scale})scale(${scale})`
-          );
+        let end = previousQueries.length-1;
+        if(!(d.properties.name in previousQueries[end].countries.sequence))
+        {
+          return;
+        }
+        $("#map-holder").append(
+          `<div class="graph-window row" id="graph-holder"></div>`
+        );
+
+        $("#graph-holder").mouseleave(function(){
+          $("#graph-holder").remove(); 
+        });
+
+        $("#graph-holder").one("animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",function()
+        {
+        let result=[];
+        let category=[];
+        for(let i=yearSpan.min; i < yearSpan.max; ++i)
+        {
+          let temp = getCategory({keyword:currentKeyword, year:i, country_name:d.properties.name});
+          result.push(temp);
+        }
+        for(let i=yearSpan.min; i < yearSpan.max; ++i)
+        {
+          let temp = getCategory({keyword:currentKeyword, year:i, country_name:"Canada"});
+          result.push(temp);
+        }
+        Promise.all(result).then(function(res)
+        {
+          console.log(res);
+          lines={};
+          lines2={};
+          for(let j=0; j < yearSpan.max - yearSpan.min; ++j){
+          let obj = JSON.parse(res[j].body).category_for;
+          let count = JSON.parse(res[j].body)._stats.total_count;
+
+          for(let i=0; i < obj.length; ++i)
+          {
+            if(obj[i].name in lines)
+            {
+              lines[obj[i].name].push({x:yearSpan.min+j, y:obj[i].count / count});
+            }
+            else
+            {
+              lines[obj[i].name]=[];
+              lines[obj[i].name].push({x:yearSpan.min+j, y:obj[i].count / count});
+            }
+          }
+        }
+          for(let j=yearSpan.max - yearSpan.min; j < res.length; ++j){
+          let obj = JSON.parse(res[j].body).category_for;
+          let count = JSON.parse(res[j].body)._stats.total_count;
+          console.log(obj);
+          for(let i=0; i < obj.length; ++i)
+          {
+            if(obj[i].name in lines2)
+            {
+              lines2[obj[i].name].push({x:yearSpan.min + j - (yearSpan.max - yearSpan.min), y:obj[i].count / count});
+            }
+            else
+            {
+              lines2[obj[i].name]=[];
+              lines2[obj[i].name].push({x:yearSpan.min + j - (yearSpan.max - yearSpan.min), y:obj[i].count / count});
+            }
+          }
+        }
+
+        
+        let chartView = new ChartView("graph-holder");
+        chartView.addView("main-view");
+        chartView.addView("category-view");
+        chartView.setMainView("main-view");
+        let CanadaArray = Array.from(previousQueries[end].countries.sequence["Canada"], function(d,i){return {x:yearSpan.min + i, y:d}});
+        let OtherArray = Array.from(previousQueries[end].countries.sequence[d.properties.name], function(d,i){return {x:yearSpan.min + i, y:d}});
+
+        chartView.addChart("main-view", 
+        {
+          xdomain:[yearSpan.min, yearSpan.max-1],
+          ydomain:[0.0, 1.0],
+          lines:
+          [
+            {
+            name:"Canada",
+            rawdata:CanadaArray,
+            data:CanadaArray
+            }
+            ,
+            {
+              name:d.properties.name,
+              rawdata:OtherArray,
+              data:OtherArray
+            }
+          ]
+        }, data=>{data.chartName ="total"});
+
+        for(let key in lines)
+        {
+          if(key in lines2)
+          {
+            chartView.addChart("category-view", 
+        {
+          xdomain:[yearSpan.min, yearSpan.max-1],
+          ydomain:[0.0, 1.0],
+          lines:
+          [
+            {
+            name:"Canada",
+            rawdata:lines2[key],
+            data:lines2[key]
+            }
+            ,
+            {
+              name:d.properties.name,
+              rawdata:lines[key],
+              data:lines[key]
+            }
+          ]
+        }, data=>{data.chartName=key});
+          }
+        }
+        });
+        });
       });
 
     //legend
-    let legend = createLegend(yearScale, svg);
+    legendVis = createLegend(yearScale, svg);
     console.log($(window).width());
 
     new EasyPZ(
@@ -603,9 +667,21 @@ $(function() {
   }
 
   async function getCanada(params) {
-    let response = d3.json("/querycanada", {
+    let response = await d3.json("/querycanada", {
       method: "POST",
       body: JSON.stringify({ keyword: params.keyword, year: params.year }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    });
+    return response;
+  }
+
+  async function getCategory(params)
+  {
+      let response = await d3.json("/querycategories", {
+      method: "POST",
+      body: JSON.stringify({ keyword: params.keyword, year: params.year, country_name:params.country_name }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }

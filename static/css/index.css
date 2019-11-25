@@ -55,6 +55,8 @@ input {
   text-align: center;
   font-size: 1.2em;
   transition: all 1s;
+  box-shadow: 0 0 3px;
+  stroke: black;
 }
 
 form:hover {
@@ -72,6 +74,7 @@ input:focus {
 
 form:hover .fa {
   outline: 2px;
+  box-shadow: none;
 }
 
 .country {
@@ -92,16 +95,6 @@ svg {
   user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome, Opera and Firefox */
 }
-.missing-data {
-  background-color: gray;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 35px,
-    rgba(255, 255, 255, 0.5) 35px,
-    rgba(255, 255, 255, 0.5) 70px
-  );
-}
 
 .title {
   top: 10%;
@@ -109,4 +102,37 @@ svg {
   width: 100%;
   text-align: center;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.graph-window {
+  top: 5%;
+  left: 5%;
+  bottom: 5%;
+  right: 5%;
+  background-color: white;
+  border-radius: 25px;
+  position: fixed;
+  box-shadow: 0 0 3px;
+  stroke: black;
+  animation-name: graph-window-animation;
+  animation-duration: 500ms;
+}
+
+@keyframes graph-window-animation {
+  from {
+    top: 50%;
+    left: 50%;
+    bottom: 50%;
+    right: 50%;
+  }
+  to {
+    top: 5%;
+    left: 5%;
+    bottom: 5%;
+    right: 5%;
+  }
+}
+
+.missing-data {
+  object-fit: cover;
 }

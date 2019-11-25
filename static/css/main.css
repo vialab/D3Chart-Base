@@ -159,20 +159,15 @@ input:checked + .slider:before {
 }
 
 .multi-container {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   flex-direction: row;
-  height: 100%;
+    height: 100%;
   width: 100%;
   overflow-y: unset;
   position: relative;
 }
 
-.chart {
-  height: 100%;
-  width: 100%;
-  position: absolute;
-}
 
 .row {
   box-sizing: border-box;
