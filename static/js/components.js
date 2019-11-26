@@ -12,7 +12,7 @@ let cmp = {
      * @param {Element} svg - element to append to
      * @returns {Element} - group containing the legend
      */
-    visualize(colorScale, svg, pTitle="Canada vs the World(2008-2018)") {
+    visualize(colorScale, svg, pTitle = "Canada vs the World(2008-2018)") {
       let size = { width: 30, height: 15 };
       let boxPadding = 30;
       let leadLagPadding = 15;
@@ -96,7 +96,7 @@ let cmp = {
           titleBBox.height})`
       );
       let misc = cmp.misclegend;
-      let visMisc = misc.visualization(size, group);
+      let visMisc = misc.visualize(size, group);
       visMisc.attr(
         "transform",
         `translate(${background.node().getBBox().width / 2 -
@@ -106,7 +106,7 @@ let cmp = {
           visBBox.height +
           titlePadding})`
       );
-      
+
       background.attr(
         "height",
         boxPadding +
@@ -306,7 +306,7 @@ let cmp = {
     }
   },
   misclegend: {
-    visualization(size, svg) {
+    visualize(size, svg) {
       let padding = 10;
       let middlePadding = 30;
       let textHeightPadding = 3;
@@ -344,7 +344,7 @@ let cmp = {
         .attr("rx", 8)
         .attr("border", "1px")
         .attr("stroke", "black")
-        .attr("fill", "url(#missing-data)");
+        .style("fill", "url(#missing-data-img)");
 
       let text2 = group
         .append("text")
@@ -363,6 +363,135 @@ let cmp = {
         .attr("font-size", "12px");
       text2.attr("y", text2.node().getBBox().height - textHeightPadding);
       return group;
+    }
+  },
+
+  countries: {
+    coloredList: [],
+    countryNames: {},
+    rawData: [],
+    group: null,
+    data(dataVals) {
+      this.rawData = dataVals;
+      for (let i = 0; i < dataVals.length; ++i) {
+        this.countryNames[dataVals[i].properties.name] =
+          dataVals[i].properties.iso_a3;
+      }
+      return this;
+    },
+    visualize(svg, projection) {
+      this.group = svg
+        .selectAll("path")
+        .data(this.rawData)
+        .enter()
+        .append("path")
+        .attr("d", projection)
+        .attr("id", function(d, i) {
+          return "country" + d.properties.iso_a3;
+        })
+        .attr("class", "country")
+        .on("mouseover", function(d, i) {
+          d3.select(this).style("stroke", "black");
+          d3.select(this).style("stroke-width", "5px");
+        })
+        .on("mouseout", function(d, i) {
+          d3.select(this).style("stroke", "white");
+          d3.select(this).style("stroke-width", "1px");
+        });
+      return this.group;
+    },
+    color(data, missingData = [], colorScale) {
+      for (let i = 0; i < data.length; ++i) {
+        if (data[i].country_name in this.countryNames) {
+          let acronym = this.countryNames[data[i].country_name];
+          $(`#country${acronym}`).css({
+            fill: colorScale.get(data[i].leadlag)
+          });
+          this.coloredList.push(`#country${acronym}`);
+        } else {
+          console.log(`${data[i].country_name} does not exist in dictionary`);
+        }
+      }
+      for (let i = 0; i < missingData.length; ++i) {
+        if (missingData[i] in this.countryNames) {
+          let acronym = this.countryNames[missingData[i]];
+          $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
+          this.coloredList.push(`country${acronym}`);
+        }
+      }
+    },
+    reset(color = "#f5f5f5") {
+      for (let i = 0; i < this.coloredList.length; ++i) {
+        $(this.coloredList[i]).css({ fill: color });
+      }
+      this.coloredList = [];
+    }
+  },
+
+  glyphs: {
+    nodes: [],
+    group: null,
+
+    visualize(svg, colorScale, data) {
+      this.group = svg.append("g");
+      this.group.attr("class", "noselect");
+
+      this.group
+        .selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", function(d) {
+          d.lat;
+        })
+        .attr("cy", function(d) {
+          d.lng;
+        })
+        .attr("r", function(d, i) {
+          return data[i].scale;
+        })
+        .attr("stroke", "black")
+        .attr("stroke-width", function(d, i) {
+          return d.scale / 5;
+        })
+        .attr("fill", function(d) {
+          colorScale.get(d.lead);
+        });
+
+      this.group
+        .selectAll("line")
+        .data(data)
+        .enter()
+        .append("line")
+        .attr("x1", function(d, i) {
+          return d.lat + d.scale;
+        })
+        .attr("y1", function(d, i) {
+          return d.lng;
+        })
+        .attr("x2", function(d, i) {
+          return d.lat - d.scale;
+        })
+        .attr("y2", function(d, i) {
+          return d.lng;
+        })
+        .attr("stroke", "black")
+        .attr("stroke-width", function(d, i) {
+          d.scale;
+        })
+        .attr("transform", function(d, i) {
+          let rotation = 0;
+          if (d.trend > 0.05) {
+            rotation = 45;
+          }
+          if (d.trend > -0.05) {
+            rotation = -45;
+          }
+          return `rotate(${rotation},${d.lat},${d.lng})`;
+        });
+    },
+    reset() {
+      this.group.remove();
     }
   }
 };

@@ -1,6 +1,7 @@
 $(function() {
   let previousQueries = [];
-  let countryNames = {};
+  let cmpCountries = cmp.countries;
+  let cmpInstitutes = cmp.glyphs;
   let nodes = [];
   let numYears = 6;
   let yearScale = createRange(numYears);
@@ -10,105 +11,26 @@ $(function() {
   let projection;
   let legend = cmp.legend;
   let legendVis;
-  let timeline;
   let defs;
   let currentKeyword;
-  let timelineAttr = {
-    margin: { left: 10, right: 10, bottom: 50 },
-    bbox: {
-      width: 400,
-      height: 100,
-      x: $(window).width() / 2 - 200,
-      y: $(window).height() - 100
-    }
-  };
+
   let colorScale = cmp.colorScale;
   colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);
 
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
   });
-  $("#keyword-form").submit(keywordSubmission);
 
-  let colorScaleList = createColorSchemes();
+  $("#keyword-form").on("submit", keywordSubmission);
 
-  function createColorSchemes() {
-    let result = [
-      d3.interpolateBrBG,
-      d3.interpolatePRGn,
-      d3.interpolatePiYG,
-      d3.interpolatePuOr,
-      d3.interpolateRdBu,
-      d3.interpolateRdGy,
-      d3.interpolateRdYlBu,
-      d3.interpolateRdYlGn,
-      d3.interpolateSpectral,
-      d3.interpolateBlues,
-      d3.interpolateGreens,
-      d3.interpolateGreys,
-      d3.interpolateOranges,
-      d3.interpolatePurples,
-      d3.interpolateReds,
-      d3.interpolateTurbo,
-      d3.interpolateViridis,
-      d3.interpolateInferno,
-      d3.interpolateMagma,
-      d3.interpolatePlasma,
-      d3.interpolateCividis,
-      d3.interpolateWarm,
-      d3.interpolateCool,
-      d3.interpolateCubehelixDefault,
-      d3.interpolateBuGn,
-      d3.interpolateBuPu,
-      d3.interpolateGnBu,
-      d3.interpolateOrRd,
-      d3.interpolatePuBuGn,
-      d3.interpolatePuBu,
-      d3.interpolatePuRd,
-      d3.interpolateRdPu,
-      d3.interpolateYlGnBu,
-      d3.interpolateYlGn,
-      d3.interpolateYlOrBr,
-      d3.interpolateYlOrRd,
-      d3.interpolateRainbow,
-      d3.interpolateSinebow
-    ];
-    return result;
-  }
-  function createGradients(colorSchemes) {
-    for (let i = 0; i < colorSchemes.length; ++i) {
-      let gradient = defs
-        .append("linearGradient")
-        .attr("id", `svgGradient${i}`)
-        .attr("x1", "0%")
-        .attr("x2", "100%")
-        .attr("y1", "0%")
-        .attr("y2", "100%");
-      gradient
-        .append("stop")
-        .attr("class", "start")
-        .attr("offset", "0%")
-        .attr("stop-color", colorSchemes[i](0))
-        .attr("stop-opacity", 1);
-
-      for (let j = 1; j < 10; ++j) {
-        gradient
-          .append("stop")
-          .attr("offset", `${j / 10}%`)
-          .attr("stop-color", colorSchemes[i](j / 10))
-          .attr("stop-opacity", 1);
-      }
-      gradient
-        .append("stop")
-        .attr("class", "end")
-        .attr("offset", "100%")
-        .attr("stop-color", colorSchemes[i](10 / 10))
-        .attr("stop-opacity", 1);
-    }
-  }
   function keywordSubmission(event) {
     event.preventDefault();
+    cmpCountries.reset();
+    cmpInstitutes.reset();
     let keyword = $("#search-field").val();
+    $("#keyword-form")
+      .get(0)
+      .reset();
     currentKeyword = keyword;
     let year = { min: 2012, max: 2018 };
     result = [];
@@ -205,7 +127,7 @@ $(function() {
     let countries = [];
     let institutions = [];
     let missingCountries = [];
-    let missingInstitutions=[];
+    let missingInstitutions = [];
     for (const country in data.countries.sequence) {
       if (
         data.countries.sequence[country].length !=
@@ -227,7 +149,10 @@ $(function() {
         data.institutions.sequence[institute].length !=
         data.countries.sequence["Canada"].length
       ) {
-        missingInstitutions.push({id: data.institutions.grid_id[institute], name: institute});
+        missingInstitutions.push({
+          id: data.institutions.grid_id[institute],
+          name: institute
+        });
         continue;
       }
       let leadLag = leadlag(
@@ -241,8 +166,7 @@ $(function() {
         name: institute
       });
     }
-    
-    colorMap(countries, missingCountries);
+    cmpCountries.color(countries, missingCountries, colorScale);
     colorInstitutions(institutions, data).then(function() {
       legendVis.remove();
       legendVis = createLegend(yearScale, svg);
@@ -252,6 +176,7 @@ $(function() {
   async function colorInstitutions(data, query) {
     let location_ids = Array.from(data, x => x.id);
     let locations = await getLocations(location_ids);
+    let renderData = [];
     console.log(locations);
     for (let index in locations) {
       const country_name = query.institutions.country_name[data[index].name];
@@ -261,54 +186,36 @@ $(function() {
       const trend =
         query.institutions.sequence[data[index].name][0] -
         query.institutions.sequence[data[index].name][end];
-      createGlyph(
-        20 * (instituteTotal / countryTotal) + 20,
-        projection([locations[index].lng, locations[index].lat]),
-        trend,
-        svg,
-        {
-          sequence: query.institutions.sequence[data[index].name],
-          total: query.institutions.total[data[index].name],
-          name: data[index].name,
-          lead: data[index].leadlag
-        }
-      );
-    }
-  }
+      let scale = 20 * (instituteTotal / countryTotal) + 20;
+      let coords = projection([locations[index].lng, locations[index].lat]);
 
-  function colorMap(data, missingData) {
-    for (let i = 0; i < data.length; ++i) {
-      if (data[i].country_name in countryNames) {
-        let acronym = countryNames[data[i].country_name];
-        $(`#country${acronym}`).css({ fill: colorScale.get(data[i].leadlag) });
-      } else {
-        console.log(`${data[i].country_name} does not exist in dictionary`);
-      }
+      renderData.push({
+        lat: coords[0],
+        lng: coords[1],
+        scale: scale,
+        lead: data[index].leadlag,
+        trend: trend
+      });
+
+      //createGlyph(
+      //  20 * (instituteTotal / countryTotal) + 20,
+      //  projection([locations[index].lng, locations[index].lat]),
+      //  trend,
+      //  svg,
+      //  {
+      //    sequence: query.institutions.sequence[data[index].name],
+      //    total: query.institutions.total[data[index].name],
+      //    name: data[index].name,
+      //    lead: data[index].leadlag
+      //  }
+      //);
     }
-    for (let i = 0; i < missingData.length; ++i) {
-      if (missingData[i] in countryNames) {
-        let acronym = countryNames[missingData[i]];
-        $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
-      }
-    }
+    cmpInstitutes.visualize(svg, colorScale, renderData);
   }
 
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
-      result.push(i);
-    }
-    return result;
-  }
-
-  function getRandom(bottom, top) {
-    let time = Math.random();
-    return Math.floor((1 - time) * bottom + time * top);
-  }
-
-  function range(min, max, step) {
-    let result = [];
-    for (let i = min; i <= max; i += step) {
       result.push(i);
     }
     return result;
@@ -348,7 +255,7 @@ $(function() {
       .attr("cy", coords[1])
       .attr("r", scale)
       .attr("stroke", "black")
-      .attr("stroke-width", scale/ 5)
+      .attr("stroke-width", scale / 5)
       .attr("fill", colorScale.get(data.lead));
     glyph
       .append("line")
@@ -366,15 +273,13 @@ $(function() {
         .style("visibility", "visible")
         .style("left", rect.left + scale + "px")
         .style("top", rect.top + scale + "px")
-        .html(
-          `<p>${data.name}<br>${data.total} papers</p>`
-        );
+        .html(`<p>${data.name}<br>${data.total} papers</p>`);
     });
     circle.on("mouseleave", function() {
       tooltip.style("visibility", "hidden");
     });
     nodes.push(glyph);
-    
+
     return glyph;
   }
 
@@ -383,7 +288,12 @@ $(function() {
     group.attr("class", "noselect");
     let padding = 20;
     let y = $(window).height();
-    legendVis = legend.visualize(colorScale, group, `Canada vs the World (${yearSpan.min}-${yearSpan.max-1}), "${currentKeyword}"`);
+    legendVis = legend.visualize(
+      colorScale,
+      group,
+      `Canada vs the World (${yearSpan.min}-${yearSpan.max -
+        1}), "${currentKeyword}"`
+    );
     legendVis.attr(
       "transform",
       `translate(${padding},${y - legendVis.node().getBBox().height - padding})`
@@ -392,12 +302,6 @@ $(function() {
   }
 
   function onLoad(json) {
-    for (let i = 0; i < json.features.length; i++) {
-      countryNames[json.features[i].properties.name] =
-        json.features[i].properties.iso_a3;
-    }
-    console.log(countryNames);
-    let scale = 1;
     //projection
     projection = d3.geoMercator().scale($("#map-holder").width());
     //path generation based on projection
@@ -422,7 +326,18 @@ $(function() {
       .attr("height", $("#map-holder").height());
     defs = svg.append("defs");
     var filter = defs.append("filter").attr("id", "dropshadow");
-
+    defs
+      .append("svg:pattern")
+      .attr("id", "missing-data-img")
+      .attr("width", 100)
+      .attr("height", 100)
+      .attr("patternUnits", "userSpaceOnUse")
+      .append("image")
+      .attr("xlink:href", "/resources/patternFill.png")
+      .attr("width", 60)
+      .attr("height", 15)
+      .attr("x", -8)
+      .attr("y", 0);
     filter
       .append("feGaussianBlur")
       .attr("in", "SourceAlpha")
@@ -461,154 +376,157 @@ $(function() {
       .attr("y", 0)
       .attr("width", $("#map").width())
       .attr("height", $("#map").height());
-
-    let countries = countriesGroup
-      .selectAll("path")
-      .data(json.features)
-      .enter()
-      .append("path")
-      .attr("d", path)
-      .attr("id", function(d, i) {
-        return "country" + d.properties.iso_a3;
-      })
-      .attr("class", "country")
-      .on("mouseover", function(d, i) {
-        d3.select(this).style("stroke", "black");
-        d3.select(this).style("stroke-width", "5px");
-      })
-      .on("mouseout", function(d, i) {
-        d3.select(this).style("stroke", "white");
-        d3.select(this).style("stroke-width", "1px");
-      })
-      .on("click", function(d, i) {
-        let end = previousQueries.length-1;
-        if(!(d.properties.name in previousQueries[end].countries.sequence))
-        {
-          return;
-        }
-        $("#map-holder").append(
-          `<div class="graph-window row" id="graph-holder"></div>`
-        );
-
-        $("#graph-holder").mouseleave(function(){
-          $("#graph-holder").remove(); 
-        });
-
-        $("#graph-holder").one("animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",function()
-        {
-        let result=[];
-        let category=[];
-        for(let i=yearSpan.min; i < yearSpan.max; ++i)
-        {
-          let temp = getCategory({keyword:currentKeyword, year:i, country_name:d.properties.name});
-          result.push(temp);
-        }
-        for(let i=yearSpan.min; i < yearSpan.max; ++i)
-        {
-          let temp = getCategory({keyword:currentKeyword, year:i, country_name:"Canada"});
-          result.push(temp);
-        }
-        Promise.all(result).then(function(res)
-        {
-          console.log(res);
-          lines={};
-          lines2={};
-          for(let j=0; j < yearSpan.max - yearSpan.min; ++j){
-          let obj = JSON.parse(res[j].body).category_for;
-          let count = JSON.parse(res[j].body)._stats.total_count;
-
-          for(let i=0; i < obj.length; ++i)
-          {
-            if(obj[i].name in lines)
-            {
-              lines[obj[i].name].push({x:yearSpan.min+j, y:obj[i].count / count});
-            }
-            else
-            {
-              lines[obj[i].name]=[];
-              lines[obj[i].name].push({x:yearSpan.min+j, y:obj[i].count / count});
-            }
-          }
-        }
-          for(let j=yearSpan.max - yearSpan.min; j < res.length; ++j){
-          let obj = JSON.parse(res[j].body).category_for;
-          let count = JSON.parse(res[j].body)._stats.total_count;
-          console.log(obj);
-          for(let i=0; i < obj.length; ++i)
-          {
-            if(obj[i].name in lines2)
-            {
-              lines2[obj[i].name].push({x:yearSpan.min + j - (yearSpan.max - yearSpan.min), y:obj[i].count / count});
-            }
-            else
-            {
-              lines2[obj[i].name]=[];
-              lines2[obj[i].name].push({x:yearSpan.min + j - (yearSpan.max - yearSpan.min), y:obj[i].count / count});
-            }
-          }
-        }
-
-        
-        let chartView = new ChartView("graph-holder");
-        chartView.addView("main-view");
-        chartView.addView("category-view");
-        chartView.setMainView("main-view");
-        let CanadaArray = Array.from(previousQueries[end].countries.sequence["Canada"], function(d,i){return {x:yearSpan.min + i, y:d}});
-        let OtherArray = Array.from(previousQueries[end].countries.sequence[d.properties.name], function(d,i){return {x:yearSpan.min + i, y:d}});
-
-        chartView.addChart("main-view", 
-        {
-          xdomain:[yearSpan.min, yearSpan.max-1],
-          ydomain:[0.0, 1.0],
-          lines:
-          [
-            {
-            name:"Canada",
-            rawdata:CanadaArray,
-            data:CanadaArray
-            }
-            ,
-            {
-              name:d.properties.name,
-              rawdata:OtherArray,
-              data:OtherArray
-            }
-          ]
-        }, data=>{data.chartName ="total"});
-
-        for(let key in lines)
-        {
-          if(key in lines2)
-          {
-            chartView.addChart("category-view", 
-        {
-          xdomain:[yearSpan.min, yearSpan.max-1],
-          ydomain:[0.0, 1.0],
-          lines:
-          [
-            {
-            name:"Canada",
-            rawdata:lines2[key],
-            data:lines2[key]
-            }
-            ,
-            {
-              name:d.properties.name,
-              rawdata:lines[key],
-              data:lines[key]
-            }
-          ]
-        }, data=>{data.chartName=key});
-          }
-        }
-        });
-        });
-      });
-
+    cmpCountries.data(json.features).visualize(countriesGroup, path);
+    //  .on("click", function(d, i) {
+    //    let end = previousQueries.length - 1;
+    //    if (!(d.properties.name in previousQueries[end].countries.sequence)) {
+    //      return;
+    //    }
+    //    $("#map-holder").append(
+    //      `<div class="graph-window row" id="graph-holder"></div>`
+    //    );
+    //
+    //    $("#graph-holder").mouseleave(function() {
+    //      $("#graph-holder").remove();
+    //    });
+    //
+    //    $("#graph-holder").one(
+    //      "animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
+    //      function() {
+    //        let result = [];
+    //        let category = [];
+    //        for (let i = yearSpan.min; i < yearSpan.max; ++i) {
+    //          let temp = getCategory({
+    //            keyword: currentKeyword,
+    //            year: i,
+    //            country_name: d.properties.name
+    //          });
+    //          result.push(temp);
+    //        }
+    //        for (let i = yearSpan.min; i < yearSpan.max; ++i) {
+    //          let temp = getCategory({
+    //            keyword: currentKeyword,
+    //            year: i,
+    //            country_name: "Canada"
+    //          });
+    //          result.push(temp);
+    //        }
+    //        Promise.all(result).then(function(res) {
+    //          console.log(res);
+    //          lines = {};
+    //          lines2 = {};
+    //          for (let j = 0; j < yearSpan.max - yearSpan.min; ++j) {
+    //            let obj = JSON.parse(res[j].body).category_for;
+    //            let count = JSON.parse(res[j].body)._stats.total_count;
+    //
+    //            for (let i = 0; i < obj.length; ++i) {
+    //              if (obj[i].name in lines) {
+    //                lines[obj[i].name].push({
+    //                  x: yearSpan.min + j,
+    //                  y: obj[i].count / count
+    //                });
+    //              } else {
+    //                lines[obj[i].name] = [];
+    //                lines[obj[i].name].push({
+    //                  x: yearSpan.min + j,
+    //                  y: obj[i].count / count
+    //                });
+    //              }
+    //            }
+    //          }
+    //          for (let j = yearSpan.max - yearSpan.min; j < res.length; ++j) {
+    //            let obj = JSON.parse(res[j].body).category_for;
+    //            let count = JSON.parse(res[j].body)._stats.total_count;
+    //            console.log(obj);
+    //            for (let i = 0; i < obj.length; ++i) {
+    //              if (obj[i].name in lines2) {
+    //                lines2[obj[i].name].push({
+    //                  x: yearSpan.min + j - (yearSpan.max - yearSpan.min),
+    //                  y: obj[i].count / count
+    //                });
+    //              } else {
+    //                lines2[obj[i].name] = [];
+    //                lines2[obj[i].name].push({
+    //                  x: yearSpan.min + j - (yearSpan.max - yearSpan.min),
+    //                  y: obj[i].count / count
+    //                });
+    //              }
+    //            }
+    //          }
+    //
+    //          let chartView = new ChartView("graph-holder");
+    //          chartView.addView("main-view");
+    //          chartView.addView("category-view");
+    //          chartView.setMainView("main-view");
+    //          let CanadaArray = Array.from(
+    //            previousQueries[end].countries.sequence["Canada"],
+    //            function(d, i) {
+    //              return { x: yearSpan.min + i, y: d };
+    //            }
+    //          );
+    //          let OtherArray = Array.from(
+    //            previousQueries[end].countries.sequence[d.properties.name],
+    //            function(d, i) {
+    //              return { x: yearSpan.min + i, y: d };
+    //            }
+    //          );
+    //
+    //          chartView.addChart(
+    //            "main-view",
+    //            {
+    //              xdomain: [yearSpan.min, yearSpan.max - 1],
+    //              ydomain: [0.0, 1.0],
+    //              lines: [
+    //                {
+    //                  name: "Canada",
+    //                  rawdata: CanadaArray,
+    //                  data: CanadaArray
+    //                },
+    //                {
+    //                  name: d.properties.name,
+    //                  rawdata: OtherArray,
+    //                  data: OtherArray
+    //                }
+    //              ]
+    //            },
+    //            data => {
+    //              data.chartName = "total";
+    //            }
+    //          );
+    //
+    //          for (let key in lines) {
+    //            if (key in lines2) {
+    //              chartView.addChart(
+    //                "category-view",
+    //                {
+    //                  xdomain: [yearSpan.min, yearSpan.max - 1],
+    //                  ydomain: [0.0, 1.0],
+    //                  lines: [
+    //                    {
+    //                      name: "Canada",
+    //                      rawdata: lines2[key],
+    //                      data: lines2[key]
+    //                    },
+    //                    {
+    //                      name: d.properties.name,
+    //                      rawdata: lines[key],
+    //                      data: lines[key]
+    //                    }
+    //                  ]
+    //                },
+    //                data => {
+    //                  data.chartName = key;
+    //                }
+    //              );
+    //            }
+    //          }
+    //        });
+    //      }
+    //    );
+    //  });
+    //
     //legend
     legendVis = createLegend(yearScale, svg);
-    console.log($(window).width());
-
     new EasyPZ(
       svg.node(),
       function(transform) {
@@ -621,16 +539,24 @@ $(function() {
             transform.scale +
             ")"
         );
-        for (let node in nodes) {
-          nodes[node].attr(
-            "transform",
-            "translate(" +
-              [transform.translateX, transform.translateY] +
-              ")scale(" +
-              transform.scale +
-              ")"
-          );
-        }
+        //for (let node in nodes) {
+        //  nodes[node].attr(
+        //    "transform",
+        //    "translate(" +
+        //      [transform.translateX, transform.translateY] +
+        //      ")scale(" +
+        //      transform.scale +
+        //      ")"
+        //  );
+        //}
+        cmpInstitutes.group.attr(
+          "transform",
+          "translate(" +
+            [transform.translateX, transform.translateY] +
+            ")scale(" +
+            transform.scale +
+            ")"
+        );
       },
       ["SIMPLE_PAN"]
     );
@@ -677,11 +603,14 @@ $(function() {
     return response;
   }
 
-  async function getCategory(params)
-  {
-      let response = await d3.json("/querycategories", {
+  async function getCategory(params) {
+    let response = await d3.json("/querycategories", {
       method: "POST",
-      body: JSON.stringify({ keyword: params.keyword, year: params.year, country_name:params.country_name }),
+      body: JSON.stringify({
+        keyword: params.keyword,
+        year: params.year,
+        country_name: params.country_name
+      }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
