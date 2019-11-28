@@ -133,23 +133,39 @@ const queryCanada = async function(req, resp) {
   });
 };
 
-const queryCategory = async function(req, resp)
-{
-    const options = {
+const queryCategory = async function(req, resp) {
+  const options = {
     url: api_url,
     method: "POST",
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return category_for limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year>=${req.body.year.min} and year<${req.body.year.max} return publications[year + category_for] limit 1000`
   };
   console.log(options);
   request.post(options, (error, res) => {
     if (error) {
       console.log(error);
     }
+
+    console.log(res);
     resp.status(200).send(res);
   });
-}
+};
 
-module.exports = { queryDimensions, queryNotCanada, queryCanada, queryCategory };
+//queryCategory({
+//  body: {
+//    keyword: "machine learning",
+//    country_name: "Canada",
+//    year: { min: 2014, max: 2016 }
+//  }
+//}).catch(function(err) {
+//  console.error(err);
+//});
+
+module.exports = {
+  queryDimensions,
+  queryNotCanada,
+  queryCanada,
+  queryCategory
+};

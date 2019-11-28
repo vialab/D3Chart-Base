@@ -416,7 +416,7 @@ let cmp = {
         if (missingData[i] in this.countryNames) {
           let acronym = this.countryNames[missingData[i]];
           $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
-          this.coloredList.push(`country${acronym}`);
+          this.coloredList.push(`#country${acronym}`);
         }
       }
     },
@@ -431,67 +431,122 @@ let cmp = {
   glyphs: {
     nodes: [],
     group: null,
-
-    visualize(svg, colorScale, data) {
+    rendered: false,
+    visualize(svg, colorScale, data, transform) {
+      this.rendered = true;
       this.group = svg.append("g");
       this.group.attr("class", "noselect");
-
-      this.group
-        .selectAll("circle")
+      let g = this.group
+        .selectAll("g")
         .data(data)
         .enter()
-        .append("circle")
-        .attr("cx", function(d) {
-          d.lat;
-        })
-        .attr("cy", function(d) {
-          d.lng;
-        })
-        .attr("r", function(d, i) {
-          return data[i].scale;
-        })
-        .attr("stroke", "black")
-        .attr("stroke-width", function(d, i) {
-          return d.scale / 5;
-        })
-        .attr("fill", function(d) {
-          colorScale.get(d.lead);
-        });
-
-      this.group
-        .selectAll("line")
-        .data(data)
-        .enter()
-        .append("line")
-        .attr("x1", function(d, i) {
-          return d.lat + d.scale;
-        })
-        .attr("y1", function(d, i) {
-          return d.lng;
-        })
-        .attr("x2", function(d, i) {
-          return d.lat - d.scale;
-        })
-        .attr("y2", function(d, i) {
-          return d.lng;
-        })
-        .attr("stroke", "black")
-        .attr("stroke-width", function(d, i) {
-          d.scale;
-        })
+        .append("g")
         .attr("transform", function(d, i) {
-          let rotation = 0;
-          if (d.trend > 0.05) {
-            rotation = 45;
-          }
-          if (d.trend > -0.05) {
-            rotation = -45;
-          }
-          return `rotate(${rotation},${d.lat},${d.lng})`;
+          return `translate(${d.lat},${d.lng})`;
         });
+      g.each(function(d, i) {
+        d3.select(this)
+          .append("circle")
+          .attr("cx", 0)
+          .attr("cy", 0)
+          .attr("r", d.scale)
+          .attr("stroke", "black")
+          .attr("stroke-width", 1)
+          .attr("fill", colorScale.get(d.lead));
+      });
+
+      g.each(function(d, i) {
+        d3.select(this)
+          .append("line")
+          .attr("x1", d.scale)
+          .attr("y1", 0)
+          .attr("x2", 0 - d.scale)
+          .attr("y2", 0)
+          .attr("stroke", "black")
+          .attr("stroke-width", 5)
+          .attr("transform", function() {
+            let rotation = 0;
+            if (d.trend > 0.05) {
+              rotation = 45;
+            }
+            if (d.trend > -0.05) {
+              rotation = -45;
+            }
+            return `rotate(${rotation},${0},${0})`;
+          });
+      });
+
+      this.group.attr(
+        "transform",
+        `translate(${transform.x}, ${transform.y})scale(${transform.scale})`
+      );
+
+      let force = d3
+        .forceSimulation(data)
+        .force(
+          "x",
+          d3.forceX(function(d) {
+            return d.lat;
+          })
+        )
+        .force(
+          "y",
+          d3.forceY(function(d) {
+            return d.lng;
+          })
+        )
+        .force(
+          "collide",
+          d3.forceCollide(function(d) {
+            return d.scale;
+          })
+        )
+        .alpha(1)
+        .on("tick", this.onTick.bind(this));
     },
     reset() {
-      this.group.remove();
+      if (this.group != null) {
+        this.rendered = false;
+        this.group.remove();
+      }
+    },
+    onTick() {
+      this.group.selectAll("g").attr("transform", function(d, i) {
+        return `translate(${d.x},${d.y})`;
+      });
+    }
+  },
+  graphwindow: {
+    graphs: [],
+    responses: [],
+    async getData(params) {
+      let res = await this.getCategory(params);
+      params.country_name = "Canada";
+      let res2 = await this.getCategory(parmas);
+      let result = JSON.parse(res.body).category_for;
+      let result2 = JSON.parse(res2.body).category_for;
+      this.responses.push(result);
+      this.responses.push(result2);
+      return this;
+    },
+    visualize() {
+      $("#map-holder").append(
+        `<div class="graph-window row" id="graph-holder"></div>`
+      );
+    },
+    async getCategory(params) {
+      let response = await d3.json("/querycategories", {
+        method: "POST",
+        body: JSON.stringify({
+          keyword: params.keyword,
+          year: params.year,
+          country_name: params.country_name
+        }),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      });
+      return response;
     }
   }
 };

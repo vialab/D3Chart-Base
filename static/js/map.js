@@ -2,10 +2,16 @@ $(function() {
   let previousQueries = [];
   let cmpCountries = cmp.countries;
   let cmpInstitutes = cmp.glyphs;
+  let transformView = {
+    x: 0,
+    y: 0,
+    scale: 0
+  };
+
   let nodes = [];
-  let numYears = 6;
+  let numYears = 5;
   let yearScale = createRange(numYears);
-  let yearSpan = { min: 2012, max: 2018 };
+  let yearSpan = { min: 2012, max: 2017 };
   let tooltip;
   let svg;
   let projection;
@@ -32,7 +38,7 @@ $(function() {
       .get(0)
       .reset();
     currentKeyword = keyword;
-    let year = { min: 2012, max: 2018 };
+    let year = { min: 2012, max: 2017 };
     result = [];
     for (let i = year.min; i < year.max; ++i) {
       let response = getNotCanada({ keyword: keyword, year: i });
@@ -186,7 +192,7 @@ $(function() {
       const trend =
         query.institutions.sequence[data[index].name][0] -
         query.institutions.sequence[data[index].name][end];
-      let scale = 20 * (instituteTotal / countryTotal) + 20;
+      let scale = 20 * (instituteTotal / countryTotal) + 8;
       let coords = projection([locations[index].lng, locations[index].lat]);
 
       renderData.push({
@@ -196,21 +202,8 @@ $(function() {
         lead: data[index].leadlag,
         trend: trend
       });
-
-      //createGlyph(
-      //  20 * (instituteTotal / countryTotal) + 20,
-      //  projection([locations[index].lng, locations[index].lat]),
-      //  trend,
-      //  svg,
-      //  {
-      //    sequence: query.institutions.sequence[data[index].name],
-      //    total: query.institutions.total[data[index].name],
-      //    name: data[index].name,
-      //    lead: data[index].leadlag
-      //  }
-      //);
     }
-    cmpInstitutes.visualize(svg, colorScale, renderData);
+    cmpInstitutes.visualize(svg, colorScale, renderData, transformView);
   }
 
   function createRange(year) {
@@ -527,10 +520,12 @@ $(function() {
     //
     //legend
     legendVis = createLegend(yearScale, svg);
-    new EasyPZ(
+    let pz = new EasyPZ(
       svg.node(),
       function(transform) {
-        scale = transform.scale;
+        transformView.x = transform.translateX;
+        transformView.y = transform.translateY;
+        transformView.scale = transform.scale;
         countriesGroup.attr(
           "transform",
           "translate(" +
@@ -539,16 +534,20 @@ $(function() {
             transform.scale +
             ")"
         );
-        //for (let node in nodes) {
-        //  nodes[node].attr(
-        //    "transform",
-        //    "translate(" +
-        //      [transform.translateX, transform.translateY] +
-        //      ")scale(" +
-        //      transform.scale +
-        //      ")"
-        //  );
-        //}
+        let bbox = countriesGroup.node().getBBox();
+        pz.options = {
+          minScale: 0.1,
+          maxScale: 5,
+          bounds: {
+            top: bbox.y,
+            bottom: bbox.y + bbox.height,
+            left: bbox.x,
+            right: bbox.x + bbox.width
+          }
+        };
+        if (!cmpInstitutes.rendered) {
+          return;
+        }
         cmpInstitutes.group.attr(
           "transform",
           "translate(" +
@@ -558,8 +557,14 @@ $(function() {
             ")"
         );
       },
-      ["SIMPLE_PAN"]
+      {
+        minScale: 0.1,
+        maxScale: 5,
+        bounds: { top: -6000, bottom: 6000, left: -1000, right: 1000 }
+      },
+      ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
     );
+    console.log(pz);
   }
 
   /**
@@ -596,21 +601,6 @@ $(function() {
     let response = await d3.json("/querycanada", {
       method: "POST",
       body: JSON.stringify({ keyword: params.keyword, year: params.year }),
-      headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
-    });
-    return response;
-  }
-
-  async function getCategory(params) {
-    let response = await d3.json("/querycategories", {
-      method: "POST",
-      body: JSON.stringify({
-        keyword: params.keyword,
-        year: params.year,
-        country_name: params.country_name
-      }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
