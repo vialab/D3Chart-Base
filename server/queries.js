@@ -140,7 +140,7 @@ const queryCategory = async function(req, resp) {
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year>=${req.body.year.min} and year<${req.body.year.max} return publications[year + category_for] limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year>=${req.body.year.min} and year<${req.body.year.max} return publications[year + category_for] sort by count limit 1000`
   };
   console.log(options);
   request.post(options, (error, res) => {

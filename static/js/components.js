@@ -358,7 +358,7 @@ let cmp = {
             padding
         )
         .attr("y", 0)
-        .text("Missing data")
+        .text("Incomplete data")
         .attr("font", "Helvetica")
         .attr("font-size", "12px");
       text2.attr("y", text2.node().getBBox().height - textHeightPadding);
@@ -427,12 +427,43 @@ let cmp = {
       this.coloredList = [];
     }
   },
+  tooltip: {
+    visual: d3
+      .select("#map-holder")
+      .append("div")
+      .style("position", "absolute")
+      .style("visibility", "hidden")
+      .style("background-color", "white")
+      .style("border-radius", "5px")
+      .style("padding", "10px")
+      .style("box-shadow", "0 0 3px")
+      .style("stroke", "black"),
+    visualize(data, box) {
+      this.visual
+        .style("visibility", "visible")
+        .style("left", box.left + box.width + "px")
+        .style("top", box.top + box.height + "px")
+        .style("padding-left", "20px")
+        .style("padding-right", "20px")
+        .style("padding-top", "10px")
+        .style("padding-bottom", "10px")
+        .html(
+          `<p>${data.name}<br>${data.total} papers<br>${data.country_name}<br>${data.country_total} papers</p>`
+        );
+    },
 
+    reset() {
+      this.visual.style("visibility", "hidden");
+    }
+  },
   glyphs: {
     nodes: [],
     group: null,
     rendered: false,
+    tooltip: null,
     visualize(svg, colorScale, data, transform) {
+      var self = this;
+      self.tooltip = cmp.tooltip;
       this.rendered = true;
       this.group = svg.append("g");
       this.group.attr("class", "noselect");
@@ -475,7 +506,16 @@ let cmp = {
             return `rotate(${rotation},${0},${0})`;
           });
       });
-
+      g.on("mouseenter", function(d) {
+        let box = d3
+          .select(this)
+          .select("circle")
+          .node()
+          .getBoundingClientRect();
+        self.tooltip.visualize(d, box);
+      }).on("mouseleave", function() {
+        self.tooltip.reset();
+      });
       this.group.attr(
         "transform",
         `translate(${transform.x}, ${transform.y})scale(${transform.scale})`
@@ -516,6 +556,7 @@ let cmp = {
       });
     }
   },
+
   graphwindow: {
     graphs: [],
     responses: [],

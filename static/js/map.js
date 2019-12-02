@@ -200,7 +200,11 @@ $(function() {
         lng: coords[1],
         scale: scale,
         lead: data[index].leadlag,
-        trend: trend
+        trend: trend,
+        name: data[index].name,
+        total: instituteTotal,
+        country_name: country_name,
+        country_total: countryTotal
       });
     }
     cmpInstitutes.visualize(svg, colorScale, renderData, transformView);
@@ -322,14 +326,14 @@ $(function() {
     defs
       .append("svg:pattern")
       .attr("id", "missing-data-img")
-      .attr("width", 100)
-      .attr("height", 100)
+      .attr("width", 50)
+      .attr("height", 25)
       .attr("patternUnits", "userSpaceOnUse")
       .append("image")
       .attr("xlink:href", "/resources/patternFill.png")
-      .attr("width", 60)
-      .attr("height", 15)
-      .attr("x", -8)
+      .attr("width", 50)
+      .attr("height", 25)
+      .attr("x", 0)
       .attr("y", 0);
     filter
       .append("feGaussianBlur")
