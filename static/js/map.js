@@ -65,8 +65,7 @@ $(function() {
           if (data[j].country_name in result.countries.total) {
             result.countries.total[data[j].country_name] += data[j].count;
           } else {
-            result.countries.total[data[j].country_name] = 0;
-            result.countries.total[data[j].country_name] += data[j].count;
+            result.countries.total[data[j].country_name] = data[j].count;
             result.countries.sequence[data[j].country_name] = [];
           }
           if (data[j].name in result.institutions.total) {
@@ -81,14 +80,15 @@ $(function() {
               data[j].country_name;
           }
         }
+        //add time sequence
+        for (const key in result.countries.total) {
+          result.countries.sequence[key].push(
+            result.countries.total[key] -
+              result.countries.sequence[key].reduce((a, b) => a + b, 0)
+          );
+        }
       }
-      //add time sequence
-      for (const key in result.countries.total) {
-        result.countries.sequence[key].push(
-          result.countries.total[key] -
-            result.countries.sequence[key].reduce((a, b) => a + b, 0)
-        );
-      }
+
       result.countries.total["Canada"] = 0;
       result.countries.sequence["Canada"] = [];
       for (let i = yearSpan; i < res.length; ++i) {
