@@ -1,15 +1,15 @@
 //https://docs.dimensions.ai/dsl/
 const request = require("request");
 const callLimit = require("./apicallrestrict");
-const lastAuthorization = require("../lastauthorization.json");
+const lastAuthorization = require("./resources/lastauthorization.json");
 const fs = require("fs");
 //use the exampleconfiglogin and input your credentials there
-const login = require("./configlogin.json");
+const login = require("./resources/configlogin.json");
 //var jwt_token;
 var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
 
-let jwt_token = require("../credentials.json");
+let jwt_token = require("./resources/credentials.json");
 
 console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
@@ -23,7 +23,7 @@ function authorizationExpiration(date) {
   let oneDay = 60 * 60 * 1000 * 24;
   if (new Date() - date > oneDay) {
     fs.writeFile(
-      "./lastauthorization.json",
+      "./server/resources/lastauthorization.json",
       JSON.stringify(new Date().toJSON()),
       err => {
         console.error(err);
@@ -44,9 +44,13 @@ if (authorizationExpiration(lastAuthorization)) {
     let cacheToken = JSON.parse(resp.body).token;
     if (cacheToken != null) {
       jwt_token = { Authorization: "JWT " + cacheToken };
-      fs.writeFile("./credentials.json", JSON.stringify(jwt_token), err => {
-        console.error(err);
-      });
+      fs.writeFile(
+        "./server/resources/credentials.json",
+        JSON.stringify(jwt_token),
+        err => {
+          console.error(err);
+        }
+      );
     } else {
       console.log("Error getting token.");
     }

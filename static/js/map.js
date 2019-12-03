@@ -7,12 +7,9 @@ $(function() {
     y: 0,
     scale: 0
   };
-
-  let nodes = [];
   let numYears = 5;
   let yearScale = createRange(numYears);
   let yearSpan = { min: 2012, max: 2017 };
-  let tooltip;
   let svg;
   let projection;
   let legend = cmp.legend;
@@ -51,7 +48,7 @@ $(function() {
     Promise.all(result).then(function(res) {
       console.log(res);
       let result = {
-        countries: { total: {}, sequence: {} },
+        countries: { total: {}, sequence: {}, deviation: {} },
         institutions: { total: {}, sequence: {}, grid_id: {}, country_name: {} }
       };
 
@@ -84,13 +81,13 @@ $(function() {
               data[j].country_name;
           }
         }
-        //add time sequence
-        for (const key in result.countries.total) {
-          result.countries.sequence[key].push(
-            result.countries.total[key] -
-              result.countries.sequence[key].reduce((a, b) => a + b, 0)
-          );
-        }
+      }
+      //add time sequence
+      for (const key in result.countries.total) {
+        result.countries.sequence[key].push(
+          result.countries.total[key] -
+            result.countries.sequence[key].reduce((a, b) => a + b, 0)
+        );
       }
       result.countries.total["Canada"] = 0;
       result.countries.sequence["Canada"] = [];
@@ -104,11 +101,42 @@ $(function() {
         canadaLine.push(JSON.parse(JSON.stringify(element)));
         for (let j = 0; j < data.length; ++j) {
           result.countries.total["Canada"] += data[j].count;
+          if (data[j].name in result.institutions.total) {
+            result.institutions.total[data[j].name] += data[j].count;
+            result.institutions.sequence[data[j].name].push(data[j].count);
+          } else {
+            result.institutions.total[data[j].name] = data[j].count;
+            result.institutions.sequence[data[j].name] = [];
+            result.institutions.sequence[data[j].name].push(data[j].count);
+            result.institutions.country_name[data[j].name] =
+              data[j].country_name;
+            result.institutions.grid_id[data[j].name] = data[j].id;
+          }
         }
         result.countries.sequence["Canada"].push(
           result.countries.total["Canada"] -
             result.countries.sequence["Canada"].reduce((a, b) => a + b, 0)
         );
+      }
+
+      countryInstitutes = {};
+
+      for (const key in result.institutions.total) {
+        if (result.institutions.country_name[key] in countryInstitutes) {
+          countryInstitutes[result.institutions.country_name[key]].push(
+            result.institutions.total[key]
+          );
+        } else {
+          countryInstitutes[result.institutions.country_name[key]] = [];
+          countryInstitutes[result.institutions.country_name[key]].push(
+            result.institutions.total[key]
+          );
+        }
+      }
+
+      for (const key in result.countries.total) {
+        deviation = stdDeviation(countryInstitutes[key]);
+        result.countries.deviation[key] = deviation;
       }
 
       for (const key in result.countries.total) {
@@ -125,6 +153,7 @@ $(function() {
       console.log(worldLine);
       console.log(canadaLine);
       previousQueries.push(result);
+
       calculateLeadLag(result);
     });
   }
@@ -169,7 +198,9 @@ $(function() {
       institutions.push({
         leadlag: leadLag,
         id: data.institutions.grid_id[institute],
-        name: institute
+        name: institute,
+        stdDeviation:
+          data.countries.deviation[data.institutions.country_name[institute]]
       });
     }
     cmpCountries.color(countries, missingCountries, colorScale);
@@ -192,7 +223,9 @@ $(function() {
       const trend =
         query.institutions.sequence[data[index].name][0] -
         query.institutions.sequence[data[index].name][end];
-      let scale = 20 * (instituteTotal / countryTotal) + 8;
+      let avg = data[index].stdDeviation.average;
+      let stdDev = data[index].stdDeviation.stdDeviation;
+      let scale = 14 + ((instituteTotal - avg) / stdDev) * 4;
       let coords = projection([locations[index].lng, locations[index].lat]);
 
       renderData.push({
@@ -204,12 +237,20 @@ $(function() {
         name: data[index].name,
         total: instituteTotal,
         country_name: country_name,
-        country_total: countryTotal
+        country_total: countryTotal,
+        stdDeviation: data[index].stdDeviation
       });
     }
     cmpInstitutes.visualize(svg, colorScale, renderData, transformView);
   }
 
+  function stdDeviation(institutes) {
+    const len = institutes.length;
+    let avg = institutes.reduce((y, x) => y + x) / len;
+    std = institutes.reduce((y, x) => y + (x - avg) * (x - avg));
+    deviation = Math.sqrt(std / len);
+    return { stdDeviation: deviation, average: avg };
+  }
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
@@ -226,58 +267,6 @@ $(function() {
       top: bound.top + window.pageYOffset - html.clientTop,
       left: bound.left + window.pageXOffset - html.clientLeft
     };
-  }
-  /**
-   *
-   * @param {Number} scale
-   * @param {[Number,Number]} coords
-   * @param {Number} trend
-   * @param {Element} svg
-   * @param {{sequence:[Number...], total:Number, name:String}} data
-   * @returns {Element}
-   */
-  function createGlyph(scale, coords, trend, svg, data) {
-    let rotation = 0;
-    if (trend > 0.05) {
-      rotation = 45;
-    }
-    if (trend > -0.05) {
-      rotation = -45;
-    }
-    let glyph = svg.append("g");
-    glyph.attr("class", "noselect");
-    let circle = glyph
-      .append("circle")
-      .attr("cx", coords[0])
-      .attr("cy", coords[1])
-      .attr("r", scale)
-      .attr("stroke", "black")
-      .attr("stroke-width", scale / 5)
-      .attr("fill", colorScale.get(data.lead));
-    glyph
-      .append("line")
-      .attr("x1", coords[0] + scale)
-      .attr("y1", coords[1])
-      .attr("x2", coords[0] - scale)
-      .attr("y2", coords[1])
-      .attr("stroke", "black")
-      .attr("stroke-width", scale / 5)
-      .attr("transform", `rotate(${rotation},${coords[0]},${coords[1]})`);
-
-    circle.on("mouseenter", function() {
-      let rect = getOffset(circle);
-      tooltip
-        .style("visibility", "visible")
-        .style("left", rect.left + scale + "px")
-        .style("top", rect.top + scale + "px")
-        .html(`<p>${data.name}<br>${data.total} papers</p>`);
-    });
-    circle.on("mouseleave", function() {
-      tooltip.style("visibility", "hidden");
-    });
-    nodes.push(glyph);
-
-    return glyph;
   }
 
   function createLegend(yearScale, svg) {

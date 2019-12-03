@@ -391,6 +391,7 @@ let cmp = {
         })
         .attr("class", "country")
         .on("mouseover", function(d, i) {
+          d3.select(this).raise();
           d3.select(this).style("stroke", "black");
           d3.select(this).style("stroke-width", "5px");
         })
@@ -461,6 +462,13 @@ let cmp = {
     group: null,
     rendered: false,
     tooltip: null,
+    /**
+     *
+     * @param {Element} svg
+     * @param {cmp.ColorScale} colorScale
+     * @param {{lat:number, lng:number}} data
+     * @param {{x:number, y:number, scale:number}} transform
+     */
     visualize(svg, colorScale, data, transform) {
       var self = this;
       self.tooltip = cmp.tooltip;
@@ -558,19 +566,9 @@ let cmp = {
   },
 
   graphwindow: {
-    graphs: [],
-    responses: [],
-    async getData(params) {
-      let res = await this.getCategory(params);
-      params.country_name = "Canada";
-      let res2 = await this.getCategory(parmas);
-      let result = JSON.parse(res.body).category_for;
-      let result2 = JSON.parse(res2.body).category_for;
-      this.responses.push(result);
-      this.responses.push(result2);
-      return this;
-    },
-    visualize() {
+    graph: null,
+
+    visualize(Canada, Other) {
       $("#map-holder").append(
         `<div class="graph-window row" id="graph-holder"></div>`
       );

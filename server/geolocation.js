@@ -1,4 +1,4 @@
-const institutesGeoLocation = require("../institution-geolocations.json");
+const institutesGeoLocation = require("./resources/institution-geolocations.json");
 
 const getLocation = function(grid_id) {
   if (grid_id in institutesGeoLocation) {

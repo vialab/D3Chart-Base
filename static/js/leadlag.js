@@ -14,6 +14,21 @@ function shift(array, offset) {
   }
   return result;
 }
+function laglead(data1, data2) {
+  let d1 = Object.values(data1);
+  let d2 = Object.values(data2);
+  //the length of the lines are not the same thefore, one line has a break in it.
+  //if there is a break in the line they are not comparable in terms for frequency
+  if (d1[0].x - d2[0].x || d1[d1.length - 1].x - d2[d2.length - 1].x) {
+    return 0;
+  }
+  //does not support the length needed
+  //must be divisible by 3
+  const size = d1.length - 1;
+  if (size % 3) {
+    return 0;
+  }
+}
 /**
  * @param  {Array} data1 - [{y:}] requires y value
  * @param  {Array} data2 - [{y:}] requires y value
@@ -46,12 +61,11 @@ function leadlag(data1, data2) {
       bestOffset = offset;
     }
   }
-  if((d1.length-1) + -bestOffset > bestOffset)
-  {
+  if (d1.length - 1 + -bestOffset > bestOffset) {
     return -bestOffset;
   }
 
-  return d1.length-1 + -bestOffset;
+  return d1.length - 1 + -bestOffset;
 }
 /**
  * @param  {Array} array - expects [{y:}]
