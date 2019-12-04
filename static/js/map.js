@@ -246,22 +246,13 @@ $(function() {
     deviation = Math.sqrt(std / len);
     return { stdDeviation: deviation, average: avg };
   }
+  
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
       result.push(i);
     }
     return result;
-  }
-
-  function getOffset(element) {
-    var bound = element.node().getBoundingClientRect();
-    var html = document.documentElement;
-
-    return {
-      top: bound.top + window.pageYOffset - html.clientTop,
-      left: bound.left + window.pageXOffset - html.clientLeft
-    };
   }
 
   function createLegend(yearScale, svg) {

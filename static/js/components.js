@@ -567,10 +567,42 @@ let cmp = {
 
   graphwindow: {
     graph: null,
-
-    visualize(Canada, Other) {
+    chartView: null,
+    visualize(canada, other, otherName, years) {
+      var self = this;
       $("#map-holder").append(
         `<div class="graph-window row" id="graph-holder"></div>`
+      );
+      $("#graph-holder").one(
+        "animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
+        function() {
+          self.chartView = new ChartView("graph-holder");
+          self.chartView.addView("main-view");
+          self.chartView.setMainView("main-view");
+          self.chartView.addView("categories-views");
+          self.chartView.addChart(
+            "main-view",
+            {
+              ydomain: [0.0, 1.0],
+              xdomain: [years.min, years.max],
+              lines: [
+                {
+                  name: "Canada",
+                  rawData: canada,
+                  data: canada
+                },
+                {
+                  name: otherName,
+                  rawData: other,
+                  data: other
+                }
+              ]
+            },
+            data => {
+              data.chartName = "Total";
+            }
+          );
+        }
       );
     },
     async getCategory(params) {
