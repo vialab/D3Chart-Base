@@ -371,6 +371,7 @@ $(function() {
       .attr("patternUnits", "userSpaceOnUse")
       .append("path")
       .attr("fill", "none")
+      .attr("opacity", 0.8)
       .attr("stroke", "#335553")
       .attr("stroke-width", "3")
       .attr("d", "M0,0 Q10,20  20,10 T 40,0");
@@ -404,16 +405,16 @@ $(function() {
             ")"
         );
         let bbox = countriesGroup.node().getBBox();
-        pz.options = {
-          minScale: 0.1,
-          maxScale: 5,
-          bounds: {
-            top: bbox.y,
-            bottom: bbox.y + bbox.height,
-            left: bbox.x,
-            right: bbox.x + bbox.width
-          }
-        };
+        //pz.options = {
+        //  minScale: 0.1,
+        //  maxScale: 5,
+        //  bounds: {
+        //    top: bbox.y,
+        //    bottom: bbox.y + bbox.height,
+        //    left: bbox.x,
+        //    right: bbox.x + bbox.width
+        //  }
+        //};
         if (!cmpInstitutes.rendered) {
           return;
         }
@@ -433,6 +434,11 @@ $(function() {
       },
       ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
     );
+
+    let timeline = cmp.timeline;
+    let tg = timeline.setYears(yearSpan).visualize(svg);
+    pz.totalTransform.scale = 0.2;
+    tg.attr("transform", "translate(1350, 910)");
     console.log(pz);
   }
 

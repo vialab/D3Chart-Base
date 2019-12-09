@@ -817,5 +817,120 @@ let cmp = {
         }
       }
     }
+  },
+
+  timeline: {
+    years: { min: null, max: null },
+    maxSelection: 5,
+    get span() {
+      return { min: 1950, max: new Date().getFullYear() - this.maxSelection };
+    },
+    size: { width: 506, height: 5 },
+    group: null,
+    brush: null,
+    xScale: null,
+    scale: null,
+
+    setYears(years) {
+      this.years = years;
+      return this;
+    },
+
+    visualize(svg, years = { min: null, max: null }) {
+      if (years.min == null && this.years.min == null) {
+        console.error(
+          "timeline.years must be set. See function timeline.setYears(years)."
+        );
+        return;
+      }
+      let self = this;
+      this.xScale = d3
+        .scaleBand()
+        .range([0, this.size.width])
+        .domain(
+          Array.from(Array(this.span.max - this.span.min + 1), (x, i) => {
+            return self.span.min + i;
+          })
+        )
+        .padding(0.01);
+      let yScale = d3
+        .scaleLinear()
+        .range([0, this.size.height])
+        .domain([0, 1]);
+      let axis = d3.axisBottom(this.xScale).tickValues(
+        this.xScale.domain().filter(function(d, i) {
+          return !(i % 5) || self.xScale.domain().length - 1 == i;
+        })
+      );
+      this.group = svg.append("g");
+      this.scale = function(x) {
+        return self.xScale(x) + self.xScale.bandwidth() / 2;
+      };
+      this.group
+        .selectAll("bar")
+        .data(
+          Array.from(new Array(this.span.max - this.span.min), (x, i) => {
+            return i + this.span.min;
+          })
+        )
+        .enter()
+        .append("rect")
+        .style("fill", function(d, i) {
+          if (i % 2) {
+            return "white";
+          } else {
+            return "black";
+          }
+        })
+        .attr("rx", 2)
+        .style("stroke", "black")
+        .attr("x", function(d, i) {
+          return self.scale(self.span.min + i);
+        })
+        .attr("width", this.xScale.bandwidth())
+        .attr("y", function() {
+          return self.size.height - yScale(1.0);
+        })
+        .attr("height", function() {
+          return yScale(1.0);
+        });
+
+      this.group
+        .append("g")
+        .attr("transform", "translate(0," + this.size.height + ")")
+        .call(axis);
+      this.brush = d3
+        .brushX()
+        .handleSize(8)
+        .extent([
+          [0, -5],
+          [this.size.width, this.size.height + 5]
+        ])
+
+        .on("end", function() {
+          // let selection = d3.event.selection;
+          // if (selection[0] == NaN || selection[1] == NaN) {
+          //   return;
+          // }
+          // let x = selection[0];
+          // let year = Math.round(x / self.xScale.bandwidth());
+          // let begin = year;
+          // d3.select(this)
+          //   .transition()
+          //   .call(self.brush.move, [
+          //     self.scale(self.years.min + begin),
+          //     self.scale(self.years.min + begin + self.maxSelection)
+          //   ]);
+        });
+      let gBrush = this.group
+        .append("g")
+        .attr("class", "brush")
+        .call(this.brush);
+
+      d3.select("selection").attr("rx", 3);
+      gBrush.call(this.brush.move, [this.scale(1955), this.scale(1960)]);
+
+      return this.group;
+    }
   }
 };
