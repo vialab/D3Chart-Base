@@ -1,5 +1,3 @@
-import { normalize } from "path";
-
 $(function() {
   let previousQueries = [];
   let cmpCountries = cmp.countries;
@@ -9,9 +7,9 @@ $(function() {
     y: 0,
     scale: 0
   };
-  let numYears = 5;
+  let yearSpan = { min: 2012, max: 2016 };
+  let numYears = yearSpan.max - yearSpan.min + 1;
   let yearScale = createRange(numYears);
-  let yearSpan = { min: 2012, max: 2017 };
   let svg;
   let projection;
   let legend = cmp.legend;
@@ -33,43 +31,46 @@ $(function() {
     cmpCountries.reset();
     cmpInstitutes.reset();
     let keyword = $("#search-field").val();
+    cmp.info.currentKeyword = keyword;
     $("#keyword-form")
       .get(0)
       .reset();
     currentKeyword = keyword;
-    let year = { min: 2012, max: 2017 };
     result = [];
-    for (let i = year.min; i < year.max; ++i) {
+    for (let i = yearSpan.min; i <= yearSpan.max; ++i) {
       let response = getNotCanada({ keyword: keyword, year: i });
       result.push(response);
     }
-    for (let i = year.min; i < year.max; ++i) {
+    for (let i = yearSpan.min; i <= yearSpan.max; ++i) {
       let response = getCanada({ keyword: keyword, year: i });
       result.push(response);
     }
     Promise.all(result).then(function(res) {
       console.log(res);
-      let parsedResults=[];
-      for (let i = 0; i < res.length; ++i) {
-        parsedResults.push(parse(res[i]));
+      let parsedResults = [];
+      for (let i = 0; i < res.length / 2; ++i) {
+        parsedResults.push(parse(res[i], false));
       }
-      let result = aggregateParsedData(parsedResults);
+      for (let i = res.length / 2; i < res.length; ++i) {
+        parsedResults.push(parse(res[i], true));
+      }
+      let aggData = aggregateParsedData(parsedResults);
       //calculate standard deviation of institution output in each country
-      for (const key in result.countries) {
-        let deviation = stdDeviation(result.countries[key].institutes);
-        result.countries[key].deviation = deviation;
+      for (const key in aggData.countries) {
+        let deviation = stdDeviation(aggData.countries[key].institutions);
+        aggData.countries[key].deviation = deviation;
       }
 
-      normalizeAggregatedData(result);
-      previousQueries.push(result);
-      calculateLeadLag(result);
+      normalizeAggregatedData(aggData);
+      previousQueries.push(aggData);
+      calculateLeadLag(aggData);
     });
   }
   /**
    * Parses the query data
    * @param {} data
    */
-  function parse(res) {
+  function parse(res, isCanada) {
     let query = JSON.parse(res.body);
     let countries = {};
     if (!("research_orgs" in query)) {
@@ -78,74 +79,91 @@ $(function() {
     }
 
     let data = query.research_orgs;
-
+    if (isCanada) {
+      data = data.filter(x => {
+        return x.country_name == "Canada";
+      });
+    }
     for (let i = 0; i < data.length; ++i) {
       if (data[i].country_name in countries) {
         countries[data[i].country_name].total += data[i].count;
       } else {
-        countries[data[i].country_name] = {institutes:{}, total:data[i].count};
+        countries[data[i].country_name] = {
+          institutes: {},
+          total: data[i].count
+        };
       }
       countries[data[i].country_name].institutes[data[i].name] = {
         count: data[i].count,
         grid_id: data[i].id
       };
     }
-    return { countries: countries};
+    return { countries: countries };
   }
 
-  function aggregateParsedData(data)
-  {
-    countries={};
-    for(let i = 0; i < data.length; ++i)
-      {
-        for(const country_name in data[i])
-        {
-          if(country_name in countries)
-          {
-            countries[country_name].total += data[i][country_name].total;
-            countries[country_name].sequence.push(data[i][country_name].total);
-          }
-          else
-          {
-            countries[country_name] = {total:data[i][country_name].total, sequence:[], deviation=0, institutions:{}};
-            countries[country_name].sequence.push(data[i][country_name].total);
-          }
-          for(const institute_name in data[i][country_name].institutes)
-          {
-            if(institute_name in countries[country_name].institutions)
-            {
-              countries[country_name].institutions[institute_name].total += data[i][country_name].institutes[institute_name].count;
-              countries[country_name].institutions[institute_name].sequence.push(data[i][country_name].institutes[institute_name].count);
-            }
-            else
-            {
-              countries[country_name].institutions[institute_name] = {
-                total: data[i][country_name].institutes[institute_name].count,
-                sequence:[],
-                grid_id: data[i][country_name].institutes[institute_name].grid_id,
-              }
-              countries[country_name].institutions[institute_name].sequence.push(data[i][country_name].institutes[institute_name].count);
-            }
+  function aggregateParsedData(data) {
+    countries = {};
+    for (let i = 0; i < data.length; ++i) {
+      for (const country_name in data[i].countries) {
+        if (country_name in countries) {
+          countries[country_name].total +=
+            data[i].countries[country_name].total;
+          countries[country_name].sequence.push(
+            data[i].countries[country_name].total
+          );
+        } else {
+          countries[country_name] = {
+            total: data[i].countries[country_name].total,
+            sequence: [],
+            deviation: 0,
+            institutions: {}
+          };
+          countries[country_name].sequence.push(
+            data[i].countries[country_name].total
+          );
+        }
+        for (const institute_name in data[i].countries[country_name]
+          .institutes) {
+          if (institute_name in countries[country_name].institutions) {
+            countries[country_name].institutions[institute_name].total +=
+              data[i].countries[country_name].institutes[institute_name].count;
+            countries[country_name].institutions[institute_name].sequence.push(
+              data[i].countries[country_name].institutes[institute_name].count
+            );
+          } else {
+            countries[country_name].institutions[institute_name] = {
+              total:
+                data[i].countries[country_name].institutes[institute_name]
+                  .count,
+              sequence: [],
+              grid_id:
+                data[i].countries[country_name].institutes[institute_name]
+                  .grid_id
+            };
+            countries[country_name].institutions[institute_name].sequence.push(
+              data[i].countries[country_name].institutes[institute_name].count
+            );
           }
         }
       }
-      return {countries: countries};
+    }
+    return { countries: countries };
   }
-  function normalizeAggregatedData(data)
-  {
-    for(const key in data)
-    {
-      const total = data[key].total;
-      for(let i=0; i < data[key].sequence.length; ++i)
-      { 
-        data[key].sequence[i] /= total;
+  function normalizeAggregatedData(data) {
+    for (const key in data.countries) {
+      const total = data.countries[key].total;
+      for (let i = 0; i < data.countries[key].sequence.length; ++i) {
+        data.countries[key].sequence[i] /= total;
       }
-      for(const institute in data[key].institutions)
-      {
-          for(let i=0; i < data[key].insitutions[institute].sequence.length; ++i)
-          {
-            data[key].institutions[institute].sequence[i] /= data[key].institutions[institute].total;
-          }
+      for (const institute in data.countries[key].institutions) {
+        for (
+          let i = 0;
+          i < data.countries[key].institutions[institute].sequence.length;
+          ++i
+        ) {
+          data.countries[key].institutions[institute].sequence[i] /=
+            data.countries[key].institutions[institute].total;
+        }
       }
     }
   }
@@ -155,50 +173,51 @@ $(function() {
     let missingCountries = [];
     let missingInstitutions = [];
     for (const country in data.countries) {
-      if(!(country == "Canada"))
-      {
-      
-      if (
-        data.countries[country].sequence.length !=
-        data.countries["Canada"].sequence.length
-      ) 
-      {
-        missingCountries.push(country);
-        continue;
-      }
-      if (country != "Canada") {
-        let leadLag = leadlag(
-          Array.from(data.countries["Canada"].sequence, y => (y = { y: y })),
-          Array.from(data.countries[country].sequence, y => (y = { y: y }))
-        );
-        countries.push({ leadlag: leadLag, country_name: country });
-      }
-    }
-      for (let i=0; i < data.countries[country].institutions.sequence.length; ++i) {
+      if (!(country == "Canada")) {
         if (
-          data.countries[country].sequence[i].length !=
-          data.countries["Canada"].institutions.sequence.length
+          data.countries[country].sequence.length !=
+          data.countries["Canada"].sequence.length
+        ) {
+          missingCountries.push(country);
+          continue;
+        }
+        if (country != "Canada") {
+          let leadLag = leadlag(
+            Array.from(data.countries["Canada"].sequence, y => (y = { y: y })),
+            Array.from(data.countries[country].sequence, y => (y = { y: y }))
+          );
+          countries.push({ leadlag: leadLag, country_name: country });
+        }
+      }
+      for (const ins in data.countries[country].institutions) {
+        if (
+          data.countries[country].institutions[ins].sequence.length !=
+          data.countries["Canada"].sequence.length
         ) {
           missingInstitutions.push({
-            id: data.countries[country].institutions.grid_id[institute],
-            name: institute
+            id: data.countries[country].institutions[ins].grid_id,
+            name: ins
           });
           continue;
         }
         let leadLag = leadlag(
-          Array.from(data.countries.sequence["Canada"], y => (y = { y: y })),
-          Array.from(data.institutions.sequence[institute], y => (y = { y: y }))
+          Array.from(data.countries["Canada"].sequence, y => (y = { y: y })),
+          Array.from(
+            data.countries[country].institutions[ins].sequence,
+            y => (y = { y: y })
+          )
         );
-  
+
         institutions.push({
           leadlag: leadLag,
-          id: data.institutions.grid_id[institute],
-          name: institute,
-          stdDeviation: data.countries.deviation[data.institutions.country_name[institute]]
+          id: data.countries[country].institutions[ins].grid_id,
+          name: ins,
+          stdDeviation: data.countries[country].deviation,
+          country_name: country
         });
       }
     }
-    cmpCountries.color(countries, missingCountries, colorScale);
+    cmpCountries.color(countries, missingCountries, colorScale, data);
     colorInstitutions(institutions, data).then(function() {
       legendVis.remove();
       legendVis = createLegend(yearScale, svg);
@@ -211,13 +230,19 @@ $(function() {
     let renderData = [];
     console.log(locations);
     for (let index in locations) {
-      const country_name = query.institutions[data[index].name].country_name;
+      const country_name = data[index].country_name;
       const countryTotal = query.countries[country_name].total;
-      const instituteTotal = query.institutions.total[data[index].name];
-      const end = query.institutions.sequence[data[index].name].length - 1;
+      const instituteTotal =
+        query.countries[country_name].institutions[data[index].name].total;
+      const end =
+        query.countries[country_name].institutions[data[index].name].sequence
+          .length - 1;
       const trend =
-        query.institutions.sequence[data[index].name][0] -
-        query.institutions.sequence[data[index].name][end];
+        query.countries[country_name].institutions[data[index].name]
+          .sequence[0] -
+        query.countries[country_name].institutions[data[index].name].sequence[
+          end
+        ];
       let avg = data[index].stdDeviation.average;
       let stdDev = data[index].stdDeviation.stdDeviation;
       let scale = 14 + ((instituteTotal - avg) / stdDev) * 4;
@@ -240,13 +265,24 @@ $(function() {
   }
 
   function stdDeviation(institutes) {
-    const len = institutes.length;
-    let avg = institutes.reduce((y, x) => y + x) / len;
-    std = institutes.reduce((y, x) => y + (x - avg) * (x - avg));
+    let len = 0;
+    let sum = 0;
+    for (const institute in institutes) {
+      len += 1;
+      sum += institutes[institute].total;
+    }
+
+    let avg = sum / len;
+    let std = 0;
+    for (const institute in institutes) {
+      std +=
+        (institutes[institute].total - avg) *
+        (institutes[institute].total - avg);
+    }
     deviation = Math.sqrt(std / len);
     return { stdDeviation: deviation, average: avg };
   }
-  
+
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
@@ -263,8 +299,7 @@ $(function() {
     legendVis = legend.visualize(
       colorScale,
       group,
-      `Canada vs the World (${yearSpan.min}-${yearSpan.max -
-        1}), "${currentKeyword}"`
+      `Canada vs the World (${yearSpan.min}-${yearSpan.max}), "${currentKeyword}"`
     );
     legendVis.attr(
       "transform",
@@ -348,155 +383,10 @@ $(function() {
       .attr("y", 0)
       .attr("width", $("#map").width())
       .attr("height", $("#map").height());
-    cmpCountries.data(json.features).visualize(countriesGroup, path);
-    //  .on("click", function(d, i) {
-    //    let end = previousQueries.length - 1;
-    //    if (!(d.properties.name in previousQueries[end].countries.sequence)) {
-    //      return;
-    //    }
-    //    $("#map-holder").append(
-    //      `<div class="graph-window row" id="graph-holder"></div>`
-    //    );
-    //
-    //    $("#graph-holder").mouseleave(function() {
-    //      $("#graph-holder").remove();
-    //    });
-    //
-    //    $("#graph-holder").one(
-    //      "animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
-    //      function() {
-    //        let result = [];
-    //        let category = [];
-    //        for (let i = yearSpan.min; i < yearSpan.max; ++i) {
-    //          let temp = getCategory({
-    //            keyword: currentKeyword,
-    //            year: i,
-    //            country_name: d.properties.name
-    //          });
-    //          result.push(temp);
-    //        }
-    //        for (let i = yearSpan.min; i < yearSpan.max; ++i) {
-    //          let temp = getCategory({
-    //            keyword: currentKeyword,
-    //            year: i,
-    //            country_name: "Canada"
-    //          });
-    //          result.push(temp);
-    //        }
-    //        Promise.all(result).then(function(res) {
-    //          console.log(res);
-    //          lines = {};
-    //          lines2 = {};
-    //          for (let j = 0; j < yearSpan.max - yearSpan.min; ++j) {
-    //            let obj = JSON.parse(res[j].body).category_for;
-    //            let count = JSON.parse(res[j].body)._stats.total_count;
-    //
-    //            for (let i = 0; i < obj.length; ++i) {
-    //              if (obj[i].name in lines) {
-    //                lines[obj[i].name].push({
-    //                  x: yearSpan.min + j,
-    //                  y: obj[i].count / count
-    //                });
-    //              } else {
-    //                lines[obj[i].name] = [];
-    //                lines[obj[i].name].push({
-    //                  x: yearSpan.min + j,
-    //                  y: obj[i].count / count
-    //                });
-    //              }
-    //            }
-    //          }
-    //          for (let j = yearSpan.max - yearSpan.min; j < res.length; ++j) {
-    //            let obj = JSON.parse(res[j].body).category_for;
-    //            let count = JSON.parse(res[j].body)._stats.total_count;
-    //            console.log(obj);
-    //            for (let i = 0; i < obj.length; ++i) {
-    //              if (obj[i].name in lines2) {
-    //                lines2[obj[i].name].push({
-    //                  x: yearSpan.min + j - (yearSpan.max - yearSpan.min),
-    //                  y: obj[i].count / count
-    //                });
-    //              } else {
-    //                lines2[obj[i].name] = [];
-    //                lines2[obj[i].name].push({
-    //                  x: yearSpan.min + j - (yearSpan.max - yearSpan.min),
-    //                  y: obj[i].count / count
-    //                });
-    //              }
-    //            }
-    //          }
-    //
-    //          let chartView = new ChartView("graph-holder");
-    //          chartView.addView("main-view");
-    //          chartView.addView("category-view");
-    //          chartView.setMainView("main-view");
-    //          let CanadaArray = Array.from(
-    //            previousQueries[end].countries.sequence["Canada"],
-    //            function(d, i) {
-    //              return { x: yearSpan.min + i, y: d };
-    //            }
-    //          );
-    //          let OtherArray = Array.from(
-    //            previousQueries[end].countries.sequence[d.properties.name],
-    //            function(d, i) {
-    //              return { x: yearSpan.min + i, y: d };
-    //            }
-    //          );
-    //
-    //          chartView.addChart(
-    //            "main-view",
-    //            {
-    //              xdomain: [yearSpan.min, yearSpan.max - 1],
-    //              ydomain: [0.0, 1.0],
-    //              lines: [
-    //                {
-    //                  name: "Canada",
-    //                  rawdata: CanadaArray,
-    //                  data: CanadaArray
-    //                },
-    //                {
-    //                  name: d.properties.name,
-    //                  rawdata: OtherArray,
-    //                  data: OtherArray
-    //                }
-    //              ]
-    //            },
-    //            data => {
-    //              data.chartName = "total";
-    //            }
-    //          );
-    //
-    //          for (let key in lines) {
-    //            if (key in lines2) {
-    //              chartView.addChart(
-    //                "category-view",
-    //                {
-    //                  xdomain: [yearSpan.min, yearSpan.max - 1],
-    //                  ydomain: [0.0, 1.0],
-    //                  lines: [
-    //                    {
-    //                      name: "Canada",
-    //                      rawdata: lines2[key],
-    //                      data: lines2[key]
-    //                    },
-    //                    {
-    //                      name: d.properties.name,
-    //                      rawdata: lines[key],
-    //                      data: lines[key]
-    //                    }
-    //                  ]
-    //                },
-    //                data => {
-    //                  data.chartName = key;
-    //                }
-    //              );
-    //            }
-    //          }
-    //        });
-    //      }
-    //    );
-    //  });
-    //
+    cmpCountries
+      .data(json.features)
+      .setYear(yearSpan)
+      .visualize(countriesGroup, path);
     //legend
     legendVis = createLegend(yearScale, svg);
     let pz = new EasyPZ(
