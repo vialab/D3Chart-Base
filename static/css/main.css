@@ -159,15 +159,16 @@ input:checked + .slider:before {
 }
 
 .multi-container {
-  display: inline-flex;
-  flex-wrap: wrap;
-  flex-direction: row;
-    height: 100%;
+  display: inline-block;
+  height: 100%;
   width: 100%;
-  overflow-y: unset;
+  overflow-y: auto;
   position: relative;
 }
 
+.multi-container::-webkit-scrollbar {
+  display: none;
+}
 
 .row {
   box-sizing: border-box;

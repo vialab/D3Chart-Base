@@ -138,23 +138,27 @@ const queryCanada = async function(req, resp) {
 };
 
 const queryCategory = async function(req, resp) {
-  const options = {
-    url: api_url,
-    method: "POST",
-    headers: {
-      Authorization: jwt_token.Authorization
-    },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year>=${req.body.year.min} and year<${req.body.year.max} return publications[year + category_for] sort by count limit 1000`
-  };
-  console.log(options);
-  request.post(options, (error, res) => {
-    if (error) {
-      console.log(error);
-    }
+  if (timer.incrementCalls()) {
+    const options = {
+      url: api_url,
+      method: "POST",
+      headers: {
+        Authorization: jwt_token.Authorization
+      },
+      body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return category_for limit 1000`
+    };
+    console.log(options);
+    request.post(options, (error, res) => {
+      if (error) {
+        console.log(error);
+      }
 
-    console.log(res);
-    resp.status(200).send(res);
-  });
+      console.log(res);
+      resp.status(200).send(res);
+    });
+  } else {
+    console.log("Reached API limit");
+  }
 };
 
 //queryCategory({

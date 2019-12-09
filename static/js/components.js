@@ -371,6 +371,8 @@ let cmp = {
     countryNames: {},
     rawData: [],
     group: null,
+    countryData: null,
+    year: { min: 0, max: 0 },
     data(dataVals) {
       this.rawData = dataVals;
       for (let i = 0; i < dataVals.length; ++i) {
@@ -379,7 +381,13 @@ let cmp = {
       }
       return this;
     },
+
+    setYear(year) {
+      this.year = year;
+      return this;
+    },
     visualize(svg, projection) {
+      var self = this;
       this.group = svg
         .selectAll("path")
         .data(this.rawData)
@@ -388,6 +396,9 @@ let cmp = {
         .attr("d", projection)
         .attr("id", function(d, i) {
           return "country" + d.properties.iso_a3;
+        })
+        .attr("name", function(d, i) {
+          return d.properties.name;
         })
         .attr("class", "country")
         .on("mouseover", function(d, i) {
@@ -398,10 +409,23 @@ let cmp = {
         .on("mouseout", function(d, i) {
           d3.select(this).style("stroke", "white");
           d3.select(this).style("stroke-width", "1px");
+        })
+        .on("click", function(d, i) {
+          if (self.countryData == null) {
+            return;
+          }
+          let countryName = d3.select(this).attr("name");
+          let canada = self.countryData.countries["Canada"].sequence;
+          let selfCountry = self.countryData.countries[countryName].sequence;
+          if (canada != null && selfCountry != null) {
+            let window = cmp.graphwindow;
+            window.visualize(canada, selfCountry, countryName, self.year);
+          }
         });
       return this.group;
     },
-    color(data, missingData = [], colorScale) {
+    color(data, missingData = [], colorScale, countryData) {
+      this.countryData = countryData;
       for (let i = 0; i < data.length; ++i) {
         if (data[i].country_name in this.countryNames) {
           let acronym = this.countryNames[data[i].country_name];
@@ -475,6 +499,9 @@ let cmp = {
       this.rendered = true;
       this.group = svg.append("g");
       this.group.attr("class", "noselect");
+      data = data.filter(x => {
+        return x.scale != NaN;
+      });
       let g = this.group
         .selectAll("g")
         .data(data)
@@ -567,11 +594,194 @@ let cmp = {
 
   graphwindow: {
     graph: null,
-
-    visualize(Canada, Other) {
+    chartView: null,
+    categories: {},
+    async getData(keyword, otherName, year) {
+      let response = [];
+      for (let i = year.min; i <= year.max; ++i) {
+        response.push(
+          await this.getCategory({
+            keyword: keyword,
+            year: i,
+            country_name: otherName
+          })
+        );
+      }
+      if (cmp.info.canadaCategories == null) {
+        let canResponse = [];
+        for (let i = year.min; i <= year.max; ++i) {
+          canResponse.push(
+            await this.getCategory({
+              keyword: keyword,
+              year: i,
+              country_name: "Canada"
+            })
+          );
+        }
+        cmp.info.canadaCategories = { categories: {} };
+        for (let i = 0; i < canResponse.length; ++i) {
+          let obj = JSON.parse(canResponse[i].body);
+          let categories = obj.category_for;
+          for (const category in categories) {
+            if (
+              categories[category].name in cmp.info.canadaCategories.categories
+            ) {
+              cmp.info.canadaCategories.categories[
+                categories[category].name
+              ].push(categories[category].count);
+            } else {
+              cmp.info.canadaCategories.categories[
+                categories[category].name
+              ] = [];
+              cmp.info.canadaCategories.categories[
+                categories[category].name
+              ].push(categories[category].count);
+            }
+          }
+          cmp.info.normalizeCategories();
+        }
+      }
+      return response;
+    },
+    async visualize(canada, other, otherName, year) {
+      let res = await this.getData(cmp.info.currentKeyword, otherName, year);
+      let categories = this.parse(res);
+      var self = this;
+      $("#graph-holder").remove();
       $("#map-holder").append(
-        `<div class="graph-window row" id="graph-holder"></div>`
+        `<div class="graph-window" id="graph-holder"></div>`
       );
+      $(document).on("click", function(e) {
+        let check = $.contains($("#graph-holder")[0], $(e.target)[0]);
+        if ($(e.target).is("#graph-holder") === false && !check) {
+          $("#graph-holder").remove();
+          $(document)
+            .prop("onclick", null)
+            .off("click");
+          e.stopPropagation();
+        }
+      });
+      $("#graph-holder").one(
+        "animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
+        function() {
+          self.chartView = new ChartView("graph-holder");
+          self.chartView.addView("main-view");
+          self.chartView.addView("category-view");
+          self.chartView.setMainView("main-view");
+          self.chartView.addChart(
+            "main-view",
+            {
+              xdomain: [year.min, year.max],
+              ydomain: [0.0, 1.0],
+              lines: [
+                {
+                  name: "Canada",
+                  rawdata: Array.from(canada, (d, i) => {
+                    return { x: year.min + i, y: d };
+                  }),
+                  data: Array.from(canada, (d, i) => {
+                    return { x: year.min + i, y: d };
+                  })
+                },
+                {
+                  name: otherName,
+                  rawdata: Array.from(other, (d, i) => {
+                    return { x: year.min + i, y: d };
+                  }),
+                  data: Array.from(other, (d, i) => {
+                    return { x: year.min + i, y: d };
+                  })
+                }
+              ]
+            },
+            data => {
+              data.chartName = "total";
+            }
+          );
+          $("#main-view").css({ "overflow-y": "hidden" });
+          let counter = 0;
+          for (const category in categories) {
+            if (category in cmp.info.canadaCategories.categories) {
+              let category_id = "category" + counter++;
+              self.categories[category_id] = category;
+              $("#category-view").append(
+                `<div id=${category_id} display="block" class="category" name=${category}><div display="block" style='background-color:#D3D3D3' id=${"head" +
+                  category_id}>${category}  +</div></div>`
+              );
+              $("#" + category_id).on("click", function() {
+                if ($("#" + category_id).find("svg").length == 0) {
+                  let name = self.categories[category_id];
+                  let height = $("#category-view").height();
+                  let width = $("#category-view").width();
+                  let padding = 30;
+                  chart = new D3Chart("#" + category_id, true, name, {
+                    x: width - padding,
+                    y: height - padding
+                  });
+                  chart.updateXScale(
+                    new Date(year.min, 0),
+                    new Date(year.max, 0)
+                  );
+                  chart.updateYScale(0.0, 1.0);
+                  chart.updateLines([
+                    {
+                      name: "Canada",
+                      rawdata: Array.from(
+                        cmp.info.canadaCategories.categories[name],
+                        (d, i) => {
+                          return { x: year.min + i, y: d };
+                        }
+                      ),
+                      data: Array.from(
+                        cmp.info.canadaCategories.categories[name],
+                        (d, i) => {
+                          return { x: year.min + i, y: d };
+                        }
+                      )
+                    },
+                    {
+                      name: otherName,
+                      rawdata: Array.from(categories[name], (d, i) => {
+                        return { x: year.min + i, y: d };
+                      }),
+                      data: Array.from(categories[name], (d, i) => {
+                        return { x: year.min + i, y: d };
+                      })
+                    }
+                  ]);
+                } else {
+                  $("#" + category_id)
+                    .find("svg")[0]
+                    .remove();
+                }
+              });
+            }
+          }
+        }
+      );
+    },
+    parse(res) {
+      let result = {};
+      for (let i = 0; i < res.length; ++i) {
+        let obj = JSON.parse(res[i].body);
+        let categories = obj.category_for;
+        for (const category in categories) {
+          if (categories[category].name in result) {
+            result[categories[category].name].push(categories[category].count);
+          } else {
+            result[categories[category].name] = [];
+            result[categories[category].name].push(categories[category].count);
+          }
+        }
+      }
+      //normalize
+      for (const category in result) {
+        let sum = result[category].reduce((a, b) => a + b, 0);
+        for (let i = 0; i < result[category].length; ++i) {
+          result[category][i] /= sum;
+        }
+      }
+      return result;
     },
     async getCategory(params) {
       let response = await d3.json("/querycategories", {
@@ -586,6 +796,26 @@ let cmp = {
         }
       });
       return response;
+    }
+  },
+
+  info: {
+    currentKeyword: null,
+    canadaCategories: null,
+    normalizeCategories() {
+      for (const category in this.canadaCategories.categories) {
+        let sum = this.canadaCategories.categories[category].reduce(
+          (a, b) => a + b,
+          0
+        );
+        for (
+          let i = 0;
+          i < this.canadaCategories.categories[category].length;
+          ++i
+        ) {
+          this.canadaCategories.categories[category][i] /= sum;
+        }
+      }
     }
   }
 };

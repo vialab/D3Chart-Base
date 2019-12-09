@@ -129,13 +129,29 @@ svg {
     right: 50%;
   }
   to {
-    top: 5%;
-    left: 5%;
-    bottom: 5%;
-    right: 5%;
+    top: 15%;
+    left: 15%;
+    bottom: 15%;
+    right: 15%;
   }
 }
 
 .missing-data {
   object-fit: cover;
+}
+
+.category {
+  box-shadow: 0 0 3px;
+  border-radius: 3px;
+  margin-left: 3px;
+  margin-right: 25px;
+  text-align: center;
+  cursor: pointer;
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Old versions of Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
 }
