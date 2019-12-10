@@ -6,18 +6,37 @@ let cmp = {
     size: { width: 100, height: 100 },
     isSwatch: false,
     swatch: undefined,
+    title: null,
+    date: null,
+    keyword: undefined,
+    colorVis: null,
+
+    setKeyword(keyword) {
+      this.keyword = keyword;
+      return this;
+    },
+    setDate(date) {
+      this.date = date;
+      if (this.title != null) {
+        this.title.text(
+          `Canada vs the World(${date.min}, ${date.max})"${this.keyword}"`
+        );
+      }
+      return this;
+    },
     /**
      *
      * @param {Object} colorScale - cmp.colorScale object
      * @param {Element} svg - element to append to
      * @returns {Element} - group containing the legend
      */
-    visualize(colorScale, svg, pTitle = "Canada vs the World(2008-2018)") {
+    visualize(colorScale, svg) {
       let size = { width: 30, height: 15 };
       let boxPadding = 30;
       let leadLagPadding = 15;
       let titlePadding = 15;
       let group = svg.append("g");
+      let self = this;
       let background = group
         .append("rect")
         .attr("height", this.size.height)
@@ -28,9 +47,11 @@ let cmp = {
         .attr("rx", 15)
         .attr("filter", "url(#dropshadow)");
 
-      let title = group
+      this.title = group
         .append("text")
-        .text(pTitle)
+        .text(
+          `Canada vs the World(${this.date.min}, ${this.date.max})"${this.keyword}"`
+        )
         .attr("x", 0)
         .attr("y", 0)
         .style("font", "Helvetica")
@@ -52,10 +73,10 @@ let cmp = {
         .style("font", "Helvetica")
         .style("font-size", "20px");
 
-      let colorVis = colorScale.visualize(size, group, true);
-      let visBBox = colorVis.node().getBBox();
-      let titleBBox = title.node().getBBox();
-      colorVis.attr(
+      this.colorVis = colorScale.visualize(size, group, true);
+      let visBBox = this.colorVis.node().getBBox();
+      let titleBBox = this.title.node().getBBox();
+      this.colorVis.attr(
         "transform",
         `translate(${boxPadding +
           lagTxt.node().getBBox().width +
@@ -89,8 +110,8 @@ let cmp = {
           boxPadding
       );
 
-      title.attr("text-anchor", "middle");
-      title.attr(
+      this.title.attr("text-anchor", "middle");
+      this.title.attr(
         "transform",
         `translate(${background.node().getBBox().width / 2}, ${boxPadding +
           titleBBox.height})`
@@ -110,7 +131,7 @@ let cmp = {
       background.attr(
         "height",
         boxPadding +
-          title.node().getBBox().height +
+          this.title.node().getBBox().height +
           titlePadding +
           visBBox.height +
           titlePadding +
@@ -124,15 +145,49 @@ let cmp = {
           if (this.isSwatch) {
             this.swatch.remove();
             this.isSwatch = false;
+            background
+              .transition()
+              .duration(500)
+              .attr("y", 0)
+              .attr("height", self.size.height);
           } else {
-            let temp = cmp.swatch;
-            this.swatch = temp.visualize(
-              svg,
-              colorScale.scale,
-              size,
-              colorScale
-            );
-            this.isSwatch = true;
+            self.size.height = background.node().getBoundingClientRect().height;
+            background
+              .transition()
+              .duration(500)
+              .attr("y", 0 - background.node().getBoundingClientRect().y)
+              .attr("height", $(window).height())
+              .on(
+                "end",
+                function() {
+                  let temp = cmp.swatch;
+                  this.swatch = temp.visualize(
+                    svg,
+                    colorScale.scale,
+                    size,
+                    colorScale,
+                    function() {
+                      self.colorVis.remove();
+                      self.colorVis = colorScale.visualize(size, group, true);
+                      self.colorVis.attr(
+                        "transform",
+                        `translate(${boxPadding +
+                          lagTxt.node().getBBox().width +
+                          leadLagPadding},${boxPadding +
+                          titleBBox.height +
+                          titlePadding})`
+                      );
+                    }
+                  );
+                  this.swatch.attr(
+                    "transform",
+                    `translate(${
+                      self.colorVis.node().getBoundingClientRect().x
+                    })`
+                  );
+                  this.isSwatch = true;
+                }.bind(this)
+              );
           }
         }.bind(this)
       );
@@ -149,9 +204,6 @@ let cmp = {
 
     setGradient(colorGradient) {
       this.gradient = colorGradient;
-      if (this.rect != undefined) {
-        this.updateScale();
-      }
       return this;
     },
 
@@ -284,12 +336,12 @@ let cmp = {
       d3.interpolateSinebow
     ],
 
-    visualize(svg, yearScale, size, colorScale) {
+    visualize(svg, yearScale, size, colorScale, callback) {
       let group = svg.append("g");
       const padding = 5;
       for (let i = 0; i < this.colorList.length; ++i) {
         let temp = cmp.colorScale;
-        temp.setGradient(this.colorList[i]).setScale(yearScale);
+        temp.setScale(yearScale).setGradient(this.colorList[i]);
         let visual = temp.visualize(size, group);
 
         visual
@@ -299,6 +351,7 @@ let cmp = {
             function() {
               colorScale.setGradient(this.colorList[i]);
               group.remove();
+              callback();
             }.bind(this)
           );
       }
@@ -822,15 +875,22 @@ let cmp = {
   timeline: {
     years: { min: null, max: null },
     maxSelection: 5,
+    minSelection: 2,
+    legend: null,
     get span() {
-      return { min: 1950, max: new Date().getFullYear() - this.maxSelection };
+      return { min: 1950, max: new Date().getFullYear() };
     },
     size: { width: 506, height: 5 },
     group: null,
     brush: null,
     xScale: null,
     scale: null,
+    currentSelection: { min: null, max: null },
 
+    setLegend(legend) {
+      this.legend = legend;
+      return this;
+    },
     setYears(years) {
       this.years = years;
       return this;
@@ -901,26 +961,58 @@ let cmp = {
         .call(axis);
       this.brush = d3
         .brushX()
-        .handleSize(8)
+        .handleSize(12)
         .extent([
           [0, -5],
           [this.size.width, this.size.height + 5]
         ])
 
         .on("end", function() {
-          // let selection = d3.event.selection;
-          // if (selection[0] == NaN || selection[1] == NaN) {
-          //   return;
-          // }
-          // let x = selection[0];
-          // let year = Math.round(x / self.xScale.bandwidth());
-          // let begin = year;
-          // d3.select(this)
-          //   .transition()
-          //   .call(self.brush.move, [
-          //     self.scale(self.years.min + begin),
-          //     self.scale(self.years.min + begin + self.maxSelection)
-          //   ]);
+          let selection = d3.event.selection;
+          console.log(d3.event.sourceEvent);
+          if (!d3.event.sourceEvent || !selection) {
+            return;
+          }
+          let diff = Math.round(
+            (selection[1] - selection[0]) / self.xScale.bandwidth()
+          );
+
+          if (diff > self.maxSelection) {
+            selection[0] +=
+              (diff - self.maxSelection) * self.xScale.bandwidth();
+          }
+          if (diff < self.minSelection) {
+            if (
+              selection[0] -
+                (self.minSelection - diff) * self.xScale.bandwidth() <
+              0
+            ) {
+              selection[1] +=
+                (self.minSelection - diff) * self.xScale.bandwidth();
+            } else {
+              selection[0] -=
+                (self.minSelection - diff) * self.xScale.bandwidth();
+            }
+          }
+          let x = selection[0];
+          let begin = Math.round(x / self.xScale.bandwidth());
+          let end = Math.round(selection[1] / self.xScale.bandwidth());
+          if (self.span.min + end > self.span.max) {
+            end -= self.span.min + end - self.span.max;
+          }
+          d3.select(this)
+            .transition()
+            .call(self.brush.move, [
+              self.scale(self.span.min + begin),
+              self.scale(self.span.min + end)
+            ]);
+          self.currentSelection = {
+            min: self.span.min + begin,
+            max: self.span.min + end
+          };
+          if (self.legend != null) {
+            self.legend.setDate(self.currentSelection);
+          }
         });
       let gBrush = this.group
         .append("g")
@@ -928,8 +1020,11 @@ let cmp = {
         .call(this.brush);
 
       d3.select("selection").attr("rx", 3);
-      gBrush.call(this.brush.move, [this.scale(1955), this.scale(1960)]);
-
+      gBrush.call(this.brush.move, [
+        this.scale(this.years.min),
+        this.scale(this.years.max)
+      ]);
+      this.currentSelection = { min: this.years.min, max: this.years.max };
       return this.group;
     }
   }

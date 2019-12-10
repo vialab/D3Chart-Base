@@ -2,6 +2,7 @@ $(function() {
   let previousQueries = [];
   let cmpCountries = cmp.countries;
   let cmpInstitutes = cmp.glyphs;
+  let timeline = cmp.timeline;
   let transformView = {
     x: 0,
     y: 0,
@@ -37,6 +38,7 @@ $(function() {
       .reset();
     currentKeyword = keyword;
     result = [];
+    yearSpan = timeline.currentSelection;
     for (let i = yearSpan.min; i <= yearSpan.max; ++i) {
       let response = getNotCanada({ keyword: keyword, year: i });
       result.push(response);
@@ -296,11 +298,11 @@ $(function() {
     group.attr("class", "noselect");
     let padding = 20;
     let y = $(window).height();
-    legendVis = legend.visualize(
-      colorScale,
-      group,
-      `Canada vs the World (${yearSpan.min}-${yearSpan.max}), "${currentKeyword}"`
-    );
+
+    legendVis = legend
+      .setKeyword(currentKeyword)
+      .setDate(yearSpan)
+      .visualize(colorScale, group);
     legendVis.attr(
       "transform",
       `translate(${padding},${y - legendVis.node().getBBox().height - padding})`
@@ -405,16 +407,6 @@ $(function() {
             ")"
         );
         let bbox = countriesGroup.node().getBBox();
-        //pz.options = {
-        //  minScale: 0.1,
-        //  maxScale: 5,
-        //  bounds: {
-        //    top: bbox.y,
-        //    bottom: bbox.y + bbox.height,
-        //    left: bbox.x,
-        //    right: bbox.x + bbox.width
-        //  }
-        //};
         if (!cmpInstitutes.rendered) {
           return;
         }
@@ -434,9 +426,10 @@ $(function() {
       },
       ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
     );
-
-    let timeline = cmp.timeline;
-    let tg = timeline.setYears(yearSpan).visualize(svg);
+    let tg = timeline
+      .setYears(yearSpan)
+      .setLegend(legend)
+      .visualize(svg);
     pz.totalTransform.scale = 0.2;
     tg.attr("transform", "translate(1350, 910)");
     console.log(pz);
