@@ -68,6 +68,7 @@ $(function() {
       calculateLeadLag(aggData);
     });
   }
+
   /**
    * Parses the query data
    * @param {} data
@@ -347,6 +348,7 @@ $(function() {
       .attr("height", 25)
       .attr("x", 0)
       .attr("y", 0);
+
     filter
       .append("feGaussianBlur")
       .attr("in", "SourceAlpha")
@@ -431,7 +433,14 @@ $(function() {
       .setLegend(legend)
       .visualize(svg);
     pz.totalTransform.scale = 0.2;
-    tg.attr("transform", "translate(1350, 910)");
+    tg.attr(
+      "transform",
+      `translate(${$(window).width() -
+        tg.node().getBoundingClientRect().width -
+        30}, ${$(window).height() -
+        tg.node().getBoundingClientRect().height -
+        30})`
+    );
     console.log(pz);
   }
 
@@ -469,6 +478,21 @@ $(function() {
     let response = await d3.json("/querycanada", {
       method: "POST",
       body: JSON.stringify({ keyword: params.keyword, year: params.year }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    });
+    return response;
+  }
+
+  async function getInstitutionCitations(params) {
+    let response = await d3.json("/institute-citations", {
+      method: "POST",
+      body: JSON.stringify({
+        country: params.country,
+        keyword: params.keyword,
+        year: params.year
+      }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }

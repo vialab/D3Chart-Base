@@ -13,12 +13,23 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome
     <div id="timeline"></div>
     <div id="map-holder"></div>
     <div class="searchbar">
-      <form action="" id='keyword-form'>
+      <form action="" id='form'>
         <input type="search" id='search-field'>
           <i class="fa fa-search"></i>
         </input>
       </form>
     </div>
+    <div id="metrics">
+      <form action="">
+        <select name="metrics">
+          <option value="1">Deviation: Institute -> Country</option>
+          <option value="2">Paper Citations</option>
+          <option value="3">Paper Churn Rate</option>
+          <option value="4">Funding</option>
+          <option value="5">Global Contribution</option>
+          </select>
+      </form>
+      </div>
   </body>
   <script src="./js/leadlag.js"></script>
   <script src="https://code.easypz.io/easypz.latest.js"></script>

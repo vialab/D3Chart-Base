@@ -10,6 +10,9 @@ let cmp = {
     date: null,
     keyword: undefined,
     colorVis: null,
+    group: null,
+    svg: null,
+    colorScale: null,
 
     setKeyword(keyword) {
       this.keyword = keyword;
@@ -35,19 +38,21 @@ let cmp = {
       let boxPadding = 30;
       let leadLagPadding = 15;
       let titlePadding = 15;
-      let group = svg.append("g");
+      this.svg = svg;
+      this.group = svg.append("g");
       let self = this;
-      let background = group
+      this.colorScale = colorScale;
+      let background = this.group
         .append("rect")
         .attr("height", this.size.height)
         .attr("width", this.size.width)
         .attr("x", 0)
         .attr("y", 0)
-        .attr("fill", "white")
+        .attr("fill", "none")
         .attr("rx", 15)
         .attr("filter", "url(#dropshadow)");
 
-      this.title = group
+      this.title = this.group
         .append("text")
         .text(
           `Canada vs the World(${this.date.min}, ${this.date.max})"${this.keyword}"`
@@ -57,7 +62,7 @@ let cmp = {
         .style("font", "Helvetica")
         .style("font-size", "20px");
 
-      let leadTxt = group
+      let leadTxt = this.group
         .append("text")
         .attr("x", 0)
         .attr("y", 0)
@@ -65,7 +70,7 @@ let cmp = {
         .style("font", "Helvetica")
         .style("font-size", "20px");
 
-      let lagTxt = group
+      let lagTxt = this.group
         .append("text")
         .attr("x", 0)
         .attr("y", 0)
@@ -73,7 +78,8 @@ let cmp = {
         .style("font", "Helvetica")
         .style("font-size", "20px");
 
-      this.colorVis = colorScale.visualize(size, group, true);
+      this.colorVis = colorScale.visualize(size, this.group, true);
+      this.colorVis.style("cursor", "help");
       let visBBox = this.colorVis.node().getBBox();
       let titleBBox = this.title.node().getBBox();
       this.colorVis.attr(
@@ -117,7 +123,7 @@ let cmp = {
           titleBBox.height})`
       );
       let misc = cmp.misclegend;
-      let visMisc = misc.visualize(size, group);
+      let visMisc = misc.visualize(size, this.group);
       visMisc.attr(
         "transform",
         `translate(${background.node().getBBox().width / 2 -
@@ -139,59 +145,48 @@ let cmp = {
           boxPadding
       );
 
-      background.on(
-        "click",
-        function() {
-          if (this.isSwatch) {
-            this.swatch.remove();
-            this.isSwatch = false;
-            background
-              .transition()
-              .duration(500)
-              .attr("y", 0)
-              .attr("height", self.size.height);
-          } else {
-            self.size.height = background.node().getBoundingClientRect().height;
-            background
-              .transition()
-              .duration(500)
-              .attr("y", 0 - background.node().getBoundingClientRect().y)
-              .attr("height", $(window).height())
-              .on(
-                "end",
-                function() {
-                  let temp = cmp.swatch;
-                  this.swatch = temp.visualize(
-                    svg,
-                    colorScale.scale,
-                    size,
-                    colorScale,
-                    function() {
-                      self.colorVis.remove();
-                      self.colorVis = colorScale.visualize(size, group, true);
-                      self.colorVis.attr(
-                        "transform",
-                        `translate(${boxPadding +
-                          lagTxt.node().getBBox().width +
-                          leadLagPadding},${boxPadding +
-                          titleBBox.height +
-                          titlePadding})`
-                      );
-                    }
-                  );
-                  this.swatch.attr(
-                    "transform",
-                    `translate(${
-                      self.colorVis.node().getBoundingClientRect().x
-                    })`
-                  );
-                  this.isSwatch = true;
-                }.bind(this)
-              );
+      this.colorVis.on("click", this.swatchClick.bind(this));
+      return this.group;
+    },
+    swatchClick() {
+      let size = { width: 30, height: 15 };
+      let self = this;
+      if (this.isSwatch) {
+        this.swatch.remove();
+        this.isSwatch = false;
+      } else {
+        let temp = cmp.swatch;
+        this.swatch = temp.visualize(
+          self.svg,
+          self.colorScale.scale,
+          size,
+          self.colorScale,
+          function() {
+            let matrix = self.colorVis
+              .attr("transform")
+              .replace(/[^0-9\-.,]/g, "")
+              .split(",");
+            let x = matrix[0];
+            let y = matrix[1];
+            self.colorVis.remove();
+            self.colorVis = self.colorScale.visualize(size, self.group, true);
+            self.colorVis.attr("transform", `translate(${x},${y})`);
+            self.colorVis.on("click", self.swatchClick.bind(self));
+            self.colorVis.style("cursor", "help");
+            self.isSwatch = false;
           }
-        }.bind(this)
-      );
-      return group;
+        );
+        console.log(self.title.node().getBoundingClientRect().y);
+        this.swatch.attr(
+          "transform",
+          `translate(${
+            self.colorVis.node().getBoundingClientRect().x
+          },${self.title.node().getBoundingClientRect().y -
+            this.swatch.node().getBoundingClientRect().height -
+            40})`
+        );
+        this.isSwatch = true;
+      }
     }
   },
 
@@ -296,30 +291,6 @@ let cmp = {
 
   swatch: {
     colorList: [
-      d3.interpolateBrBG,
-      d3.interpolatePRGn,
-      d3.interpolatePiYG,
-      d3.interpolatePuOr,
-      d3.interpolateRdBu,
-      d3.interpolateRdGy,
-      d3.interpolateRdYlBu,
-      d3.interpolateRdYlGn,
-      d3.interpolateSpectral,
-      d3.interpolateBlues,
-      d3.interpolateGreens,
-      d3.interpolateGreys,
-      d3.interpolateOranges,
-      d3.interpolatePurples,
-      d3.interpolateReds,
-      d3.interpolateTurbo,
-      d3.interpolateViridis,
-      d3.interpolateInferno,
-      d3.interpolateMagma,
-      d3.interpolatePlasma,
-      d3.interpolateCividis,
-      d3.interpolateWarm,
-      d3.interpolateCool,
-      d3.interpolateCubehelixDefault,
       d3.interpolateBuGn,
       d3.interpolateBuPu,
       d3.interpolateGnBu,
@@ -332,18 +303,28 @@ let cmp = {
       d3.interpolateYlGn,
       d3.interpolateYlOrBr,
       d3.interpolateYlOrRd,
-      d3.interpolateRainbow,
-      d3.interpolateSinebow
+      d3.interpolateBrBG,
+      d3.interpolatePRGn,
+      d3.interpolatePiYG,
+      d3.interpolateRdBu,
+      d3.interpolateRdGy,
+      d3.interpolateRdYlBu,
+      d3.interpolateViridis,
+      d3.interpolatePlasma,
+      d3.interpolateCividis
     ],
 
     visualize(svg, yearScale, size, colorScale, callback) {
       let group = svg.append("g");
-      const padding = 5;
-      for (let i = 0; i < this.colorList.length; ++i) {
+      let padding = 5;
+      const firstGroup = 12;
+      const secondGroup = 18;
+      let group1 = group.append("g");
+      const groupPadding = 15;
+      for (let i = 0; i < firstGroup; ++i) {
         let temp = cmp.colorScale;
         temp.setScale(yearScale).setGradient(this.colorList[i]);
-        let visual = temp.visualize(size, group);
-
+        let visual = temp.visualize(size, group1);
         visual
           .attr("transform", `translate(0, ${i * size.height + padding * i})`)
           .on(
@@ -355,6 +336,41 @@ let cmp = {
             }.bind(this)
           );
       }
+      let group2 = group.append("g");
+      group2.attr("transform", `translate(0, ${groupPadding})`);
+      for (let i = firstGroup; i < secondGroup; ++i) {
+        let temp = cmp.colorScale;
+        temp.setScale(yearScale).setGradient(this.colorList[i]);
+        let visual = temp.visualize(size, group2);
+        visual
+          .attr("transform", `translate(0, ${i * size.height + padding * i})`)
+          .on(
+            "click",
+            function() {
+              colorScale.setGradient(this.colorList[i]);
+              group.remove();
+              callback();
+            }.bind(this)
+          );
+      }
+      let group3 = group.append("g");
+      group3.attr("transform", `translate(0, ${groupPadding * 2})`);
+      for (let i = secondGroup; i < this.colorList.length; ++i) {
+        let temp = cmp.colorScale;
+        temp.setScale(yearScale).setGradient(this.colorList[i]);
+        let visual = temp.visualize(size, group3);
+        visual
+          .attr("transform", `translate(0, ${i * size.height + padding * i})`)
+          .on(
+            "click",
+            function() {
+              colorScale.setGradient(this.colorList[i]);
+              group.remove();
+              callback();
+            }.bind(this)
+          );
+      }
+
       return group;
     }
   },
@@ -903,7 +919,9 @@ let cmp = {
         );
         return;
       }
+      //bind self for use in inline functions
       let self = this;
+      //create x scale for timeline
       this.xScale = d3
         .scaleBand()
         .range([0, this.size.width])
@@ -913,19 +931,23 @@ let cmp = {
           })
         )
         .padding(0.01);
+      //create y scale for creating the bubbles
       let yScale = d3
         .scaleLinear()
         .range([0, this.size.height])
         .domain([0, 1]);
+      //timeline ticks
       let axis = d3.axisBottom(this.xScale).tickValues(
         this.xScale.domain().filter(function(d, i) {
           return !(i % 5) || self.xScale.domain().length - 1 == i;
         })
       );
+      //timeline group and the return
       this.group = svg.append("g");
       this.scale = function(x) {
         return self.xScale(x) + self.xScale.bandwidth() / 2;
       };
+      //create the bubbles
       this.group
         .selectAll("bar")
         .data(
@@ -954,11 +976,12 @@ let cmp = {
         .attr("height", function() {
           return yScale(1.0);
         });
-
+      //translate the axis to the bottom of the size of the timeline
       this.group
         .append("g")
         .attr("transform", "translate(0," + this.size.height + ")")
         .call(axis);
+      //create the timeline brush
       this.brush = d3
         .brushX()
         .handleSize(12)
@@ -966,21 +989,23 @@ let cmp = {
           [0, -5],
           [this.size.width, this.size.height + 5]
         ])
-
+        //when the timeline scrubber has stopped moving call this function
         .on("end", function() {
           let selection = d3.event.selection;
           console.log(d3.event.sourceEvent);
           if (!d3.event.sourceEvent || !selection) {
             return;
           }
+          //calculate the difference of the beginning and end of the scrubber
           let diff = Math.round(
             (selection[1] - selection[0]) / self.xScale.bandwidth()
           );
-
+          //check if the scrubber was resized larger than the max selection which is 5
           if (diff > self.maxSelection) {
             selection[0] +=
               (diff - self.maxSelection) * self.xScale.bandwidth();
           }
+          //check if the scrubber was resize smaller than the min selection which is 2
           if (diff < self.minSelection) {
             if (
               selection[0] -
@@ -994,6 +1019,7 @@ let cmp = {
                 (self.minSelection - diff) * self.xScale.bandwidth();
             }
           }
+          //snap brush to year
           let x = selection[0];
           let begin = Math.round(x / self.xScale.bandwidth());
           let end = Math.round(selection[1] / self.xScale.bandwidth());
@@ -1014,18 +1040,38 @@ let cmp = {
             self.legend.setDate(self.currentSelection);
           }
         });
+      //append brush group
       let gBrush = this.group
         .append("g")
         .attr("class", "brush")
         .call(this.brush);
-
-      d3.select("selection").attr("rx", 3);
+      //move brush to default position
       gBrush.call(this.brush.move, [
         this.scale(this.years.min),
         this.scale(this.years.max)
       ]);
+      //keep track of what is selected by the brush
       this.currentSelection = { min: this.years.min, max: this.years.max };
+      //return the brush group
       return this.group;
+    }
+  },
+  //This data object contains all of the query information
+  dataObject: {
+    queries: [],
+
+    queryObject: {
+      countryData: {}
+    },
+    institution: {
+      sequence: [],
+      total: null,
+      citationTotal: null
+    },
+    categoryData: {
+      count: null,
+      sequence: [],
+      total: null
     }
   }
 };

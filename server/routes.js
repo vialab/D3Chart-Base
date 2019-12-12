@@ -32,6 +32,8 @@ module.exports = app => {
 
   app.post("/querycanada", queryDimensions.queryCanada);
 
+  app.post("/institute-citations", queryDimensions.queryInstituteCitations);
+
   app.post("/default-view", (req, res) => {
     res.json(defaultData);
   });

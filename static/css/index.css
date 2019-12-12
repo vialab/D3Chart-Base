@@ -16,7 +16,7 @@
   z-index: 2;
 }
 
-form {
+#form {
   position: relative;
   top: 50%;
   left: 50%;
@@ -62,12 +62,12 @@ input {
   stroke: black;
 }
 
-form:hover {
+#form:hover {
   width: 200px;
   cursor: pointer;
 }
 
-form:hover input {
+#form:hover input {
   display: block;
 }
 
@@ -75,7 +75,7 @@ input:focus {
   outline: none;
 }
 
-form:hover .fa {
+#form:hover .fa {
   outline: 2px;
   box-shadow: none;
 }
@@ -159,4 +159,9 @@ svg {
 .selection {
   fill: steelblue;
   fill-opacity: 0.5;
+}
+
+#metrics {
+  z-index: 2;
+  position: relative;
 }

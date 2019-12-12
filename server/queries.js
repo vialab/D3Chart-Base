@@ -133,6 +133,7 @@ const queryCanada = async function(req, resp) {
     if (error) {
       console.log(error);
     }
+    console.log(res);
     resp.status(200).send(res);
   });
 };
@@ -161,11 +162,33 @@ const queryCategory = async function(req, resp) {
   }
 };
 
+const queryInstituteCitations = async function(req, resp) {
+  if (timer.incrementCalls()) {
+    const options = {
+      url: api_url,
+      method: "POST",
+      headers: {
+        Authorization: jwt_token.Authorization
+      },
+      body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
+    };
+    request.post(options, (error, res) => {
+      if (error) {
+        console.log(error);
+      }
+      console.log(res);
+      resp.status(200).send(res);
+    });
+  } else {
+    console.log("Reached API limit");
+  }
+};
+
 //queryCategory({
 //  body: {
 //    keyword: "machine learning",
 //    country_name: "Canada",
-//    year: { min: 2014, max: 2016 }
+//    year: 2014
 //  }
 //}).catch(function(err) {
 //  console.error(err);
@@ -175,5 +198,6 @@ module.exports = {
   queryDimensions,
   queryNotCanada,
   queryCanada,
-  queryCategory
+  queryCategory,
+  queryInstituteCitations
 };
