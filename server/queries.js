@@ -162,7 +162,7 @@ const queryCategory = async function(req, resp) {
   }
 };
 
-const queryInstituteCitations = async function(req, resp) {
+const queryInstituteCitationsCan = async function(req, resp) {
   if (timer.incrementCalls()) {
     const options = {
       url: api_url,
@@ -183,21 +183,82 @@ const queryInstituteCitations = async function(req, resp) {
     console.log("Reached API limit");
   }
 };
+const queryInstituteCitationsNotCan = async function(req, resp) {
+  if (timer.incrementCalls()) {
+    const options = {
+      url: api_url,
+      method: "POST",
+      headers: {
+        Authorization: jwt_token.Authorization
+      },
+      body: `search publications for "${req.body.keyword}" where research_org_country_names!="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
+    };
+    request.post(options, (error, res) => {
+      if (error) {
+        console.log(error);
+      }
+      console.log(res);
+      resp.status(200).send(res);
+    });
+  } else {
+    console.log("Reached API limit");
+  }
+};
 
-//queryCategory({
-//  body: {
-//    keyword: "machine learning",
-//    country_name: "Canada",
-//    year: 2014
-//  }
-//}).catch(function(err) {
-//  console.error(err);
-//});
+const queryCanadaFunding = async function(req, resp) {
+  if (!("keyword" in req.body) && !("year" in req.body)) {
+    resp.status(400).send({ error: "Must contain keyword and year" });
+    return;
+  }
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search grants for "${req.body.keyword}" where research_org_countries.name="Canada" and active_year=${req.body.year} return research_orgs aggregate funding limit 1000`
+  };
+
+  console.log(options);
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+    }
+    console.log(res);
+    resp.status(200).send(res);
+  });
+};
+const queryFunding = async function(req, resp) {
+  if (!("keyword" in req.body) && !("year" in req.body)) {
+    resp.status(400).send({ error: "Must contain keyword and year" });
+    return;
+  }
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search grants for "${req.body.keyword}" where research_org_countries.name!="Canada" and active_year=${req.body.year} return research_orgs aggregate funding limit 1000`
+  };
+
+  console.log(options);
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+    }
+    console.log(res);
+    resp.status(200).send(res);
+  });
+};
 
 module.exports = {
   queryDimensions,
   queryNotCanada,
   queryCanada,
   queryCategory,
-  queryInstituteCitations
+  queryInstituteCitationsCan,
+  queryInstituteCitationsNotCan,
+  queryCanadaFunding,
+  queryFunding
 };

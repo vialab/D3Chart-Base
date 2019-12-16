@@ -648,6 +648,30 @@ let cmp = {
         .alpha(1)
         .on("tick", this.onTick.bind(this));
     },
+    updateScale(scale, scalarFunction) {
+      let g = this.group.selectAll("g");
+      g.each(function(d, i) {
+        d3.select(this)
+          .select("circle")
+          .attr("r", function(d) {
+            if (d.name in scale) {
+              return scalarFunction(scale[d.name]);
+            }
+          });
+        d3.select(this)
+          .select("line")
+          .attr("x1", function(d) {
+            if (d.name in scale) {
+              return scalarFunction(scale[d.name]);
+            }
+          })
+          .attr("x2", function(d) {
+            if (d.name in scale) {
+              return 0 - scalarFunction(scale[d.name]);
+            }
+          });
+      });
+    },
     reset() {
       if (this.group != null) {
         this.rendered = false;
@@ -1059,19 +1083,228 @@ let cmp = {
   //This data object contains all of the query information
   dataObject: {
     queries: [],
+    metaData: [],
+    get end() {
+      return this.queries.length - 1;
+    },
+    hasData() {
+      return this.queries.length;
+    }
+  },
 
-    queryObject: {
-      countryData: {}
+  metricSelection: {
+    async getMetric(selection) {
+      if (selection == 5) {
+        if ("contribution" in cmp.dataObject.metaData[cmp.dataObject.end]) {
+          return cmp.dataObject.metaData[cmp.dataObject.end].contribution;
+        }
+        return this.getContribution();
+      } else if (selection == 2) {
+        if ("timesCited" in cmp.dataObject.metaData[cmp.dataObject.end]) {
+          return cmp.dataObject.metaData[cmp.dataObject.end].timesCited;
+        }
+        return this.getTimesCited();
+      } else if (selection == 4) {
+        if ("funding" in cmp.dataObject.metaData[cmp.dataObject.end]) {
+          return cmp.dataObject.metaData[cmp.dataObject.end].funding;
+        }
+        return await this.getFunding();
+      } else if (selection == 3) {
+        if ("consistency" in cmp.dataObject.metaData[cmp.dataObject.end]) {
+          return cmp.dataObject.metaData[cmp.dataObject.end].consistency;
+        }
+        return await this.getConsistency();
+      }
     },
-    institution: {
-      sequence: [],
-      total: null,
-      citationTotal: null
+
+    getMetrics() {
+      this.getContribution();
     },
-    categoryData: {
-      count: null,
-      sequence: [],
-      total: null
+    getContribution() {
+      const end = cmp.dataObject.queries.length - 1;
+      let result = {};
+      for (const country in cmp.dataObject.queries[end].countries) {
+        for (const institute in cmp.dataObject.queries[end].countries[country]
+          .institutions) {
+          cmp.dataObject.queries[end].countries[country].institutions[
+            institute
+          ].contribution =
+            14 +
+            ((cmp.dataObject.queries[end].countries[country].institutions[
+              institute
+            ].total -
+              cmp.dataObject.metaData[end].averagePaper) /
+              cmp.dataObject.metaData[end].std) *
+              4;
+          result[institute] =
+            cmp.dataObject.queries[end].countries[country].institutions[
+              institute
+            ].contribution;
+        }
+      }
+      cmp.dataObject.metaData[end].contribution = result;
+      return result;
+    },
+
+    async getTimesCited() {
+      let promises = [];
+      for (
+        let i = cmp.dataObject.metaData[cmp.dataObject.end].years.min;
+        i <= cmp.dataObject.metaData[cmp.dataObject.end].years.max;
+        ++i
+      ) {
+        promises.push(
+          await this.query("/institute-citations", {
+            country: "Canada",
+            year: i,
+            keyword: cmp.dataObject.metaData[cmp.dataObject.end].keyword
+          })
+        );
+      }
+      for (
+        let i = cmp.dataObject.metaData[cmp.dataObject.end].years.min;
+        i <= cmp.dataObject.metaData[cmp.dataObject.end].years.max;
+        ++i
+      ) {
+        promises.push(
+          await this.query("/institute-citations-not", {
+            country: "Canada",
+            year: i,
+            keyword: cmp.dataObject.metaData[cmp.dataObject.end].keyword
+          })
+        );
+      }
+      let citations = {};
+      for (let i = 0; i < promises.length; ++i) {
+        let data = JSON.parse(promises[i].body).publications;
+        console.log(data);
+        for (let j = 0; j < data.length; ++j) {
+          if ("research_orgs" in data[j] && "times_cited" in data[j]) {
+            for (let k = 0; k < data[j].research_orgs.length; ++k) {
+              if (data[j].research_orgs[k].name in citations) {
+                citations[data[j].research_orgs[k].name] += data[j].times_cited;
+              } else {
+                citations[data[j].research_orgs[k].name] = data[j].times_cited;
+              }
+            }
+          }
+        }
+      }
+      let max = 0;
+      for (const ins in citations) {
+        let comp = citations[ins];
+        if (comp > max) {
+          max = comp;
+        }
+      }
+      for (const ins in citations) {
+        citations[ins] = 10 + (citations[ins] / max) * 15;
+      }
+      cmp.dataObject.metaData[cmp.dataObject.end].timesCited = citations;
+      return citations;
+    },
+
+    async getFunding() {
+      let results = [];
+      for (
+        let i = cmp.dataObject.metaData[cmp.dataObject.end].years.min;
+        i < cmp.dataObject.metaData[cmp.dataObject.end].years.max;
+        ++i
+      ) {
+        results.push(
+          await this.query("/funding-can", {
+            year: i,
+            keyword: cmp.dataObject.metaData[cmp.dataObject.end].keyword
+          })
+        );
+      }
+      for (
+        let i = cmp.dataObject.metaData[cmp.dataObject.end].years.min;
+        i < cmp.dataObject.metaData[cmp.dataObject.end].years.max;
+        ++i
+      ) {
+        results.push(
+          await this.query("/funding", {
+            year: i,
+            keyword: cmp.dataObject.metaData[cmp.dataObject.end].keyword
+          })
+        );
+      }
+      funding = {};
+      for (let i = 0; i < results.length; ++i) {
+        let data = JSON.parse(results[i].body).research_orgs;
+        for (let j = 0; j < data.length; ++j) {
+          if (data[j].name in funding) {
+            funding[data[j].name] += data[j].funding;
+          } else {
+            funding[data[j].name] = data[j].funding;
+          }
+        }
+      }
+      cmp.dataObject.metaData[cmp.dataObject.end].funding = funding;
+      let max = 0;
+      for (const ins in funding) {
+        let comp = funding[ins];
+        if (comp > max) {
+          max = comp;
+        }
+      }
+      for (const ins in funding) {
+        funding[ins] = 10 + (funding[ins] / max) * 15;
+      }
+      return funding;
+    },
+
+    getConsistency() {
+      result = {};
+      const end = cmp.dataObject.queries.length - 1;
+      for (const country in cmp.dataObject.queries[end].countries) {
+        for (const institute in cmp.dataObject.queries[end].countries[country]
+          .institutions) {
+          let sequence =
+            cmp.dataObject.queries[end].countries[country].institutions[
+              institute
+            ].sequence;
+          let slopes = [];
+          const sequenceEnd = sequence.length - 1;
+          //calculate slope assume x distance is 1 || which it has to be for lead lag so it is fine to assume
+          for (let i = 0; i < sequenceEnd; ++i) {
+            const next = i + 1;
+            let slope = sequence[next] - sequence[i];
+            slopes.push(slope);
+          }
+          let sum = slopes.reduce(function(acc, val) {
+            return acc + val;
+          }, 0);
+          let avg = sum / slopes.length;
+          let std = 0;
+          for (let i = 0; i < slopes.length; ++i) {
+            std += (slopes[i] - avg) * (slopes[i] - avg);
+          }
+          std /= slopes.length - 1;
+          std = Math.sqrt(std);
+          cmp.dataObject.queries[end].countries[country].institutions[
+            institute
+          ].consistency = 20 - std * 50;
+          result[institute] = 20 - std * 50;
+        }
+      }
+      cmp.dataObject.metaData[end].consistency = result;
+      return result;
+    },
+    async query(route, params) {
+      let response = await d3.json(route, {
+        method: "POST",
+        body: JSON.stringify({
+          country_name: params.country,
+          keyword: params.keyword,
+          year: params.year
+        }),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      });
+      return response;
     }
   }
 };

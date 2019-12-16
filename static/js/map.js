@@ -25,7 +25,17 @@ $(function() {
     onLoad(json);
   });
 
-  $("#keyword-form").on("submit", keywordSubmission);
+  $("#metric-selection").on("change", async function() {
+    if (!cmp.dataObject.hasData()) {
+      return;
+    }
+    let selection = $("#metric-selection").val();
+    let result = await cmp.metricSelection.getMetric(selection);
+    cmpInstitutes.updateScale(result, function(x) {
+      return x;
+    });
+  });
+  $("#form").on("submit", keywordSubmission);
 
   function keywordSubmission(event) {
     event.preventDefault();
@@ -33,7 +43,7 @@ $(function() {
     cmpInstitutes.reset();
     let keyword = $("#search-field").val();
     cmp.info.currentKeyword = keyword;
-    $("#keyword-form")
+    $("#form")
       .get(0)
       .reset();
     currentKeyword = keyword;
@@ -64,7 +74,6 @@ $(function() {
       }
 
       normalizeAggregatedData(aggData);
-      previousQueries.push(aggData);
       calculateLeadLag(aggData);
     });
   }
@@ -210,16 +219,33 @@ $(function() {
             y => (y = { y: y })
           )
         );
-
+        data.countries[country].institutions[ins].leadlag = leadlag;
         institutions.push({
           leadlag: leadLag,
           id: data.countries[country].institutions[ins].grid_id,
           name: ins,
           stdDeviation: data.countries[country].deviation,
-          country_name: country
+          country_name: country,
+          totalPapers: data.countries[country].institutions[ins].total
         });
       }
     }
+    let total = institutions.reduce((acc, currentVal) => {
+      return acc + currentVal.totalPapers;
+    }, 0);
+    let avg = total / institutions.length;
+    let std = institutions.reduce((acc, currentVal) => {
+      return (
+        acc + (currentVal.totalPapers - avg) * (currentVal.totalPapers - avg)
+      );
+    }, 0);
+
+    cmp.dataObject.metaData.push({
+      std: Math.sqrt(std / institutions.length),
+      averagePaper: avg,
+      years: yearSpan,
+      keyword: currentKeyword
+    });
     cmpCountries.color(countries, missingCountries, colorScale, data);
     colorInstitutions(institutions, data).then(function() {
       legendVis.remove();
@@ -250,6 +276,9 @@ $(function() {
       let stdDev = data[index].stdDeviation.stdDeviation;
       let scale = 14 + ((instituteTotal - avg) / stdDev) * 4;
       let coords = projection([locations[index].lng, locations[index].lat]);
+      query.countries[country_name].institutions[
+        data[index].name
+      ].scale = scale;
 
       renderData.push({
         lat: coords[0],
@@ -264,6 +293,7 @@ $(function() {
         stdDeviation: data[index].stdDeviation
       });
     }
+    cmp.dataObject.queries.push(query);
     cmpInstitutes.visualize(svg, colorScale, renderData, transformView);
   }
 
