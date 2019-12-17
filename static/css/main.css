@@ -176,3 +176,8 @@ input:checked + .slider:before {
   height: 90%;
   width: 100%;
 }
+
+.chart {
+  display: inline-block;
+  vertical-align: middle;
+}

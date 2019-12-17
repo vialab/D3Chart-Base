@@ -248,8 +248,8 @@ $(function() {
     });
     cmpCountries.color(countries, missingCountries, colorScale, data);
     colorInstitutions(institutions, data).then(function() {
-      legendVis.remove();
-      legendVis = createLegend(yearScale, svg);
+      legendVis.raise();
+      timeline.group.raise();
     });
   }
 
@@ -324,7 +324,7 @@ $(function() {
     return result;
   }
 
-  function createLegend(yearScale, svg) {
+  function createLegend(svg) {
     let group = svg.append("g");
     group.attr("class", "noselect");
     let padding = 20;
@@ -423,7 +423,7 @@ $(function() {
       .setYear(yearSpan)
       .visualize(countriesGroup, path);
     //legend
-    legendVis = createLegend(yearScale, svg);
+    legendVis = createLegend(svg);
     let pz = new EasyPZ(
       svg.node(),
       function(transform) {

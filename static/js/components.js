@@ -488,7 +488,12 @@ let cmp = {
           let selfCountry = self.countryData.countries[countryName].sequence;
           if (canada != null && selfCountry != null) {
             let window = cmp.graphwindow;
-            window.visualize(canada, selfCountry, countryName, self.year);
+            window.visualize(
+              canada,
+              selfCountry,
+              countryName,
+              cmp.dataObject.metaData[cmp.dataObject.end].years
+            );
           }
         });
       return this.group;
@@ -689,6 +694,7 @@ let cmp = {
     graph: null,
     chartView: null,
     categories: {},
+    recommended: [],
     async getData(keyword, otherName, year) {
       let response = [];
       for (let i = year.min; i <= year.max; ++i) {
@@ -759,6 +765,7 @@ let cmp = {
         function() {
           self.chartView = new ChartView("graph-holder");
           self.chartView.addView("main-view");
+          self.chartView.addView("recommended-view");
           self.chartView.addView("category-view");
           self.chartView.setMainView("main-view");
           self.chartView.addChart(
@@ -791,10 +798,65 @@ let cmp = {
               data.chartName = "total";
             }
           );
+          $("#recommended-view").css({ "overflow-y": "hidden" });
           $("#main-view").css({ "overflow-y": "hidden" });
           let counter = 0;
           for (const category in categories) {
             if (category in cmp.info.canadaCategories.categories) {
+              let line1 = Array.from(
+                cmp.info.canadaCategories.categories[category],
+                (d, i) => {
+                  return d;
+                }
+              );
+              let line2 = Array.from(categories[category], (d, i) => {
+                return d;
+              });
+              let area = self.getAreaBetweenCurve(line1, line2);
+              self.checkArea(area, category);
+            }
+          }
+          for (const category in categories) {
+            if (category in cmp.info.canadaCategories.categories) {
+              if (self.isRecommended(category)) {
+                self.chartView.addChart(
+                  "recommended-view",
+                  {
+                    xdomain: [year.min, year.max],
+                    ydomain: [0.0, 1.0],
+                    lines: [
+                      {
+                        name: "Canada",
+                        rawdata: Array.from(
+                          cmp.info.canadaCategories.categories[category],
+                          (d, i) => {
+                            return { x: year.min + i, y: d };
+                          }
+                        ),
+                        data: Array.from(
+                          cmp.info.canadaCategories.categories[category],
+                          (d, i) => {
+                            return { x: year.min + i, y: d };
+                          }
+                        )
+                      },
+                      {
+                        name: otherName,
+                        rawdata: Array.from(categories[category], (d, i) => {
+                          return { x: year.min + i, y: d };
+                        }),
+                        data: Array.from(categories[category], (d, i) => {
+                          return { x: year.min + i, y: d };
+                        })
+                      }
+                    ]
+                  },
+                  data => {
+                    data.chartName = category;
+                  }
+                );
+                continue;
+              }
               let category_id = "category" + counter++;
               self.categories[category_id] = category;
               $("#category-view").append(
@@ -889,6 +951,40 @@ let cmp = {
         }
       });
       return response;
+    },
+
+    getAreaBetweenCurve(line1, line2) {
+      if (line1.length != line2.length) {
+        return 0;
+      }
+      let sum = 0;
+      for (let i = 0; i < line1.length; ++i) {
+        sum += Math.abs(line1[i] - line2[i]);
+      }
+      return sum;
+    },
+
+    checkArea(value, name) {
+      if (this.recommended.length < 6) {
+        this.recommended.push({ val: value, name: name });
+        return true;
+      }
+      for (let i = 0; i < this.recommended.length; ++i) {
+        if (value > this.recommended[i].val) {
+          this.recommended[i].val = value;
+          this.recommended[i].name = name;
+          return true;
+        }
+      }
+      return false;
+    },
+    isRecommended(name) {
+      for (let i = 0; i < this.recommended.length; ++i) {
+        if (this.recommended[i].name == name) {
+          return true;
+        }
+      }
+      return false;
     }
   },
 
@@ -1078,6 +1174,9 @@ let cmp = {
       this.currentSelection = { min: this.years.min, max: this.years.max };
       //return the brush group
       return this.group;
+    },
+    reset() {
+      this.group.remove();
     }
   },
   //This data object contains all of the query information
