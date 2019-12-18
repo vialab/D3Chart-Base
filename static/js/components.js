@@ -560,6 +560,8 @@ let cmp = {
     group: null,
     rendered: false,
     tooltip: null,
+    simulation: null,
+    collision: null,
     /**
      *
      * @param {Element} svg
@@ -606,12 +608,13 @@ let cmp = {
           .attr("stroke-width", 5)
           .attr("transform", function() {
             let rotation = 0;
-            if (d.trend > 0.05) {
-              rotation = 45;
-            }
-            if (d.trend > -0.05) {
+            if (d.trend > 0.01) {
               rotation = -45;
             }
+            if (d.trend < -0.01) {
+              rotation = 45;
+            }
+
             return `rotate(${rotation},${0},${0})`;
           });
       });
@@ -629,8 +632,10 @@ let cmp = {
         "transform",
         `translate(${transform.x}, ${transform.y})scale(${transform.scale})`
       );
-
-      let force = d3
+      this.collision = d3.forceCollide().radius(function(d) {
+        return d.scale;
+      });
+      this.simulation = d3
         .forceSimulation(data)
         .force(
           "x",
@@ -644,12 +649,7 @@ let cmp = {
             return d.lng;
           })
         )
-        .force(
-          "collide",
-          d3.forceCollide(function(d) {
-            return d.scale;
-          })
-        )
+        .force("collide", this.collision)
         .alpha(1)
         .on("tick", this.onTick.bind(this));
     },
@@ -660,7 +660,8 @@ let cmp = {
           .select("circle")
           .attr("r", function(d) {
             if (d.name in scale) {
-              return scalarFunction(scale[d.name]);
+              d.scale = scalarFunction(scale[d.name]);
+              return d.scale;
             }
           });
         d3.select(this)
@@ -676,6 +677,8 @@ let cmp = {
             }
           });
       });
+      this.collision.initialize(this.simulation.nodes());
+      this.simulation.alpha(1).restart();
     },
     reset() {
       if (this.group != null) {
@@ -1407,3 +1410,13 @@ let cmp = {
     }
   }
 };
+
+class DataObject {}
+
+class Country {}
+
+class Institute {}
+
+class Legend {}
+
+class Timeline {}

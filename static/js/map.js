@@ -422,6 +422,7 @@ $(function() {
       .data(json.features)
       .setYear(yearSpan)
       .visualize(countriesGroup, path);
+    let bbox = countriesGroup.node().getBBox();
     //legend
     legendVis = createLegend(svg);
     let pz = new EasyPZ(
@@ -438,7 +439,6 @@ $(function() {
             transform.scale +
             ")"
         );
-        let bbox = countriesGroup.node().getBBox();
         if (!cmpInstitutes.rendered) {
           return;
         }
@@ -453,8 +453,7 @@ $(function() {
       },
       {
         minScale: 0.1,
-        maxScale: 5,
-        bounds: { top: -6000, bottom: 6000, left: -1000, right: 1000 }
+        maxScale: 5
       },
       ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
     );
