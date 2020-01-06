@@ -425,6 +425,12 @@ $(function() {
     let bbox = countriesGroup.node().getBBox();
     //legend
     legendVis = createLegend(svg);
+
+    $("#map").attr(
+      "transform",
+      `translate(${$(window).width() / 2}, ${$(window).height() / 2 +
+        152})scale(0.1)`
+    );
     let pz = new EasyPZ(
       svg.node(),
       function(transform) {
