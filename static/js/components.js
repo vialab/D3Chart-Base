@@ -14,8 +14,17 @@ let cmp = {
     svg: null,
     colorScale: null,
 
+    countries: null,
+
+    institutions: null,
+
     setKeyword(keyword) {
       this.keyword = keyword;
+      if (this.title != null) {
+        this.title.text(
+          `Canada vs the World(${this.date.min}, ${this.date.max})"${this.keyword}"`
+        );
+      }
       return this;
     },
     setDate(date) {
@@ -630,7 +639,7 @@ let cmp = {
       });
       this.group.attr(
         "transform",
-        `translate(${transform.x}, ${transform.y})scale(${transform.scale})`
+        `translate(${transform.translateX}, ${transform.translateY})scale(${transform.scale})`
       );
       this.collision = d3.forceCollide().radius(function(d) {
         return d.scale;
@@ -652,6 +661,12 @@ let cmp = {
         .force("collide", this.collision)
         .alpha(1)
         .on("tick", this.onTick.bind(this));
+    },
+    updateColor(colorScale) {
+      let g = this.group.selectAll("g");
+      g.each(function(d, i) {
+        d3.select(this).attr("fill", colorScale.get(d.lead));
+      });
     },
     updateScale(scale, scalarFunction) {
       let g = this.group.selectAll("g");
@@ -1216,6 +1231,8 @@ let cmp = {
           return cmp.dataObject.metaData[cmp.dataObject.end].consistency;
         }
         return await this.getConsistency();
+      } else if (selection == 1) {
+        return cmp.dataObject.metaData[cmp.dataObject.end].base;
       }
     },
 
@@ -1410,150 +1427,3 @@ let cmp = {
     }
   }
 };
-
-class DataObject {
-  queries = [];
-  metaData = [];
-  /**
-   * @returns {Number} gets the end index of the array
-   */
-  get end() {
-    return this.queries.length - 1;
-  }
-  /**
-   * @return {Boolean} returns if the data object has data.
-   */
-  hasData() {
-    return this.queries.length;
-  }
-}
-
-class Countries {
-  coloredList = [];
-  countryNames = {};
-  rawData = [];
-  group = null;
-  countryData = null;
-  year = { min: 0, max: 0 };
-  /**
-   *
-   * @param {Array.<{properties:{name:string, iso_a3:string}}>} dataVals - list of objects that must have properties name, iso_a3.
-   * @returns {this} returns the class for function chaining.
-   * This function creates a map for countries acronym and its name. Without this map calculating geolocation data will not work.
-   */
-  data(dataVals) {
-    this.rawData = dataVals;
-    for (let i = 0; i < dataVals.length; ++i) {
-      this.countryNames[dataVals[i].properties.name] =
-        dataVals[i].properties.iso_a3;
-    }
-    return this;
-  }
-
-  /**
-   *
-   * @param {{min:Number, max:Number}} year - set years for visualization min
-   * @returns {this} returns class for function chaining
-   */
-  setYear(year) {
-    if (year.min >= year.max) {
-      throw Error("Min must be lower than max");
-    }
-    this.year = year;
-    return this;
-  }
-  /**
-   *
-   * @param {SVGElement} svg - svg element
-   * @param {Function} projection - d3.geoMercator().scale()
-   * @return {Element} returns element that contains the countries
-   */
-  visualize(svg, projection) {
-    var self = this;
-    this.group = svg
-      .selectAll("path")
-      .data(this.rawData)
-      .enter()
-      .append("path")
-      .attr("d", projection)
-      .attr("id", function(d, i) {
-        return "country" + d.properties.iso_a3;
-      })
-      .attr("name", function(d, i) {
-        return d.properties.name;
-      })
-      .attr("class", "country")
-      .on("mouseover", function(d, i) {
-        d3.select(this).raise();
-        d3.select(this).style("stroke", "black");
-        d3.select(this).style("stroke-width", "5px");
-      })
-      .on("mouseout", function(d, i) {
-        d3.select(this).style("stroke", "white");
-        d3.select(this).style("stroke-width", "1px");
-      })
-      .on("click", function(d, i) {
-        if (self.countryData == null) {
-          return;
-        }
-        let countryName = d3.select(this).attr("name");
-        let canada = self.countryData.countries["Canada"].sequence;
-        let selfCountry = self.countryData.countries[countryName].sequence;
-        if (canada != null && selfCountry != null) {
-          let window = cmp.graphwindow;
-          window.visualize(
-            canada,
-            selfCountry,
-            countryName,
-            cmp.dataObject.metaData[cmp.dataObject.end].years
-          );
-        }
-      });
-    return this.group;
-  }
-  /**
-   *
-   * @param {{leadlag: number, country_name: string}} data - requires leadlag and country_name property
-   * @param {Array.<string>} missingData - list of country names that have incomplete data.
-   * @param {*} colorScale - color scale to color countries.
-   * @param {*} countryData - aggregated country data.
-   */
-  color(data, missingData = [], colorScale, countryData) {
-    this.countryData = countryData;
-    for (let i = 0; i < data.length; ++i) {
-      if (data[i].country_name in this.countryNames) {
-        let acronym = this.countryNames[data[i].country_name];
-        $(`#country${acronym}`).css({
-          fill: colorScale.get(data[i].leadlag)
-        });
-        this.coloredList.push(`#country${acronym}`);
-      } else {
-        console.log(`${data[i].country_name} does not exist in dictionary`);
-      }
-    }
-    for (let i = 0; i < missingData.length; ++i) {
-      if (missingData[i] in this.countryNames) {
-        let acronym = this.countryNames[missingData[i]];
-        $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
-        this.coloredList.push(`#country${acronym}`);
-      }
-    }
-  }
-  /**
-   *
-   * @param {string} color - Default color to set the countries css to. Default is gray.
-   * Call this function when you want to reset the countries.
-   */
-  reset(color = "#f5f5f5") {
-    for (let i = 0; i < this.coloredList.length; ++i) {
-      $(this.coloredList[i]).css({ fill: color });
-    }
-    this.coloredList = [];
-  }
-}
-
-class Institutes {}
-
-class Legend {}
-
-class Timeline {}

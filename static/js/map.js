@@ -1,26 +1,26 @@
 $(function() {
-  let previousQueries = [];
+  //These are all cmp objects see components.js
   let cmpCountries = cmp.countries;
   let cmpInstitutes = cmp.glyphs;
   let timeline = cmp.timeline;
-  let transformView = {
-    x: 0,
-    y: 0,
-    scale: 0
-  };
+  let legend = cmp.legend;
+  //default variables like the d3.projection, svg, the svg defs, currentKeyword, and the easyPZ variable
   let yearSpan = { min: 2012, max: 2016 };
   let numYears = yearSpan.max - yearSpan.min + 1;
   let yearScale = createRange(numYears);
   let svg;
   let projection;
-  let legend = cmp.legend;
   let legendVis;
   let defs;
   let currentKeyword;
+  let pz;
+  let mapBoundaries;
 
   let colorScale = cmp.colorScale;
+  //setting the color gradient to be the red->blue color scale
   colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);
-
+  //this is the country/map data
+  //once we receive the json we call the load function which creates the map, legend and timeline
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
   });
@@ -39,10 +39,13 @@ $(function() {
 
   function keywordSubmission(event) {
     event.preventDefault();
+    let defaultSelection = 1;
+    $("#metric-selection").val(defaultSelection);
     cmpCountries.reset();
     cmpInstitutes.reset();
     let keyword = $("#search-field").val();
     cmp.info.currentKeyword = keyword;
+    legend.setKeyword(keyword);
     $("#form")
       .get(0)
       .reset();
@@ -112,7 +115,12 @@ $(function() {
     }
     return { countries: countries };
   }
-
+  /**
+   *
+   * @param {*} data
+   * Normalizes the totals of output papers
+   * This is essentially required for us to do any sort of comparison
+   */
   function aggregateParsedData(data) {
     countries = {};
     for (let i = 0; i < data.length; ++i) {
@@ -161,6 +169,7 @@ $(function() {
     }
     return { countries: countries };
   }
+
   function normalizeAggregatedData(data) {
     for (const key in data.countries) {
       const total = data.countries[key].total;
@@ -179,13 +188,18 @@ $(function() {
       }
     }
   }
+  /**
+   *
+   * @param {*} data
+   * Calculates lead lag for countries and institutions relative to canada's graph
+   */
   function calculateLeadLag(data) {
     let countries = [];
     let institutions = [];
     let missingCountries = [];
     let missingInstitutions = [];
     for (const country in data.countries) {
-      if (!(country == "Canada")) {
+      if (country != "Canada") {
         if (
           data.countries[country].sequence.length !=
           data.countries["Canada"].sequence.length
@@ -252,12 +266,16 @@ $(function() {
       timeline.group.raise();
     });
   }
-
+  /**
+   *
+   * @param {*} data
+   * @param {*} query
+   * creates and colors the institutions
+   */
   async function colorInstitutions(data, query) {
     let location_ids = Array.from(data, x => x.id);
     let locations = await getLocations(location_ids);
     let renderData = [];
-    console.log(locations);
     for (let index in locations) {
       const country_name = data[index].country_name;
       const countryTotal = query.countries[country_name].total;
@@ -293,10 +311,23 @@ $(function() {
         stdDeviation: data[index].stdDeviation
       });
     }
+    //creating the base data for the institutions
+    let base = {};
+    for (const index in renderData) {
+      base[renderData[index].name] = renderData[index].scale;
+    }
+    //storing the base data
     cmp.dataObject.queries.push(query);
-    cmpInstitutes.visualize(svg, colorScale, renderData, transformView);
+    cmp.dataObject.metaData[cmp.dataObject.end].base = {};
+    cmp.dataObject.metaData[cmp.dataObject.end].base = base;
+    //visualizing the institutions
+    cmpInstitutes.visualize(svg, colorScale, renderData, pz.totalTransform);
   }
-
+  /**
+   *
+   * @param {*} institutes
+   * calculates the standard deviation for the institutions. The set used for the calculation is all the institutions in a single country.
+   */
   function stdDeviation(institutes) {
     let len = 0;
     let sum = 0;
@@ -315,7 +346,12 @@ $(function() {
     deviation = Math.sqrt(std / len);
     return { stdDeviation: deviation, average: avg };
   }
-
+  /**
+   *
+   * @param {Number} year
+   * This function creates an array that contains the year range
+   * Example: if input is 5 the resulting array will be [-5,-4,-3,-2,-1,0,1,2,3,4,5]
+   */
   function createRange(year) {
     let result = [];
     for (let i = -year; i <= year; ++i) {
@@ -323,13 +359,16 @@ $(function() {
     }
     return result;
   }
-
+  /**
+   *
+   * @param {Element} svg
+   * This function creates the legend
+   */
   function createLegend(svg) {
     let group = svg.append("g");
     group.attr("class", "noselect");
     let padding = 20;
     let y = $(window).height();
-
     legendVis = legend
       .setKeyword(currentKeyword)
       .setDate(yearSpan)
@@ -346,6 +385,7 @@ $(function() {
     projection = d3.geoMercator().scale($("#map-holder").width());
     //path generation based on projection
     let path = d3.geoPath().projection(projection);
+    //tooltip on hover
     tooltip = d3
       .select("#map-holder")
       .append("div")
@@ -364,6 +404,10 @@ $(function() {
       // set to the same size as the "map-holder" div
       .attr("width", $("#map-holder").width())
       .attr("height", $("#map-holder").height());
+    /*
+     *These are definitions, The drop shadow is for applying a shadow to the border of objects
+     *The Missing data is for filling countries and institutes with wavey lines to symbolize incomplete data
+     */
     defs = svg.append("defs");
     var filter = defs.append("filter").attr("id", "dropshadow");
     defs
@@ -418,25 +462,30 @@ $(function() {
       .attr("y", 0)
       .attr("width", $("#map").width())
       .attr("height", $("#map").height());
+    //cmpCountries contains all of the country rendering data
+    //json.features is all of the country names and their svg line data
     cmpCountries
       .data(json.features)
       .setYear(yearSpan)
       .visualize(countriesGroup, path);
-    let bbox = countriesGroup.node().getBBox();
-    //legend
-    legendVis = createLegend(svg);
+    //defining map boundaries, struggled with this working with the easyPZ library
+    //TODO implement map boundary
+    mapBoundaries = countriesGroup.node().getBBox();
 
+    //legend element
+    legendVis = createLegend(svg);
+    //translating the countries into the center of the viewport
     $("#map").attr(
       "transform",
       `translate(${$(window).width() / 2}, ${$(window).height() / 2 +
         152})scale(0.1)`
     );
-    let pz = new EasyPZ(
+    //This is EasyPZ *ironically not so easy*
+    //The EasyPz library is responsible for handling mouse events on the svg
+    //If you add an element to the svg you must add it to the transform function below
+    pz = new EasyPZ(
       svg.node(),
       function(transform) {
-        transformView.x = transform.translateX;
-        transformView.y = transform.translateY;
-        transformView.scale = transform.scale;
         countriesGroup.attr(
           "transform",
           "translate(" +
@@ -459,15 +508,30 @@ $(function() {
       },
       {
         minScale: 0.1,
-        maxScale: 5
+        maxScale: 2,
+        bounds: {
+          top: NaN,
+          right: NaN,
+          bottom: NaN,
+          left: NaN
+        }
       },
       ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
     );
+
+    //This is the timeline object
     let tg = timeline
       .setYears(yearSpan)
       .setLegend(legend)
       .visualize(svg);
-    pz.totalTransform.scale = 0.2;
+    //setting easyPZ default transform and scale to that of the #map
+    //If you look above you will notice its the same translation as the #map
+    pz.totalTransform = {
+      scale: 0.1,
+      translateX: $(window).width() / 2,
+      translateY: $(window).height() / 2 + 152
+    };
+    //moving the timeline to the bottom right hand corner 30 pixels from the bottom and 30 pixels from the right
     tg.attr(
       "transform",
       `translate(${$(window).width() -
@@ -476,7 +540,6 @@ $(function() {
         tg.node().getBoundingClientRect().height -
         30})`
     );
-    console.log(pz);
   }
 
   /**
@@ -513,21 +576,6 @@ $(function() {
     let response = await d3.json("/querycanada", {
       method: "POST",
       body: JSON.stringify({ keyword: params.keyword, year: params.year }),
-      headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
-    });
-    return response;
-  }
-
-  async function getInstitutionCitations(params) {
-    let response = await d3.json("/institute-citations", {
-      method: "POST",
-      body: JSON.stringify({
-        country: params.country,
-        keyword: params.keyword,
-        year: params.year
-      }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
