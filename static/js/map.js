@@ -14,7 +14,6 @@ $(function() {
   let defs;
   let currentKeyword;
   let pz;
-  let mapBoundaries;
 
   let colorScale = cmp.colorScale;
   //setting the color gradient to be the red->blue color scale
@@ -426,7 +425,7 @@ $(function() {
     filter
       .append("feGaussianBlur")
       .attr("in", "SourceAlpha")
-      .attr("stdDeviation", 1)
+      .attr("stdDeviation", 2)
       .attr("result", "blur");
 
     filter

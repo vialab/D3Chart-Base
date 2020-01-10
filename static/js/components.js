@@ -602,7 +602,7 @@ let cmp = {
           .attr("cy", 0)
           .attr("r", d.scale)
           .attr("stroke", "black")
-          .attr("stroke-width", 1)
+          .attr("stroke-width", 3)
           .attr("fill", colorScale.get(d.lead));
       });
 
@@ -669,6 +669,7 @@ let cmp = {
       });
     },
     updateScale(scale, scalarFunction) {
+      let svg = d3.select("svg");
       let g = this.group.selectAll("g");
       g.each(function(d, i) {
         d3.select(this)
@@ -713,6 +714,7 @@ let cmp = {
     chartView: null,
     categories: {},
     recommended: [],
+    numberRecommended: 4,
     async getData(keyword, otherName, year) {
       let response = [];
       for (let i = year.min; i <= year.max; ++i) {
@@ -816,6 +818,7 @@ let cmp = {
               data.chartName = "total";
             }
           );
+
           $("#recommended-view").css({ "overflow-y": "hidden" });
           $("#main-view").css({ "overflow-y": "hidden" });
           let counter = 0;
@@ -883,45 +886,48 @@ let cmp = {
               );
               $("#" + category_id).on("click", function() {
                 if ($("#" + category_id).find("svg").length == 0) {
+                  self.chartView.clearView("main-view");
                   let name = self.categories[category_id];
-                  let height = $("#category-view").height();
-                  let width = $("#category-view").width();
-                  let padding = 30;
-                  chart = new D3Chart("#" + category_id, true, name, {
-                    x: width - padding,
-                    y: height - padding
-                  });
-                  chart.updateXScale(
-                    new Date(year.min, 0),
-                    new Date(year.max, 0)
-                  );
-                  chart.updateYScale(0.0, 1.0);
-                  chart.updateLines([
+                  //chart = new D3Chart("#" + category_id, true, name, {
+                  //  x: width - padding,
+                  //  y: height - padding
+                  //});
+                  self.chartView.addChart(
+                    "main-view",
                     {
-                      name: "Canada",
-                      rawdata: Array.from(
-                        cmp.info.canadaCategories.categories[name],
-                        (d, i) => {
-                          return { x: year.min + i, y: d };
+                      xdomain: [year.min, year.max],
+                      ydomain: [0.0, 1.0],
+                      lines: [
+                        {
+                          name: "Canada",
+                          rawdata: Array.from(
+                            cmp.info.canadaCategories.categories[name],
+                            (d, i) => {
+                              return { x: year.min + i, y: d };
+                            }
+                          ),
+                          data: Array.from(
+                            cmp.info.canadaCategories.categories[name],
+                            (d, i) => {
+                              return { x: year.min + i, y: d };
+                            }
+                          )
+                        },
+                        {
+                          name: otherName,
+                          rawdata: Array.from(categories[name], (d, i) => {
+                            return { x: year.min + i, y: d };
+                          }),
+                          data: Array.from(categories[name], (d, i) => {
+                            return { x: year.min + i, y: d };
+                          })
                         }
-                      ),
-                      data: Array.from(
-                        cmp.info.canadaCategories.categories[name],
-                        (d, i) => {
-                          return { x: year.min + i, y: d };
-                        }
-                      )
+                      ]
                     },
-                    {
-                      name: otherName,
-                      rawdata: Array.from(categories[name], (d, i) => {
-                        return { x: year.min + i, y: d };
-                      }),
-                      data: Array.from(categories[name], (d, i) => {
-                        return { x: year.min + i, y: d };
-                      })
+                    data => {
+                      data.chartName = category;
                     }
-                  ]);
+                  );
                 } else {
                   $("#" + category_id)
                     .find("svg")[0]
@@ -983,7 +989,7 @@ let cmp = {
     },
 
     checkArea(value, name) {
-      if (this.recommended.length < 6) {
+      if (this.recommended.length < this.numberRecommended) {
         this.recommended.push({ val: value, name: name });
         return true;
       }
@@ -1158,9 +1164,10 @@ let cmp = {
             }
           }
           //snap brush to year
-          let x = selection[0];
-          let begin = Math.round(x / self.xScale.bandwidth());
-          let end = Math.round(selection[1] / self.xScale.bandwidth());
+          let xStart = selection[0];
+          let xEnd = selection[1];
+          let begin = Math.round(xStart / self.xScale.bandwidth());
+          let end = Math.round(xEnd / self.xScale.bandwidth());
           if (self.span.min + end > self.span.max) {
             end -= self.span.min + end - self.span.max;
           }
@@ -1427,3 +1434,341 @@ let cmp = {
     }
   }
 };
+class ProgressBar {
+  /**
+   *
+   * @param {string} id - element id
+   */
+  constructor(id) {
+    $(id).append(`<div class='progressBackground'></div>`);
+    this.root = $(".progressBackground");
+    $(this.root).append(`<div class='progressBar'></div>`);
+    this.bar = $(".progressBar");
+  }
+  /**
+   *
+   * @param {number} percent number 0-100
+   */
+  setProgress(percent) {
+    $(this.bar).width(`${percent}%`);
+  }
+  root = null;
+  bar = null;
+  gradient = null;
+}
+class Scrubber {
+  /**
+   *
+   * @param {{width: Number, height: Number}} size
+   */
+  constructor(size) {}
+}
+class TimeView {
+  constructor() {
+    this.progressBar = new ProgressBar();
+  }
+  progressBar = null;
+}
+
+class InstitutionData {
+  papers = {};
+  funding = {};
+  citations = {};
+  /**
+   *
+   * @param {Number} year
+   * @returns {Boolean}
+   */
+  hasPapers(year) {
+    return year in this.papers;
+  }
+  /**
+   *
+   * @param {Number} year
+   * @returns {Number}
+   */
+  getPapers(year) {
+    return this.papers[year];
+  }
+  /**
+   *
+   * @param {Number} year
+   * @param {Number} value
+   */
+  addPapers(year, value) {
+    this.papers[year] = value;
+  }
+  /**
+   *
+   * @param {Number} year
+   * @returns {Boolean}
+   */
+  hasFunding(year) {
+    return year in this.funding;
+  }
+  /**
+   *
+   * @param {Number} year
+   * @returns {Number}
+   */
+  getFunding(year) {
+    return this.funding[year];
+  }
+  /**
+   *
+   * @param {Number} year
+   * @param {Number} value
+   */
+  addFunding(year, value) {
+    this.funding[year] = value;
+  }
+}
+class CountryData {
+  institutes = [];
+  countryTotal = {};
+  /**
+   *
+   * @param {string} name
+   * @returns {InstitutionData}
+   */
+  getInstitute(name) {
+    return this.institutes[name];
+  }
+  /**
+   *
+   * @param {string} name
+   * @returns {boolean}
+   */
+  hasInstitute(name) {
+    return name in this.institutes;
+  }
+  /**
+   *
+   * @param {string} name
+   * @param {InstitutionData} institute
+   */
+  addInstitute(name, institute) {
+    this.institutes[name] = institute;
+  }
+  /**
+   *
+   * @param {string} year - year of interest
+   * @returns {Boolean}
+   */
+  hasTotal(year) {
+    return year in this.countryTotal;
+  }
+  /**
+   *
+   * @param {string} year - year of interest
+   * @returns {Number} total papers for country
+   */
+  getTotal(year) {
+    return this.countryTotal[year];
+  }
+  /**
+   *
+   * @param {string} year - year of interest
+   * @param {Number} value - country total
+   */
+  addTotal(year, value) {
+    this.countryTotal[year] = value;
+  }
+
+  /**
+   *
+   * @param {Number} year
+   */
+  calculateTotal(year) {
+    let sum = 0;
+    for (let i = 0; i < this.institutes.length; ++i) {
+      if (this.institutes[i].hasPapers(year)) {
+        sum += this.institutes[i].getPapers(year);
+      }
+    }
+    this.countryTotal[year] = sum;
+  }
+}
+
+class DataObject {
+  currentYearLoading = new Date().getFullYear();
+  countries = {};
+  numOfWaitingQueries = 0;
+  callback = null;
+
+  intervalVar = null;
+  onFinished(callback) {
+    this.callback = callback;
+  }
+
+  /**
+   *
+   * @param {string} name - country name
+   * @returns {Boolean}
+   */
+  hasCountry(name) {
+    return name in this.countries;
+  }
+  /**
+   *
+   * @param {string} name - country name
+   * @returns {CountryData}
+   */
+  getCountry(name) {
+    return this.countries[name];
+  }
+  /**
+   *
+   * @param {string} name - country name
+   * @param {CountryData} country
+   */
+  addCountry(name, country) {
+    this.countries[name] = country;
+  }
+
+  /**
+   *
+   * @param {string} keyword
+   */
+  getAllPapers(keyword) {
+    let self = this;
+    this.intervalVar = setInterval(function() {
+      self.queryPapers(keyword);
+    }, 2000);
+  }
+
+  pauseLoading() {
+    if (this.intervalVar != null) {
+      clearInterval(this.intervalVar);
+    }
+  }
+  /**
+   *
+   * @param {Number} year
+   * @param {string} keyword
+   */
+  queryPapers(keyword) {
+    //suspend the interval until after the query has returned
+    clearInterval(this.intervalVar);
+    this.getCanadaPapers(
+      this.currentYearLoading,
+      keyword,
+      this.queryCanadaCallback.bind(this)
+    );
+    this.getWorldPapers(
+      this.currentYearLoading,
+      keyword,
+      this.queryWorldCallback.bind(this)
+    );
+    if (this.currentYearLoading < 1950) {
+      this.callback();
+    }
+  }
+  /**
+   *
+   * @param {Number} year
+   * @param {string} keyword
+   * @param {function} callback
+   */
+  getCanadaPapers(year, keyword, callback) {
+    d3.json("/querycanada", {
+      method: "POST",
+      body: JSON.stringify({ keyword: keyword, year: year }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    })
+      .then(function(data) {
+        callback(data, year, keyword);
+      })
+      .catch(function(err) {
+        console.log(err);
+      });
+  }
+  /**
+   *
+   * @param {Number} year
+   * @param {string} keyword
+   * @param {function} callback
+   */
+  getWorldPapers(year, keyword, callback) {
+    d3.json("/querynotcanada", {
+      method: "POST",
+      body: JSON.stringify({ keyword: keyword, year: year }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    })
+      .then(function(data) {
+        callback(data, year, keyword);
+      })
+      .catch(function(err) {
+        console.log(err);
+      });
+  }
+
+  queryCanadaCallback(data, year, keyword) {
+    let result = JSON.parse(data.body);
+    //this could break if they change the research_orgs property
+    //currently I do not see a way to avoid this potential failpoint
+    let property = "research_orgs";
+    if (!(property in result)) {
+      throw Error(`${property} is not in ${result}`);
+    }
+    result = result.research_orgs;
+    //sometimes there is collaborations, we have chosen to filters those out
+    //essentially we only look at the institutes that reside in canada
+    result = result.filter(function(x) {
+      return x.country_name == "Canada";
+    });
+    //add canada country to data object
+    if (!this.hasCountry("Canada")) {
+      this.addCountry("Canada", new CountryData());
+    }
+    //iterate through query and add all institutes and their number of papers for this year
+    for (let i = 0; i < result.length; ++i) {
+      if (this.getCountry("Canada").hasInstitute(result[i].name)) {
+        this.getCountry("Canada")
+          .getInstitute(result[i].name)
+          .addPapers(year, result[i].count);
+      } else {
+        let country = this.getCountry("Canada");
+        country.addInstitute(result[i].name, new InstitutionData());
+        country.getInstitute(result[i].name).addPapers(year, result[i].count);
+      }
+    }
+    //once we have added all of the papers to the institutes within the country, calculate the total for the country
+    this.getCountry("Canada").addTotal(
+      year,
+      result.reduce((acc, val) => acc + val.count, 0)
+    );
+  }
+  queryWorldCallback(data, year, keyword) {
+    let result = JSON.parse(data.body);
+    let property = "research_orgs";
+    //this could break if they change the research_orgs property
+    //currently I do not see a way to avoid this potential failpoint
+    if (!(property in result)) {
+      throw Error(`${property} is not in ${result}`);
+    }
+    result = result.research_orgs;
+    //add the countries and their institutes
+    //add the paper count to institutes
+    for (let i = 0; i < result.length; ++i) {
+      if (!this.hasCountry(result[i].country_name)) {
+        this.addCountry(result[i].country_name, new CountryData());
+      }
+      let country = this.getCountry(result[i].country_name);
+      if (!country.hasInstitute(result[i].name)) {
+        country.addInstitute(result[i].name, new InstitutionData());
+      }
+      let institute = country.getInstitute(result[i].name);
+      institute.addPapers(year, result[i].count);
+    }
+    //calculate total papers for countries in the specified year
+    for (let country in this.countries) {
+      this.getCountry(country).calculateTotal(year);
+    }
+    this.getAllPapers(keyword);
+  }
+}

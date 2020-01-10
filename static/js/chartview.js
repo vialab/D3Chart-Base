@@ -222,6 +222,17 @@ class ChartView {
       );
     }
   }
+  clearView(viewName) {
+    if (!(viewName in this.viewList)) {
+      throw new Error(`${viewName} is not in viewList`);
+    }
+    while (this.viewList[viewName].firstChild) {
+      delete this.charts[this.viewList[viewName].id][
+        this.viewList[viewName].firstChild.id
+      ];
+      this.viewList[viewName].removeChild(this.viewList[viewName].firstChild);
+    }
+  }
 
   clear() {
     for (let key in this.charts) {
@@ -250,9 +261,9 @@ class ChartView {
     const parent_id = e.node().parentNode.id;
     //compounded ids
     const node_id = e.node().id;
+    this.clearView(this.mainView.element_id);
     if (parent_id != this.mainView.element_id) {
       //move node to main view
-      this.viewList[parent_id].removeChild(e.node());
       this.viewList[this.mainView.element_id].appendChild(e.node());
 
       //move main view node to view the above node came from
