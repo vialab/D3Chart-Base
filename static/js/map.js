@@ -14,7 +14,8 @@ $(function() {
   let defs;
   let currentKeyword;
   let pz;
-
+  let test = new MapObj();
+  test.dataObject.getAllPapers("soy");
   let colorScale = cmp.colorScale;
   //setting the color gradient to be the red->blue color scale
   colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);

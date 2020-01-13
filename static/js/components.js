@@ -1463,9 +1463,169 @@ class Scrubber {
    */
   constructor(size) {}
 }
+class STDGraph {
+  /**
+   *
+   * @param {{width:Number, height:Number}} size
+   * @param {Array.<{x: Number, y: Number}>} data
+   * @param {String} parentID
+   * @param {{top:Number, right: Number, left: Number, bottom: Number}} margin - default is {top: 10, right:30, bottom:30, left:60}
+   */
+
+  constructor(size, data, parentID, margin = null) {
+    if (margin != null) {
+      this.margin = margin;
+    }
+    this.size = size;
+    this.data = [...data];
+    this.parentID = parentID;
+    this.size.width = this.size.width - this.margin.left - this.margin.right;
+    this.size.height = this.size.height - this.margin.top - this.margin.bottom;
+    this.render();
+  }
+  data = [];
+  size = { width: null, height: null };
+
+  margin = { top: 10, right: 30, bottom: 30, left: 60 };
+  svg = null;
+  parentID = null;
+
+  xRange = [1950, new Date().getFullYear()];
+
+  scales = { x: null, y: null };
+  axii = { x: null, y: null };
+
+  line = null;
+  /**
+   *
+   * @param {Array<>.{x:Number, y:Number}} data
+   */
+  updateData(data) {
+    this.data = data;
+
+    let maxY = Math.max(...data.map(val => val.y));
+    let minY = Math.min(...data.map(val => val.y));
+
+    let transition = d3.transition().duration(500);
+
+    if (maxY > this.scales.y.domain()[1]) {
+      this.scales.y = d3
+        .scaleLinear()
+        .domain([this.scales.y.domain()[0], maxY])
+        .range([this.size.height, 0]);
+      this.axii.y.scale(this.scales.y);
+
+      this.svg
+        .select(".y-axis")
+        .transition(transition)
+        .call(this.axii.y);
+    }
+    if (minY < this.scales.y.domain()[0]) {
+      this.scales.y = d3
+        .scaleLinear()
+        .domain([minY, this.scales.y.domain()[1]])
+        .range([this.size.height, 0]);
+
+      this.axii.y.scale(this.scales.y);
+
+      this.svg
+        .select(".y-axis")
+        .transition(transition)
+        .call(this.axii.y);
+    }
+    this.line.data(this.data);
+
+    let lines = this.svg.selectAll("line-path").data([this.data]);
+    let self = this;
+    lines
+      .enter()
+      .append("path")
+      .attr("class", "line-path")
+      .merge(lines)
+      .transition()
+      .duration(500)
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(d) {
+            return self.scales.x(d.x);
+          })
+          .y(function(d) {
+            return self.scales.y(d.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 1.5);
+  }
+  render() {
+    this.svg = d3
+      .select(this.parentID)
+      .append("svg")
+      .attr("width", this.size.width + this.margin.left + this.margin.right)
+      .attr("height", this.size.height + this.margin.bottom + this.margin.top)
+      .append("g")
+      .attr(
+        "transform",
+        "translate(" + this.margin.left + "," + this.margin.top + ")"
+      );
+
+    this.scales.x = d3
+      .scaleLinear()
+      .domain(this.xRange)
+      .range([0, this.size.width]);
+
+    this.axii.x = this.svg
+      .append("g")
+      .attr("transform", "translate(0," + this.size.height + ")")
+      .attr("class", "x-axis")
+      .call(d3.axisBottom(this.scales.x).tickFormat(d3.format("d")));
+
+    this.scales.y = d3
+      .scaleLinear()
+      .domain([
+        d3.min(this.data, function(d) {
+          return +d.y;
+        }),
+        d3.max(this.data, function(d) {
+          return +d.y;
+        })
+      ])
+      .range([this.size.height, 0]);
+    this.axii.y = this.svg
+      .append("g")
+      .attr("class", "y-axis")
+      .call(d3.axisLeft(this.scales.y));
+
+    this.line = this.svg
+      .selectAll("line-path")
+      .data(this.data)
+      .enter()
+      .append("path")
+      .attr("class", "line-path")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(d) {
+            return x(d.x);
+          })
+          .y(function(d) {
+            return y(d.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 1.5);
+  }
+}
 class TimeView {
-  constructor() {
-    this.progressBar = new ProgressBar();
+  constructor(id) {
+    this.progressBar = new ProgressBar(id);
+  }
+  setProgress(value) {
+    this.progressBar.setProgress(value);
   }
   progressBar = null;
 }
@@ -1581,9 +1741,9 @@ class CountryData {
    */
   calculateTotal(year) {
     let sum = 0;
-    for (let i = 0; i < this.institutes.length; ++i) {
-      if (this.institutes[i].hasPapers(year)) {
-        sum += this.institutes[i].getPapers(year);
+    for (const institute in this.institutes) {
+      if (this.institutes[institute].hasPapers(year)) {
+        sum += this.institutes[institute].getPapers(year);
       }
     }
     this.countryTotal[year] = sum;
@@ -1592,11 +1752,24 @@ class CountryData {
 
 class DataObject {
   currentYearLoading = new Date().getFullYear();
-  countries = {};
-  numOfWaitingQueries = 0;
-  callback = null;
 
+  minYearLoaded = 1950;
+  intervalRate = 5000;
+  countries = {};
+
+  callback = null;
   intervalVar = null;
+  timeview = null;
+
+  onDataCallbacks = [];
+
+  /**
+   *
+   * @param {TimeView} timeview
+   */
+  constructor(timeview) {
+    this.timeview = timeview;
+  }
   onFinished(callback) {
     this.callback = callback;
   }
@@ -1625,6 +1798,18 @@ class DataObject {
   addCountry(name, country) {
     this.countries[name] = country;
   }
+  /**
+   *
+   * @param {function(DataObject)} callback
+   */
+  onData(callback) {
+    this.onDataCallbacks.push(callback);
+  }
+  updateOnData() {
+    for (let i = 0; i < this.onDataCallbacks.length; ++i) {
+      this.onDataCallbacks[i](this);
+    }
+  }
 
   /**
    *
@@ -1634,9 +1819,8 @@ class DataObject {
     let self = this;
     this.intervalVar = setInterval(function() {
       self.queryPapers(keyword);
-    }, 2000);
+    }, this.intervalRate);
   }
-
   pauseLoading() {
     if (this.intervalVar != null) {
       clearInterval(this.intervalVar);
@@ -1650,6 +1834,7 @@ class DataObject {
   queryPapers(keyword) {
     //suspend the interval until after the query has returned
     clearInterval(this.intervalVar);
+    console.log(this.currentYearLoading);
     this.getCanadaPapers(
       this.currentYearLoading,
       keyword,
@@ -1660,7 +1845,8 @@ class DataObject {
       keyword,
       this.queryWorldCallback.bind(this)
     );
-    if (this.currentYearLoading < 1950) {
+    --this.currentYearLoading;
+    if (this.currentYearLoading < this.minYearLoaded) {
       this.callback();
     }
   }
@@ -1769,6 +1955,36 @@ class DataObject {
     for (let country in this.countries) {
       this.getCountry(country).calculateTotal(year);
     }
+
+    const maxRange = new Date().getFullYear() - this.minYearLoaded;
+    const currentRange = year - this.minYearLoaded;
+    this.timeview.setProgress(100 - (currentRange / maxRange) * 100);
     this.getAllPapers(keyword);
+    this.updateOnData();
+  }
+}
+
+class MapObj {
+  timeline = new TimeView("#timeline");
+  dataObject = new DataObject(this.timeline);
+  stdGraph = new STDGraph({ width: 500, height: 300 }, [], "#timeline");
+  constructor() {
+    this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
+  }
+  onDataUpdateSTDGraph(dataObject) {
+    let previousYear = dataObject.currentYearLoading + 1;
+    let canada = dataObject.countries["Canada"];
+    let sum = 0;
+    let counter = 0;
+    for (let value in canada.countryTotal) {
+      ++counter;
+      sum += canada.countryTotal[value];
+    }
+    let avg = sum / counter;
+    let data = [];
+    for (let value in canada.countryTotal) {
+      data.push({ x: value, y: avg - canada.countryTotal[value] });
+    }
+    this.stdGraph.updateData(data);
   }
 }
