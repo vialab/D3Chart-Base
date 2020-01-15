@@ -1461,7 +1461,51 @@ class Scrubber {
    *
    * @param {{width: Number, height: Number}} size
    */
-  constructor(size) {}
+  constructor(size, parent, scales) {
+    this.brush = d3
+      .brushX()
+      .handleSize(12)
+      .extent([
+        [0, -5],
+        [size.width, size.height]
+      ]);
+    let gBrush = parent
+      .append("g")
+      .attr("class", "brush")
+      .call(this.brush);
+
+    this.parent = parent;
+    //move brush to default position
+    gBrush.call(this.brush.move, [
+      scales.x(this.currentSelection.min),
+      scales.x(this.currentSelection.max)
+    ]);
+  }
+
+  setOpacity(value) {
+    this.parent.select("brush").attr("opacity", `${value}%`);
+  }
+  parent = null;
+  brush = null;
+  onEndCallbacks = [];
+  minSelection = 3;
+  currentSelection = {
+    min: new Date().getFullYear() - 3,
+    max: new Date().getFullYear()
+  };
+  /**
+   *
+   * @param {function({min:Number max:Number})} callbacks
+   */
+  onEnd(callbacks) {
+    this.onEndCallbacks.push(callbacks);
+  }
+
+  endCallbacks() {
+    for (let i = 0; i < this.onEndCallbacks.length; ++i) {
+      this.onEndCallbacks[i](this.currentSelection);
+    }
+  }
 }
 class STDGraph {
   /**
@@ -1471,7 +1515,6 @@ class STDGraph {
    * @param {String} parentID
    * @param {{top:Number, right: Number, left: Number, bottom: Number}} margin - default is {top: 10, right:30, bottom:30, left:60}
    */
-
   constructor(size, data, parentID, margin = null) {
     if (margin != null) {
       this.margin = margin;
@@ -1496,52 +1539,44 @@ class STDGraph {
   axii = { x: null, y: null };
 
   line = null;
+  scrubber = null;
+
+  raise() {
+    this.svg.raise();
+  }
   /**
    *
    * @param {Array<>.{x:Number, y:Number}} data
    */
   updateData(data) {
     this.data = data;
-
+    if (this.scrubber == null && this.data.length > 2) {
+      this.scrubber = new Scrubber(this.size, this.svg, this.scales);
+      this.scrubber.setOpacity(30);
+    }
     let maxY = Math.max(...data.map(val => val.y));
     let minY = Math.min(...data.map(val => val.y));
 
-    let transition = d3.transition().duration(500);
-
     if (maxY > this.scales.y.domain()[1]) {
-      this.scales.y = d3
-        .scaleLinear()
-        .domain([this.scales.y.domain()[0], maxY])
-        .range([this.size.height, 0]);
-      this.axii.y.scale(this.scales.y);
+      this.scales.y.domain([this.scales.y.domain()[0], maxY]);
 
+      if (minY < this.scales.y.domain()[0]) {
+        this.scales.y.domain([minY, this.scales.y.domain()[1]]);
+      }
       this.svg
-        .select(".y-axis")
-        .transition(transition)
+        .selectAll(".y-axis")
+        .transition()
+        .duration(3000)
         .call(this.axii.y);
     }
-    if (minY < this.scales.y.domain()[0]) {
-      this.scales.y = d3
-        .scaleLinear()
-        .domain([minY, this.scales.y.domain()[1]])
-        .range([this.size.height, 0]);
-
-      this.axii.y.scale(this.scales.y);
-
-      this.svg
-        .select(".y-axis")
-        .transition(transition)
-        .call(this.axii.y);
-    }
-    this.line.data(this.data);
-
-    let lines = this.svg.selectAll("line-path").data([this.data]);
     let self = this;
-    lines
-      .enter()
+    var u = this.svg.selectAll(".line-path").data([this.data]);
+
+    // Updata the line
+    u.enter()
       .append("path")
       .attr("class", "line-path")
-      .merge(lines)
+      .merge(u)
       .transition()
       .duration(500)
       .attr(
@@ -1557,7 +1592,7 @@ class STDGraph {
       )
       .attr("fill", "none")
       .attr("stroke", "steelblue")
-      .attr("stroke-width", 1.5);
+      .attr("stroke-width", 2.5);
   }
   render() {
     this.svg = d3
@@ -1582,42 +1617,46 @@ class STDGraph {
       .attr("class", "x-axis")
       .call(d3.axisBottom(this.scales.x).tickFormat(d3.format("d")));
 
+    let maxY = Math.max(...this.data.map(val => val.y));
+    let minY = Math.min(...this.data.map(val => val.y));
+    if (this.data.length == 0) {
+      maxY = 0;
+      minY = 0;
+    }
     this.scales.y = d3
       .scaleLinear()
-      .domain([
-        d3.min(this.data, function(d) {
-          return +d.y;
-        }),
-        d3.max(this.data, function(d) {
-          return +d.y;
-        })
-      ])
+      .domain([minY, maxY])
       .range([this.size.height, 0]);
-    this.axii.y = this.svg
+    this.axii.y = d3.axisLeft(this.scales.y);
+    this.svg
       .append("g")
       .attr("class", "y-axis")
-      .call(d3.axisLeft(this.scales.y));
+      .call(this.axii.y);
 
-    this.line = this.svg
-      .selectAll("line-path")
-      .data(this.data)
-      .enter()
+    let self = this;
+    var u = this.svg.selectAll(".line-path").data([this.data]);
+
+    // Updata the line
+    u.enter()
       .append("path")
       .attr("class", "line-path")
+      .merge(u)
+      .transition()
+      .duration(500)
       .attr(
         "d",
         d3
           .line()
           .x(function(d) {
-            return x(d.x);
+            return self.scales.x(d.x);
           })
           .y(function(d) {
-            return y(d.y);
+            return self.scales.y(d.y);
           })
       )
       .attr("fill", "none")
       .attr("stroke", "steelblue")
-      .attr("stroke-width", 1.5);
+      .attr("stroke-width", 2.5);
   }
 }
 class TimeView {
@@ -1983,7 +2022,7 @@ class MapObj {
     let avg = sum / counter;
     let data = [];
     for (let value in canada.countryTotal) {
-      data.push({ x: value, y: avg - canada.countryTotal[value] });
+      data.push({ x: Number(value), y: avg - canada.countryTotal[value] });
     }
     this.stdGraph.updateData(data);
   }
