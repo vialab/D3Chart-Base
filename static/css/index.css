@@ -3,17 +3,16 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 100%;
+  right: 0;
+  overflow: hidden;
 }
 
 .searchbar {
   pointer-events: none;
-  position: fixed;
-  bottom: 50px;
-  left: 83.6%;
-  right: 16.4%;
+  position: relative;
   height: 10%;
   z-index: 2;
+  margin-top: 35px;
 }
 
 #form {
@@ -277,4 +276,38 @@ svg {
   height: 30px;
   background-color: green;
   border-radius: 15px;
+}
+
+#analytics-panel {
+  width: 20%;
+  height: 100%;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 0 3px;
+  stroke: black;
+  position: fixed;
+  padding-bottom: 30px;
+  top: 5;
+  left: 5;
+  bottom: 5;
+}
+
+.btn-group {
+  width: 100%;
+  padding: 10px;
+}
+#scrollable {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#legend {
+  height: 20%;
+  width: 100%;
+  bottom: 5px;
+  position: absolute;
+}
+
+.handle {
+  visibility: hidden;
 }

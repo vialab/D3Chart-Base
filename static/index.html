@@ -10,26 +10,28 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome
 </head>
 <html>
   <body>
-    <div id="timeline"></div>
     <div id="map-holder"></div>
-    <div class="searchbar">
-      <form action="" id='form'>
-        <input type="search" id='search-field'>
-          <i class="fa fa-search"></i>
-        </input>
-      </form>
-    </div>
-    <div id="metrics">
-      <form action="">
-        <select name="metrics" id="metric-selection">
-          <option value="1" title="The radius of the institute's glyph is relative to the standard deviation of the countries' number of papers.">Deviation: Institute -> Country</option>
-          <option value="2" title="The radius of the institute's glyph is relative to the institute's number of citations divided by the maximum number of citations in the query.">Paper Citations</option>
-          <option value="3" title="The radius of the institute's glyph is relative to the standard deviation of slope for each year. If the number of paper output is consistent the node will be large.">Consistency</option>
-          <option value="4" title="The radius of the institute's glyph is relative to the institute's funding divided by the maximum funding in the query.">Funding</option>
-          <option value="5" title="The radius of the institute's glyph is relative to the standard deviation of the world's number of papers.">Deviation: Institute -> World</option>
-          </select>
-      </form>
+    <div id= "analytics-panel"> 
+      <div id="scrollable">
+        <div class="searchbar">
+            <form action="" id='form'>
+              <input type="search" id='search-field'>
+                <i class="fa fa-search"></i>
+              </input>
+            </form>
+          </div>
+        <div id="timeline"></div>
+        <div class="btn-group">
+            <button>Deviation: Institute -> Country</button>
+            <button>Paper Citations</button>
+            <button>Consistency</button>
+            <button>Funding</button>
+            <button>Deviation: Institute -> World</button>
+          </div>
       </div>
+      <div id="legend">
+      </div>
+  </div>
   </body>
   <script src="./js/leadlag.js"></script>
   <script src="https://code.easypz.io/easypz.latest.js"></script>

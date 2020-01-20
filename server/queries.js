@@ -110,6 +110,8 @@ const queryNotCanada = async function(req, resp) {
     if (error) {
       console.log(error);
     }
+
+    console.log(res.body);
     resp.status(200).send(res);
   });
 };
@@ -133,7 +135,7 @@ const queryCanada = async function(req, resp) {
     if (error) {
       console.log(error);
     }
-    console.log(res);
+    console.log(res.body);
     resp.status(200).send(res);
   });
 };
@@ -154,7 +156,7 @@ const queryCategory = async function(req, resp) {
         console.log(error);
       }
 
-      console.log(res);
+      console.log(res.body);
       resp.status(200).send(res);
     });
   } else {

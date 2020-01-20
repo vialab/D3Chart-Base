@@ -2,7 +2,7 @@ $(function() {
   //These are all cmp objects see components.js
   let cmpCountries = cmp.countries;
   let cmpInstitutes = cmp.glyphs;
-  let timeline = cmp.timeline;
+  //let timeline = cmp.timeline;
   let legend = cmp.legend;
   //default variables like the d3.projection, svg, the svg defs, currentKeyword, and the easyPZ variable
   let yearSpan = { min: 2012, max: 2016 };
@@ -14,8 +14,8 @@ $(function() {
   let defs;
   let currentKeyword;
   let pz;
-  let test = new MapObj();
-  test.dataObject.getAllPapers("soy");
+  let mapObj = new MapObj();
+  //test.dataObject.getAllPapers("Video cassette recorder");
   let colorScale = cmp.colorScale;
   //setting the color gradient to be the red->blue color scale
   colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);
@@ -41,44 +41,8 @@ $(function() {
     event.preventDefault();
     let defaultSelection = 1;
     $("#metric-selection").val(defaultSelection);
-    cmpCountries.reset();
-    cmpInstitutes.reset();
     let keyword = $("#search-field").val();
-    cmp.info.currentKeyword = keyword;
-    legend.setKeyword(keyword);
-    $("#form")
-      .get(0)
-      .reset();
-    currentKeyword = keyword;
-    result = [];
-    yearSpan = timeline.currentSelection;
-    for (let i = yearSpan.min; i <= yearSpan.max; ++i) {
-      let response = getNotCanada({ keyword: keyword, year: i });
-      result.push(response);
-    }
-    for (let i = yearSpan.min; i <= yearSpan.max; ++i) {
-      let response = getCanada({ keyword: keyword, year: i });
-      result.push(response);
-    }
-    Promise.all(result).then(function(res) {
-      console.log(res);
-      let parsedResults = [];
-      for (let i = 0; i < res.length / 2; ++i) {
-        parsedResults.push(parse(res[i], false));
-      }
-      for (let i = res.length / 2; i < res.length; ++i) {
-        parsedResults.push(parse(res[i], true));
-      }
-      let aggData = aggregateParsedData(parsedResults);
-      //calculate standard deviation of institution output in each country
-      for (const key in aggData.countries) {
-        let deviation = stdDeviation(aggData.countries[key].institutions);
-        aggData.countries[key].deviation = deviation;
-      }
-
-      normalizeAggregatedData(aggData);
-      calculateLeadLag(aggData);
-    });
+    mapObj.dataObject.getAllPapers(keyword);
   }
 
   /**
@@ -263,7 +227,7 @@ $(function() {
     cmpCountries.color(countries, missingCountries, colorScale, data);
     colorInstitutions(institutions, data).then(function() {
       legendVis.raise();
-      timeline.group.raise();
+      //timeline.group.raise();
     });
   }
   /**
@@ -375,7 +339,9 @@ $(function() {
       .visualize(colorScale, group);
     legendVis.attr(
       "transform",
-      `translate(${padding},${y - legendVis.node().getBBox().height - padding})`
+      `translate(${$(window).width() -
+        legendVis.node().getBoundingClientRect().width -
+        padding},${y - legendVis.node().getBBox().height - padding})`
     );
     return group;
   }
@@ -464,10 +430,7 @@ $(function() {
       .attr("height", $("#map").height());
     //cmpCountries contains all of the country rendering data
     //json.features is all of the country names and their svg line data
-    cmpCountries
-      .data(json.features)
-      .setYear(yearSpan)
-      .visualize(countriesGroup, path);
+    mapObj.createCountries(countriesGroup, json.features, path);
     //defining map boundaries, struggled with this working with the easyPZ library
     //TODO implement map boundary
     mapBoundaries = countriesGroup.node().getBBox();
@@ -480,66 +443,8 @@ $(function() {
       `translate(${$(window).width() / 2}, ${$(window).height() / 2 +
         152})scale(0.1)`
     );
-    //This is EasyPZ *ironically not so easy*
-    //The EasyPz library is responsible for handling mouse events on the svg
-    //If you add an element to the svg you must add it to the transform function below
-    pz = new EasyPZ(
-      svg.node(),
-      function(transform) {
-        countriesGroup.attr(
-          "transform",
-          "translate(" +
-            [transform.translateX, transform.translateY] +
-            ")scale(" +
-            transform.scale +
-            ")"
-        );
-        if (!cmpInstitutes.rendered) {
-          return;
-        }
-        cmpInstitutes.group.attr(
-          "transform",
-          "translate(" +
-            [transform.translateX, transform.translateY] +
-            ")scale(" +
-            transform.scale +
-            ")"
-        );
-      },
-      {
-        minScale: 0.1,
-        maxScale: 2,
-        bounds: {
-          top: NaN,
-          right: NaN,
-          bottom: NaN,
-          left: NaN
-        }
-      },
-      ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
-    );
-
-    //This is the timeline object
-    let tg = timeline
-      .setYears(yearSpan)
-      .setLegend(legend)
-      .visualize(svg);
-    //setting easyPZ default transform and scale to that of the #map
-    //If you look above you will notice its the same translation as the #map
-    pz.totalTransform = {
-      scale: 0.1,
-      translateX: $(window).width() / 2,
-      translateY: $(window).height() / 2 + 152
-    };
-    //moving the timeline to the bottom right hand corner 30 pixels from the bottom and 30 pixels from the right
-    tg.attr(
-      "transform",
-      `translate(${$(window).width() -
-        tg.node().getBoundingClientRect().width -
-        30}, ${$(window).height() -
-        tg.node().getBoundingClientRect().height -
-        30})`
-    );
+    mapObj.createInteraction(svg.node());
+    mapObj.interaction.addElementToTransform(countriesGroup);
   }
 
   /**

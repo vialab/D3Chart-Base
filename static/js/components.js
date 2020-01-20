@@ -1031,179 +1031,6 @@ let cmp = {
       }
     }
   },
-
-  timeline: {
-    years: { min: null, max: null },
-    maxSelection: 5,
-    minSelection: 2,
-    legend: null,
-    get span() {
-      return { min: 1950, max: new Date().getFullYear() };
-    },
-    size: { width: 506, height: 5 },
-    group: null,
-    brush: null,
-    xScale: null,
-    scale: null,
-    currentSelection: { min: null, max: null },
-
-    setLegend(legend) {
-      this.legend = legend;
-      return this;
-    },
-    setYears(years) {
-      this.years = years;
-      return this;
-    },
-
-    visualize(svg, years = { min: null, max: null }) {
-      if (years.min == null && this.years.min == null) {
-        console.error(
-          "timeline.years must be set. See function timeline.setYears(years)."
-        );
-        return;
-      }
-      //bind self for use in inline functions
-      let self = this;
-      //create x scale for timeline
-      this.xScale = d3
-        .scaleBand()
-        .range([0, this.size.width])
-        .domain(
-          Array.from(Array(this.span.max - this.span.min + 1), (x, i) => {
-            return self.span.min + i;
-          })
-        )
-        .padding(0.01);
-      //create y scale for creating the bubbles
-      let yScale = d3
-        .scaleLinear()
-        .range([0, this.size.height])
-        .domain([0, 1]);
-      //timeline ticks
-      let axis = d3.axisBottom(this.xScale).tickValues(
-        this.xScale.domain().filter(function(d, i) {
-          return !(i % 5) || self.xScale.domain().length - 1 == i;
-        })
-      );
-      //timeline group and the return
-      this.group = svg.append("g");
-      this.scale = function(x) {
-        return self.xScale(x) + self.xScale.bandwidth() / 2;
-      };
-      //create the bubbles
-      this.group
-        .selectAll("bar")
-        .data(
-          Array.from(new Array(this.span.max - this.span.min), (x, i) => {
-            return i + this.span.min;
-          })
-        )
-        .enter()
-        .append("rect")
-        .style("fill", function(d, i) {
-          if (i % 2) {
-            return "white";
-          } else {
-            return "black";
-          }
-        })
-        .attr("rx", 2)
-        .style("stroke", "black")
-        .attr("x", function(d, i) {
-          return self.scale(self.span.min + i);
-        })
-        .attr("width", this.xScale.bandwidth())
-        .attr("y", function() {
-          return self.size.height - yScale(1.0);
-        })
-        .attr("height", function() {
-          return yScale(1.0);
-        });
-      //translate the axis to the bottom of the size of the timeline
-      this.group
-        .append("g")
-        .attr("transform", "translate(0," + this.size.height + ")")
-        .call(axis);
-      //create the timeline brush
-      this.brush = d3
-        .brushX()
-        .handleSize(12)
-        .extent([
-          [0, -5],
-          [this.size.width, this.size.height + 5]
-        ])
-        //when the timeline scrubber has stopped moving call this function
-        .on("end", function() {
-          let selection = d3.event.selection;
-          console.log(d3.event.sourceEvent);
-          if (!d3.event.sourceEvent || !selection) {
-            return;
-          }
-          //calculate the difference of the beginning and end of the scrubber
-          let diff = Math.round(
-            (selection[1] - selection[0]) / self.xScale.bandwidth()
-          );
-          //check if the scrubber was resized larger than the max selection which is 5
-          if (diff > self.maxSelection) {
-            selection[0] +=
-              (diff - self.maxSelection) * self.xScale.bandwidth();
-          }
-          //check if the scrubber was resize smaller than the min selection which is 2
-          if (diff < self.minSelection) {
-            if (
-              selection[0] -
-                (self.minSelection - diff) * self.xScale.bandwidth() <
-              0
-            ) {
-              selection[1] +=
-                (self.minSelection - diff) * self.xScale.bandwidth();
-            } else {
-              selection[0] -=
-                (self.minSelection - diff) * self.xScale.bandwidth();
-            }
-          }
-          //snap brush to year
-          let xStart = selection[0];
-          let xEnd = selection[1];
-          let begin = Math.round(xStart / self.xScale.bandwidth());
-          let end = Math.round(xEnd / self.xScale.bandwidth());
-          if (self.span.min + end > self.span.max) {
-            end -= self.span.min + end - self.span.max;
-          }
-          d3.select(this)
-            .transition()
-            .call(self.brush.move, [
-              self.scale(self.span.min + begin),
-              self.scale(self.span.min + end)
-            ]);
-          self.currentSelection = {
-            min: self.span.min + begin,
-            max: self.span.min + end
-          };
-          if (self.legend != null) {
-            self.legend.setDate(self.currentSelection);
-          }
-        });
-      //append brush group
-      let gBrush = this.group
-        .append("g")
-        .attr("class", "brush")
-        .call(this.brush);
-      //move brush to default position
-      gBrush.call(this.brush.move, [
-        this.scale(this.years.min),
-        this.scale(this.years.max)
-      ]);
-      //keep track of what is selected by the brush
-      this.currentSelection = { min: this.years.min, max: this.years.max };
-      //return the brush group
-      return this.group;
-    },
-    reset() {
-      this.group.remove();
-    }
-  },
   //This data object contains all of the query information
   dataObject: {
     queries: [],
@@ -1464,35 +1291,107 @@ class Scrubber {
   constructor(size, parent, scales) {
     this.brush = d3
       .brushX()
-      .handleSize(12)
       .extent([
         [0, -5],
         [size.width, size.height]
-      ]);
-    let gBrush = parent
+      ])
+      .on("brush", this.brushed.bind(this));
+    this.brushVis = parent
       .append("g")
       .attr("class", "brush")
       .call(this.brush);
 
     this.parent = parent;
+    this.scales = scales;
+
+    this.minYear = this.scales.x.invert(0);
+    this.maxYear = this.scales.x.invert(size.width);
     //move brush to default position
-    gBrush.call(this.brush.move, [
+    this.brushVis.call(this.brush.move, [
       scales.x(this.currentSelection.min),
       scales.x(this.currentSelection.max)
     ]);
   }
 
-  setOpacity(value) {
-    this.parent.select("brush").attr("opacity", `${value}%`);
+  /**
+   *
+   * @param {{min:number, max:number}} extent - extent year selection
+   */
+  setExtent(extent) {
+    this.brush.extent([
+      [this.scales.x(extent.min), -5],
+      [this.scales.x(extent.max), this.scales.y(1)]
+    ]);
+    this.minYear = extent.min;
+    this.maxYear = extent.max;
   }
+  setOpacity(value) {
+    this.parent.select(".brush").attr("opacity", `${value}%`);
+  }
+  hidden() {
+    this.parent.select(".brush").attr("opacity", `${0}%`);
+  }
+  visible() {
+    this.parent.select(".brush").attr("opacity", `${30}%`);
+  }
+  brushed() {
+    if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return;
+    const d0 = d3.event.selection.map(this.scales.x.invert);
+    d0[0] = Math.round(d0[0]);
+    d0[1] = Math.round(d0[1]);
+    if (d0[1] - d0[0] > this.maxSelection) {
+      d0[0] += d0[1] - d0[0] - this.maxSelection;
+    }
+    if (d0[1] - d0[0] < this.minSelection) {
+      d0[1] += this.minSelection - (d0[1] - d0[0]);
+      if (d0[1] > this.maxYear) {
+        let offset = d0[1] - this.maxYear;
+        d0[1] = this.maxYear;
+        d0[0] -= offset;
+      }
+    }
+    let selection = d0[1] - d0[0];
+    if (d0[1] > this.maxYear - selection) {
+      let offset = this.maxYear - selection - d0[1];
+      d0[1] += offset;
+      d0[0] += offset;
+    }
+    if (d0[0] < this.minYear + selection) {
+      let offset = this.minYear + selection - d0[0];
+      d0[1] += offset;
+      d0[0] += offset;
+    }
+    this.currentSelection = { min: d0[0], max: d0[1] };
+    this.updateOnBrushed(d0);
+    this.brushVis.call(this.brush.move, [
+      this.scales.x(d0[0]),
+      this.scales.x(d0[1])
+    ]);
+  }
+  getNumYearsSelected() {
+    return this.currentSelection.max - this.currentSelection.min;
+  }
+  scales = null;
   parent = null;
   brush = null;
+  brushVis = null;
   onEndCallbacks = [];
   minSelection = 3;
+  maxSelection = 10;
+  minYear = 1950;
+  maxYear = new Date().getFullYear();
   currentSelection = {
     min: new Date().getFullYear() - 3,
     max: new Date().getFullYear()
   };
+  onBrushedCallbacks = [];
+  /**
+   *
+   * @param {function(Array.<number>)} callback
+   */
+  onBrushed(callback) {
+    this.onBrushedCallbacks.push(callback);
+  }
   /**
    *
    * @param {function({min:Number max:Number})} callbacks
@@ -1500,7 +1399,11 @@ class Scrubber {
   onEnd(callbacks) {
     this.onEndCallbacks.push(callbacks);
   }
-
+  updateOnBrushed(position) {
+    for (let i = 0; i < this.onBrushedCallbacks.length; ++i) {
+      this.onBrushedCallbacks[i]({ x: position[0], width: position[1] });
+    }
+  }
   endCallbacks() {
     for (let i = 0; i < this.onEndCallbacks.length; ++i) {
       this.onEndCallbacks[i](this.currentSelection);
@@ -1529,7 +1432,7 @@ class STDGraph {
   data = [];
   size = { width: null, height: null };
 
-  margin = { top: 10, right: 30, bottom: 30, left: 60 };
+  margin = { top: 10, right: 30, bottom: 35, left: 40 };
   svg = null;
   parentID = null;
 
@@ -1550,9 +1453,8 @@ class STDGraph {
    */
   updateData(data) {
     this.data = data;
-    if (this.scrubber == null && this.data.length > 2) {
-      this.scrubber = new Scrubber(this.size, this.svg, this.scales);
-      this.scrubber.setOpacity(30);
+    if (this.scrubber != null && this.data.length > 8) {
+      this.scrubber.visible();
     }
     let maxY = Math.max(...data.map(val => val.y));
     let minY = Math.min(...data.map(val => val.y));
@@ -1605,7 +1507,6 @@ class STDGraph {
         "transform",
         "translate(" + this.margin.left + "," + this.margin.top + ")"
       );
-
     this.scales.x = d3
       .scaleLinear()
       .domain(this.xRange)
@@ -1615,7 +1516,15 @@ class STDGraph {
       .append("g")
       .attr("transform", "translate(0," + this.size.height + ")")
       .attr("class", "x-axis")
-      .call(d3.axisBottom(this.scales.x).tickFormat(d3.format("d")));
+      .call(d3.axisBottom(this.scales.x).tickFormat(d3.format("d")))
+      .selectAll("text")
+      .attr("y", 0)
+      .attr("x", 9)
+      .attr("dy", ".35em")
+      .attr("transform", "rotate(90)")
+      .style("text-anchor", "start")
+      .style("font-family", "helvetica-lite")
+      .style("font-size", "12px");
 
     let maxY = Math.max(...this.data.map(val => val.y));
     let minY = Math.min(...this.data.map(val => val.y));
@@ -1657,6 +1566,133 @@ class STDGraph {
       .attr("fill", "none")
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2.5);
+    this.scrubber = new Scrubber(this.size, this.svg, this.scales);
+    //his.scrubber.hidden();
+  }
+}
+
+class EventGraph {
+  parent = null;
+  margin = { top: 0, right: 30, bottom: 0, left: 40 };
+  data = [];
+  size = null;
+  xRange = [1950, new Date().getFullYear()];
+  scales = { x: null, y: null };
+  events = null;
+  eventName = null;
+  color = null;
+  constructor(size, data, parentID, eventName, color = null, margin = null) {
+    if (margin != null) {
+      this.margin = margin;
+    }
+    this.size = size;
+    this.data = [...data];
+    this.parent = parentID;
+    this.size.width = this.size.width - this.margin.left - this.margin.right;
+    this.size.height = this.size.height - this.margin.top - this.margin.bottom;
+    if (color != null) {
+      this.color = color;
+    }
+    const randomHsl = () => `hsla(${Math.random() * 360}, 100%, 50%, 1)`;
+    this.color = randomHsl();
+    this.eventName = eventName;
+    this.render();
+  }
+  updateData(data) {
+    this.data = data;
+    let self = this;
+    this.svg.selectAll("." + this.eventName).remove();
+    this.svg
+      .selectAll("." + this.eventName)
+      .data(this.data)
+      .enter()
+      .append("rect")
+      .attr("class", this.eventName)
+      .attr("x", function(d) {
+        return self.scales.x(d.x1);
+      })
+      .attr("y", function(d) {
+        return self.scales.y(1);
+      })
+      .attr("height", function(d) {
+        return Math.abs((self.scales.y(0) - self.scales.y(1)) / 2);
+      })
+      .attr("width", function(d) {
+        console.log(d);
+        return self.scales.x(d.x2) - self.scales.x(d.x1);
+      })
+      .attr("rx", "5px")
+      .style("fill", this.color);
+  }
+  createScrubberLines(position) {
+    let self = this;
+    this.svg.selectAll(".scrubber-rect").remove();
+    this.svg
+      .selectAll(".scrubber-rect")
+      .data([position])
+      .enter()
+      .append("rect")
+      .attr("class", "scrubber-rect")
+      .attr("x", function(d) {
+        return self.scales.x(d.x);
+      })
+      .attr("y", this.scales.y(1))
+      .attr("width", function(d) {
+        return self.scales.x(d.width) - self.scales.x(d.x);
+      })
+      .attr("height", this.scales.y(0))
+      .style("fill", "steelblue")
+      .style("opacity", 0.5)
+      .style("stroke-opacity", 0)
+      .transition()
+      .duration(2000)
+      .style("opacity", 0)
+      .remove();
+  }
+  render() {
+    this.svg = d3
+      .select(this.parent)
+      .append("svg")
+      .attr("width", this.size.width + this.margin.left + this.margin.right)
+      .attr("height", this.size.height + this.margin.bottom + this.margin.top)
+      .append("g")
+      .attr(
+        "transform",
+        "translate(" + this.margin.left + "," + this.margin.top + ")"
+      );
+
+    this.scales.x = d3
+      .scaleLinear()
+      .domain(this.xRange)
+      .range([0, this.size.width]);
+
+    this.scales.y = d3
+      .scaleLinear()
+      .domain([0, 1])
+      .range([this.size.height, 0]);
+
+    let self = this;
+    this.svg
+      .selectAll("." + this.eventName)
+      .data(this.data)
+      .enter()
+      .append("rect")
+      .attr("class", this.eventName)
+      .attr("x", function(d) {
+        return self.scales.x(d.x1);
+      })
+      .attr("y", function(d) {
+        return self.scales.y(0.75);
+      })
+      .attr("height", function(d) {
+        return Math.abs((self.scales.y(0) - self.scales.y(1)) / 2);
+      })
+      .attr("width", function(d) {
+        console.log(d);
+        return self.scales.x(d.x2) - self.scales.x(d.x1);
+      })
+      .attr("rx", "5px")
+      .style("fill", this.color);
   }
 }
 class TimeView {
@@ -1791,14 +1827,13 @@ class CountryData {
 
 class DataObject {
   currentYearLoading = new Date().getFullYear();
-
+  queryReturned = { canada: false, notCanada: false };
   minYearLoaded = 1950;
   intervalRate = 5000;
   countries = {};
 
   callback = null;
   intervalVar = null;
-  timeview = null;
 
   onDataCallbacks = [];
 
@@ -1806,9 +1841,7 @@ class DataObject {
    *
    * @param {TimeView} timeview
    */
-  constructor(timeview) {
-    this.timeview = timeview;
-  }
+  constructor() {}
   onFinished(callback) {
     this.callback = callback;
   }
@@ -1874,6 +1907,7 @@ class DataObject {
     //suspend the interval until after the query has returned
     clearInterval(this.intervalVar);
     console.log(this.currentYearLoading);
+    this.queryReturned = { canada: false, notCanada: false };
     this.getCanadaPapers(
       this.currentYearLoading,
       keyword,
@@ -1886,7 +1920,10 @@ class DataObject {
     );
     --this.currentYearLoading;
     if (this.currentYearLoading < this.minYearLoaded) {
-      this.callback();
+      if (this.callback != null) {
+        this.callback();
+      }
+      clearInterval(this.intervalVar);
     }
   }
   /**
@@ -1933,16 +1970,22 @@ class DataObject {
   }
 
   queryCanadaCallback(data, year, keyword) {
+    this.queryReturned.canada = true;
     let result = JSON.parse(data.body);
     //this could break if they change the research_orgs property
     //currently I do not see a way to avoid this potential failpoint
     let property = "research_orgs";
     if (!(property in result)) {
-      throw Error(`${property} is not in ${result}`);
+      if (this.queryReturned.notCanada && this.queryReturned.canada) {
+        if (year > this.minYearLoaded) {
+          this.getAllPapers(keyword);
+        }
+      }
+      return;
     }
     result = result.research_orgs;
     //sometimes there is collaborations, we have chosen to filters those out
-    //essentially we only look at the institutes that reside in canada
+    //essentially, we only look at the institutes that reside in canada
     result = result.filter(function(x) {
       return x.country_name == "Canada";
     });
@@ -1967,14 +2010,26 @@ class DataObject {
       year,
       result.reduce((acc, val) => acc + val.count, 0)
     );
+    if (this.queryReturned.notCanada && this.queryReturned.canada) {
+      this.updateOnData();
+      if (year > this.minYearLoaded) {
+        this.getAllPapers(keyword);
+      }
+    }
   }
   queryWorldCallback(data, year, keyword) {
+    this.queryReturned.notCanada = true;
     let result = JSON.parse(data.body);
     let property = "research_orgs";
     //this could break if they change the research_orgs property
     //currently I do not see a way to avoid this potential failpoint
     if (!(property in result)) {
-      throw Error(`${property} is not in ${result}`);
+      if (this.queryReturned.notCanada && this.queryReturned.canada) {
+        if (year > this.minYearLoaded) {
+          this.getAllPapers(keyword);
+        }
+      }
+      return;
     }
     result = result.research_orgs;
     //add the countries and their institutes
@@ -1995,22 +2050,413 @@ class DataObject {
       this.getCountry(country).calculateTotal(year);
     }
 
-    const maxRange = new Date().getFullYear() - this.minYearLoaded;
-    const currentRange = year - this.minYearLoaded;
-    this.timeview.setProgress(100 - (currentRange / maxRange) * 100);
-    this.getAllPapers(keyword);
-    this.updateOnData();
+    if (this.queryReturned.notCanada && this.queryReturned.canada) {
+      this.updateOnData();
+      if (year > this.minYearLoaded) {
+        this.getAllPapers(keyword);
+      }
+    }
   }
 }
+class Countries {
+  coloredList = [];
+  countryNames = {};
+  group = null;
+  data = null;
+  onHoverCallback = null;
+  tooltip = null;
+  constructor(data) {
+    this.data = data;
+    for (let i = 0; i < data.length; ++i) {
+      this.countryNames[data[i].properties.name] = data[i].properties.iso_a3;
+    }
+  }
 
+  render(svg, projection) {
+    var self = this;
+    this.group = svg
+      .selectAll("path")
+      .data(this.data)
+      .enter()
+      .append("path")
+      .attr("d", projection)
+      .attr("id", function(d, i) {
+        return "country" + d.properties.iso_a3;
+      })
+      .attr("name", function(d, i) {
+        return d.properties.name;
+      })
+      .attr("class", "country")
+      .on("mouseover", function(d, i) {
+        d3.select(this).raise();
+        d3.select(this).style("stroke", "black");
+        d3.select(this).style("stroke-width", "5px");
+        if (self.onHoverCallback == null) {
+          let box = d3
+            .select(this)
+            .node()
+            .getBoundingClientRect();
+          self.tooltip = new Tooltip(
+            "#map-holder",
+            box,
+            `<p>${d.properties.name}</p`
+          );
+        } else {
+          self.onHoverCallback(self.tooltip);
+        }
+      })
+      .on("mouseout", function(d, i) {
+        d3.select(this).style("stroke", "white");
+        d3.select(this).style("stroke-width", "1px");
+        self.tooltip.destroy();
+        self.tooltip = null;
+      })
+      .on("click", function(d, i) {});
+  }
+  /**
+   *
+   * @param {Array.<{country_name:string, leadlag:number}>} data
+   * @param {Array.<String>} missingData
+   * @param {} colorScale
+   */
+  color(data, colorScale, missingData) {
+    for (let i = 0; i < data.length; ++i) {
+      if (data[i].country_name in this.countryNames) {
+        let acronym = this.countryNames[data[i].country_name];
+        $(`#country${acronym}`).css({
+          fill: colorScale.get(data[i].leadlag)
+        });
+      } else {
+        console.log(`${data[i].country_name} does not exist in dictionary`);
+      }
+    }
+    for (let i = 0; i < missingData.length; ++i) {
+      if (missingData[i] in this.countryNames) {
+        let acronym = this.countryNames[missingData[i]];
+        $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
+      }
+    }
+  }
+  reset(color = "#f5f5f5") {
+    this.group.selectAll("path").style("fill", color);
+  }
+  /**
+   *
+   * @param {function(Tooltip)} callback
+   */
+  onHover(callback) {
+    this.onHoverCallback = callback;
+  }
+}
+class Institutions {
+  constructor(svg, data, colorScale, transform, projection) {
+    let location_ids = Array.from(data, x => x.id);
+    let self = this;
+    this.getLocations(location_ids, function(res) {
+      let locations = JSON.parse(res.body);
+      //TODO finish institution location
+      self.render(svg, data, colorScale, transform);
+    });
+  }
+  /**
+   *
+   * @param {[string]} grid_ids
+   */
+  getLocations(grid_ids, callback) {
+    d3.json("/geo-locations", {
+      method: "POST",
+      body: JSON.stringify({ grid_ids: grid_ids }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    })
+      .then(callback)
+      .catch(function(err) {
+        console.error(err);
+      });
+  }
+  render(svg, data, colorScale, transform) {
+    var self = this;
+    this.group = svg.append("g");
+    this.group.attr("class", "noselect");
+    this.group.attr(
+      "transform",
+      `translate(${transform.translateX}, ${transform.translateY})scale(${transform.scale})`
+    );
+    let g = this.group
+      .selectAll("g")
+      .data(data)
+      .enter()
+      .append("g")
+      .attr("transform", function(d, i) {
+        return `translate(${d.lat},${d.lng})`;
+      });
+    g.each(function(d, i) {
+      d3.select(this)
+        .append("circle")
+        .attr("cx", 0)
+        .attr("cy", 0)
+        .attr("r", d.scale)
+        .attr("stroke", "black")
+        .attr("stroke-width", 3)
+        .attr("fill", colorScale.get(d.lead));
+    });
+
+    g.each(function(d, i) {
+      d3.select(this)
+        .append("line")
+        .attr("x1", d.scale)
+        .attr("y1", 0)
+        .attr("x2", 0 - d.scale)
+        .attr("y2", 0)
+        .attr("stroke", "black")
+        .attr("stroke-width", 5)
+        .attr("transform", function() {
+          let rotation = 0;
+          if (d.trend > 0.01) {
+            rotation = -45;
+          }
+          if (d.trend < -0.01) {
+            rotation = 45;
+          }
+
+          return `rotate(${rotation},${0},${0})`;
+        });
+    });
+    g.on("mouseenter", function(d) {
+      let box = d3
+        .select(this)
+        .select("circle")
+        .node()
+        .getBoundingClientRect();
+      self.tooltip.visualize(d, box);
+    }).on("mouseleave", function() {
+      self.tooltip.reset();
+    });
+    this.collision = d3.forceCollide().radius(function(d) {
+      return d.scale;
+    });
+    this.simulation = d3
+      .forceSimulation(data)
+      .force(
+        "x",
+        d3.forceX(function(d) {
+          return d.lat;
+        })
+      )
+      .force(
+        "y",
+        d3.forceY(function(d) {
+          return d.lng;
+        })
+      )
+      .force("collide", this.collision)
+      .alpha(1)
+      .on("tick", this.tick.bind(this));
+  }
+  color(colorScale) {
+    let g = this.group.selectAll("g");
+    g.each(function(d, i) {
+      d3.select(this).attr("fill", colorScale.get(d.lead));
+    });
+  }
+  setRadius() {
+    let svg = d3.select("svg");
+    let g = this.group.selectAll("g");
+    g.each(function(d, i) {
+      d3.select(this)
+        .select("circle")
+        .attr("r", function(d) {
+          if (d.name in scale) {
+            d.scale = scalarFunction(scale[d.name]);
+            return d.scale;
+          }
+        });
+      d3.select(this)
+        .select("line")
+        .attr("x1", function(d) {
+          if (d.name in scale) {
+            return scalarFunction(scale[d.name]);
+          }
+        })
+        .attr("x2", function(d) {
+          if (d.name in scale) {
+            return 0 - scalarFunction(scale[d.name]);
+          }
+        });
+    });
+    this.collision.initialize(this.simulation.nodes());
+    this.simulation.alpha(1).restart();
+  }
+  tick() {
+    this.group.selectAll("g").attr("transform", function(d, i) {
+      return `translate(${d.x},${d.y})`;
+    });
+  }
+  destroy() {
+    if (this.group != null) {
+      this.group.remove();
+    }
+  }
+  nodes = [];
+  group = null;
+  rendered = false;
+  tooltip = null;
+  simulation = null;
+  collision = null;
+}
+
+class MapInteraction {
+  easyPZ = null;
+  elements = [];
+  /**
+   *
+   * @param {Element} svg
+   * @param {{scale:Number, translateX: Number, translateY: Number}} defaultPosition
+   */
+  constructor(svg, defaultPosition = null) {
+    this.easyPZ = new EasyPZ(
+      svg,
+      this.transform.bind(this),
+      {
+        minScale: 0.1,
+        maxScale: 2,
+        bounds: {
+          top: NaN,
+          right: NaN,
+          bottom: NaN,
+          left: NaN
+        }
+      },
+      ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
+    );
+    if (defaultPosition == null) {
+      this.easyPZ.totalTransform = {
+        scale: 0.1,
+        translateX: $(window).width() / 2,
+        translateY: $(window).height() / 2 + 152
+      };
+    } else {
+      this.easyPZ.totalTransform = defaultPosition;
+    }
+  }
+  /**
+   * @returns {{translateX:Number, translateY:Number, scale:Number}}
+   */
+  getTransform() {
+    return this.easyPZ.totalTransform;
+  }
+  transform(transform) {
+    for (let i = 0; i < this.elements.length; ++i) {
+      this.elements[i].attr(
+        "transform",
+        `translate(${transform.translateX}, ${transform.translateY})scale(${transform.scale})`
+      );
+    }
+  }
+  /**
+   *
+   * @param {Element} element
+   */
+  addElementToTransform(element) {
+    this.elements.push(element);
+  }
+  /**
+   *
+   * @param {Element} element
+   */
+  removeElementToTransform(element) {
+    this.elements.splice(this.elements.indexOf(element), 1);
+  }
+}
+class Tooltip {
+  /**
+   *
+   * @param {Element} parent
+   * @param {{x:number, y:number: height:number, width:number}} rect
+   * @param {InnerHTML} html
+   * @param {Object} style
+   */
+  vis = null;
+  constructor(parent, rect, html, style = null) {
+    if (style == null) {
+      this.vis = d3
+        .select(parent)
+        .append("div")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background-color", "white")
+        .style("border-radius", "5px")
+        .style("padding", "10px")
+        .style("box-shadow", "0 0 3px")
+        .style("stroke", "black");
+    } else {
+      this.vis = d3
+        .select(parent)
+        .append("div")
+        .style(style);
+    }
+    this.vis
+      .style("visibility", "visible")
+      .style("left", rect.x + rect.width + "px")
+      .style("top", rect.y + rect.height + "px")
+      .style("padding-left", "20px")
+      .style("padding-right", "20px")
+      .style("padding-top", "10px")
+      .style("padding-bottom", "10px")
+      .html(html);
+  }
+  destroy() {
+    this.vis.remove();
+  }
+}
 class MapObj {
-  timeline = new TimeView("#timeline");
-  dataObject = new DataObject(this.timeline);
-  stdGraph = new STDGraph({ width: 500, height: 300 }, [], "#timeline");
+  countries = null;
+  interaction = null;
+  dataObject = new DataObject();
+  stdGraph = new STDGraph(
+    { width: $("#timeline").width(), height: 300 },
+    [],
+    "#timeline"
+  );
+  eventGraph = new EventGraph(
+    { width: $("#timeline").width(), height: 30 },
+    [],
+    "#timeline",
+    "testEvent"
+  );
+  eventGraph2 = new EventGraph(
+    { width: $("#timeline").width(), height: 30 },
+    [],
+    "#timeline",
+    "testEvent2"
+  );
   constructor() {
     this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph.createScrubberLines.bind(this.eventGraph)
+    );
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph2.createScrubberLines.bind(this.eventGraph2)
+    );
+    this.dataObject.onData(this.mostLead.bind(this));
+    this.dataObject.onData(this.mostLag.bind(this));
+  }
+  createCountries(svg, json, projection) {
+    this.countries = new Countries(json);
+    this.countries.render(svg, projection);
+  }
+  /**
+   *
+   * @param {Element} svg svg element
+   */
+  createInteraction(svg) {
+    this.interaction = new MapInteraction(svg);
   }
   onDataUpdateSTDGraph(dataObject) {
+    if (!dataObject.hasCountry("Canada")) {
+      return;
+    }
     let previousYear = dataObject.currentYearLoading + 1;
     let canada = dataObject.countries["Canada"];
     let sum = 0;
@@ -2022,8 +2468,139 @@ class MapObj {
     let avg = sum / counter;
     let data = [];
     for (let value in canada.countryTotal) {
-      data.push({ x: Number(value), y: avg - canada.countryTotal[value] });
+      data.push({ x: Number(value), y: canada.countryTotal[value] });
     }
     this.stdGraph.updateData(data);
+  }
+
+  mostLead(dateObject) {
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected() + 1;
+    const currentYear = this.dataObject.currentYearLoading + 1;
+    if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
+      return;
+    }
+    let mostLead = 0;
+    let eventRange = {
+      max: new Date().getFullYear() - leadLagWindow,
+      min: new Date().getFullYear() - leadLagWindow * 2
+    };
+    for (
+      let max = new Date().getFullYear() - leadLagWindow,
+        min = new Date().getFullYear() - leadLagWindow * 2;
+      min > currentYear + leadLagWindow;
+      --min, --max
+    ) {
+      let val = this.leadSum({ min: min, max: max });
+      if (val < mostLead) {
+        eventRange = { max: max, min: min };
+        mostLead = val;
+      }
+    }
+    this.eventGraph.updateData([{ x1: eventRange.min, x2: eventRange.max }]);
+  }
+  mostLag(dataObject) {
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected() + 1;
+    const currentYear = this.dataObject.currentYearLoading + 1;
+    if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
+      return;
+    }
+    let mostLead = 0;
+    let eventRange = {
+      max: new Date().getFullYear() - leadLagWindow,
+      min: new Date().getFullYear() - leadLagWindow * 2
+    };
+    for (
+      let max = new Date().getFullYear() - leadLagWindow,
+        min = new Date().getFullYear() - leadLagWindow * 2;
+      min > currentYear + leadLagWindow;
+      --min, --max
+    ) {
+      let val = this.lagSum({ min: min, max: max });
+      if (val > mostLead) {
+        eventRange = { max: max, min: min };
+        mostLead = val;
+      }
+    }
+    this.eventGraph2.updateData([{ x1: eventRange.min, x2: eventRange.max }]);
+  }
+  /**
+   *
+   * @param {{min:number, max:number}} years
+   */
+  leadSum(years) {
+    let offset = years.max - years.min + 1;
+    const canada = this.dataObject.getCountry("Canada");
+    let canadaData = [];
+    let sum = 0;
+    for (let i = years.min; i <= years.max; ++i) {
+      if (!canada.hasTotal(i)) {
+        return 0;
+      }
+      canadaData.push(canada.getTotal(i));
+    }
+
+    for (const country in this.dataObject.countries) {
+      if (country == "Canada") {
+        continue;
+      }
+      const currentCountry = this.dataObject.getCountry(country);
+      let currentCountryData = [];
+      for (let i = years.min - offset; i <= years.max + offset; ++i) {
+        if (!currentCountry.hasTotal(i)) {
+          break;
+        }
+        currentCountryData.push(currentCountry.getTotal(i));
+      }
+      if (currentCountryData.length == canadaData.length * 3) {
+        let lead = leadlag(canadaData, currentCountryData);
+        if (lead.bestOffset < 0) {
+          sum += lead.bestOffset;
+        }
+      }
+    }
+    return sum;
+  }
+  /**
+   *
+   * @param {{min:number, max:number}} years
+   */
+  lagSum(years) {
+    let offset = years.max - years.min + 1;
+    const canada = this.dataObject.getCountry("Canada");
+    let canadaData = [];
+    let sum = 0;
+    for (let i = years.min; i <= years.max; ++i) {
+      if (!canada.hasTotal(i)) {
+        return 0;
+      }
+      canadaData.push(canada.getTotal(i));
+    }
+
+    for (const country in this.dataObject.countries) {
+      if (country == "Canada") {
+        continue;
+      }
+      const currentCountry = this.dataObject.getCountry(country);
+      let currentCountryData = [];
+      for (let i = years.min - offset; i <= years.max + offset; ++i) {
+        if (!currentCountry.hasTotal(i)) {
+          break;
+        }
+        currentCountryData.push(currentCountry.getTotal(i));
+      }
+      if (currentCountryData.length == canadaData.length * 3) {
+        let lead = leadlag(canadaData, currentCountryData);
+        if (lead.bestOffset > 0) {
+          sum += lead.bestOffset;
+        }
+      }
+    }
+    return sum;
+  }
+
+  reset() {
+    if (this.countries != null) {
+      this.countries.reset();
+    }
   }
 }

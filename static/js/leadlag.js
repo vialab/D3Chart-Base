@@ -14,67 +14,85 @@ function shift(array, offset) {
   }
   return result;
 }
-function laglead(data1, data2) {
-  let d1 = Object.values(data1);
-  let d2 = Object.values(data2);
-  //the length of the lines are not the same thefore, one line has a break in it.
-  //if there is a break in the line they are not comparable in terms for frequency
-  if (d1[0].x - d2[0].x || d1[d1.length - 1].x - d2[d2.length - 1].x) {
-    return 0;
-  }
-  //does not support the length needed
-  //must be divisible by 3
-  const size = d1.length - 1;
-  if (size % 3) {
-    return 0;
-  }
-}
 /**
- * @param  {Array} data1 - [{y:}] requires y value
- * @param  {Array} data2 - [{y:}] requires y value
- * @returns {Number} the alignment shift for data1 where it best aligns with data2
+ *
+ * @param {Array.<number>} data1
+ * @param {Array.<number>} data2 - data2.length  must = data1.length * 3
  */
 function leadlag(data1, data2) {
-  let d1 = Object.values(data1);
-  let d2 = Object.values(data2);
-  //the length of the lines are not the same thefore, one line has a break in it.
-  //if there is a break in the line they are not comparable in terms for frequency
-  if (d1[0].x - d2[0].x || d1[d1.length - 1].x - d2[d2.length - 1].x) {
+  if (data1.length * 3 != data2.length) {
     return 0;
   }
+  let d1 = data1;
+  let d2 = data2;
   let d1Mean = mean(d1);
   let d2Mean = mean(d2);
   let d1STD = standardDeviation(d1, d1Mean);
   let d2STD = standardDeviation(d2, d2Mean);
+  let leadLagValues = [];
   let highestRelation = 0;
   let bestOffset = 0;
 
-  for (let offset = 0; offset < d1.length; ++offset) {
-    let shiftedArray = shift(d1, offset);
-    let sum = 0;
-    for (let i = 0; i < shiftedArray.length; ++i) {
-      sum +=
-        ((shiftedArray[i].y - d1Mean) / d1STD) * ((d2[i].y - d2Mean) / d2STD);
+  for (let i = 0; i < d2.length - d1.length + 1; ++i) {
+    let currentLeadLag = 0;
+    for (let j = 0; j < d1.length; ++j) {
+      currentLeadLag +=
+        ((d1[j] - d1Mean) / d1STD) * ((d2[i + j] - d2Mean) / d2STD);
     }
-    if (sum > highestRelation) {
-      highestRelation = sum;
-      bestOffset = offset;
+    leadLagValues.push(currentLeadLag);
+    if (highestRelation < currentLeadLag) {
+      highestRelation = currentLeadLag;
+      bestOffset = i - d1.length;
     }
   }
-  if (d1.length - 1 + -bestOffset > bestOffset) {
-    return -bestOffset;
-  }
-
-  return d1.length - 1 + -bestOffset;
+  return { values: leadLagValues, bestOffset: bestOffset };
 }
+///**
+// * @param  {Array} data1 - [{y:}] requires y value
+// * @param  {Array} data2 - [{y:}] requires y value
+// * @returns {Number} the alignment shift for data1 where it best aligns with data2
+// */
+//function leadlag(data1, data2) {
+//  let d1 = Object.values(data1);
+//  let d2 = Object.values(data2);
+//  //the length of the lines are not the same thefore, one line has a break in it.
+//  //if there is a break in the line they are not comparable in terms for frequency
+//  if (d1[0].x - d2[0].x || d1[d1.length - 1].x - d2[d2.length - 1].x) {
+//    return 0;
+//  }
+//  let d1Mean = mean(d1);
+//  let d2Mean = mean(d2);
+//  let d1STD = standardDeviation(d1, d1Mean);
+//  let d2STD = standardDeviation(d2, d2Mean);
+//  let highestRelation = 0;
+//  let bestOffset = 0;
+//
+//  for (let offset = 0; offset < d1.length; ++offset) {
+//    let shiftedArray = shift(d1, offset);
+//    let sum = 0;
+//    for (let i = 0; i < shiftedArray.length; ++i) {
+//      sum +=
+//        ((shiftedArray[i].y - d1Mean) / d1STD) * ((d2[i].y - d2Mean) / d2STD);
+//    }
+//    if (sum > highestRelation) {
+//      highestRelation = sum;
+//      bestOffset = offset;
+//    }
+//  }
+//  if (d1.length - 1 + -bestOffset > bestOffset) {
+//    return -bestOffset;
+//  }
+//
+//  return d1.length - 1 + -bestOffset;
+//}
 /**
  * @param  {Array} array - expects [{y:}]
  * @returns {Float} returns the mean of the set
  */
 function mean(array) {
-  result = 0;
-  for (let i = 0; i < array.length; i++) {
-    result += array[i].y;
+  let result = 0;
+  for (let i = 0; i < array.length; ++i) {
+    result += array[i];
   }
 
   return result / array.length;
@@ -85,9 +103,9 @@ function mean(array) {
  * @return {Float} the standard deviation of the set
  */
 function standardDeviation(array, mean) {
-  sum = 0;
-  for (let i = 0; i < array.length; i++) {
-    sum += (array[i].y - mean) ** 2;
+  let sum = 0;
+  for (let i = 0; i < array.length; ++i) {
+    sum += (array[i] - mean) ** 2;
   }
   return Math.sqrt(sum);
 }
