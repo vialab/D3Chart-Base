@@ -1295,7 +1295,8 @@ class Scrubber {
         [0, -5],
         [size.width, size.height]
       ])
-      .on("brush", this.brushed.bind(this));
+      .on("brush", this.brushed.bind(this))
+      .on("end", this.endCallbacks.bind(this));
     this.brushVis = parent
       .append("g")
       .attr("class", "brush")
@@ -1324,6 +1325,9 @@ class Scrubber {
     ]);
     this.minYear = extent.min;
     this.maxYear = extent.max;
+    this.maxSelection = Math.min(
+      ...[10, Math.floor((this.maxYear - this.minYear) / 3)]
+    );
   }
   setOpacity(value) {
     this.parent.select(".brush").attr("opacity", `${value}%`);
@@ -1361,21 +1365,28 @@ class Scrubber {
       d0[1] += offset;
       d0[0] += offset;
     }
+    let resize =
+      this.currentSelection.max - this.currentSelection.min != d0[1] - d0[0];
     this.currentSelection = { min: d0[0], max: d0[1] };
+    0;
     this.updateOnBrushed(d0);
     this.brushVis.call(this.brush.move, [
       this.scales.x(d0[0]),
       this.scales.x(d0[1])
     ]);
+    if (resize) {
+      this.updateOnResize(d0);
+    }
   }
   getNumYearsSelected() {
-    return this.currentSelection.max - this.currentSelection.min;
+    return this.currentSelection.max - this.currentSelection.min + 1;
   }
   scales = null;
   parent = null;
   brush = null;
   brushVis = null;
   onEndCallbacks = [];
+  onResizeCallbacks = [];
   minSelection = 3;
   maxSelection = 10;
   minYear = 1950;
@@ -1394,10 +1405,23 @@ class Scrubber {
   }
   /**
    *
-   * @param {function({min:Number max:Number})} callbacks
+   * @param {function({min:Number, max:Number})} callbacks
    */
   onEnd(callbacks) {
     this.onEndCallbacks.push(callbacks);
+  }
+
+  /**
+   *
+   * @param {function({min:Number, max:Number})} callbacks
+   */
+  onResize(callbacks) {
+    this.onResizeCallbacks.push(callbacks);
+  }
+  updateOnResize(position) {
+    for (let i = 0; i < this.onResizeCallbacks.length; ++i) {
+      this.onBrushedCallbacks[i]({ min: position[0], max: position[1] });
+    }
   }
   updateOnBrushed(position) {
     for (let i = 0; i < this.onBrushedCallbacks.length; ++i) {
@@ -1459,6 +1483,8 @@ class STDGraph {
     let maxY = Math.max(...data.map(val => val.y));
     let minY = Math.min(...data.map(val => val.y));
 
+    let minX = Math.min(...data.map(val => val.x));
+    let maxX = Math.max(...data.map(val => val.x));
     if (maxY > this.scales.y.domain()[1]) {
       this.scales.y.domain([this.scales.y.domain()[0], maxY]);
 
@@ -1474,6 +1500,7 @@ class STDGraph {
     let self = this;
     var u = this.svg.selectAll(".line-path").data([this.data]);
 
+    this.scrubber.setExtent({ min: minX, max: maxX });
     // Updata the line
     u.enter()
       .append("path")
@@ -1567,7 +1594,7 @@ class STDGraph {
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2.5);
     this.scrubber = new Scrubber(this.size, this.svg, this.scales);
-    //his.scrubber.hidden();
+    this.scrubber.hidden();
   }
 }
 
@@ -2154,6 +2181,11 @@ class Institutions {
     let self = this;
     this.getLocations(location_ids, function(res) {
       let locations = JSON.parse(res.body);
+      for (const idx in locations) {
+        let coords = projection([locations[idx].lng, locations[idx].lat]);
+        data[idx].position = {};
+        data[idx].position = { lat: coords[0], lng: coords[1] };
+      }
       //TODO finish institution location
       self.render(svg, data, colorScale, transform);
     });
@@ -2369,6 +2401,32 @@ class MapInteraction {
     this.elements.splice(this.elements.indexOf(element), 1);
   }
 }
+class ColorScale {
+  constructor(numYears) {
+    //account for negative
+    this.setRange(numYears);
+  }
+  gradient = d3.interpolateRdBu;
+  values = [];
+
+  setGradient(gradient) {
+    this.gradient = gradient;
+  }
+  setRange(numYears) {
+    this.values = [];
+    for (let i = 0 - numYears; i <= 0 + numYears; ++i) {
+      this.values.push(i);
+    }
+  }
+  get(value) {
+    let idx = this.values.indexOf(value);
+    if (idx == -1) {
+      console.error("Color Scale does not have value of " + value);
+      return NaN;
+    }
+    return this.gradient(idx / (this.values.length - 1));
+  }
+}
 class Tooltip {
   /**
    *
@@ -2413,6 +2471,8 @@ class Tooltip {
 class MapObj {
   countries = null;
   interaction = null;
+
+  colorScale = new ColorScale(3);
   dataObject = new DataObject();
   stdGraph = new STDGraph(
     { width: $("#timeline").width(), height: 300 },
@@ -2439,6 +2499,7 @@ class MapObj {
     this.stdGraph.scrubber.onBrushed(
       this.eventGraph2.createScrubberLines.bind(this.eventGraph2)
     );
+    this.stdGraph.scrubber.onEnd(this.onScrubberSelection.bind(this));
     this.dataObject.onData(this.mostLead.bind(this));
     this.dataObject.onData(this.mostLag.bind(this));
   }
@@ -2473,8 +2534,100 @@ class MapObj {
     this.stdGraph.updateData(data);
   }
 
+  onScrubberSelection(selection) {
+    console.log(selection);
+    //update the color of the countries
+    this.colorScale.setRange(this.stdGraph.scrubber.getNumYearsSelected());
+    let result = this.getLeadLagCountries(selection);
+    this.countries.color(result.data, this.colorScale, result.missingData);
+    //update the institutions
+  }
+  getLeadLagInstitutes(selection) {
+    let canada = this.dataObject.getCountry("Canada");
+    let canadaData = [];
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
+
+    for (let i = selection.min; i <= selection.max; ++i) {
+      if (!canada.hasTotal(i)) {
+        console.error("Canada does not have data for year: " + i);
+        return;
+      }
+      canadaData.push(canada.getTotal(i));
+    }
+    let otherData = [];
+    let missingData = [];
+    for (const country in this.dataObject.countries) {
+      if (country == "Canada") {
+        continue;
+      }
+      const minWindow = selection.min - leadLagWindow;
+      const maxWindow = selection.max + leadLagWindow;
+      let currentCountry = this.dataObject.getCountry(country);
+      let currentCountryData = [];
+      for (let i = minWindow; i <= maxWindow; ++i) {
+        if (!currentCountry.hasTotal(i)) {
+          missingData.push(country);
+          break;
+        }
+        currentCountryData.push(currentCountry.getTotal(i));
+      }
+      if (currentCountryData.length == maxWindow - minWindow + 1) {
+        let result = leadlag(canadaData, currentCountryData);
+        otherData.push({
+          country_name: country,
+          leadlag: result.bestOffset,
+          data: currentCountryData
+        });
+      }
+    }
+    otherData.push({ country_name: "Canada", leadlag: 0, data: canadaData });
+
+    return { data: otherData, missingData: missingData };
+  }
+  getLeadLagCountries(selection) {
+    let canada = this.dataObject.getCountry("Canada");
+    let canadaData = [];
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
+
+    for (let i = selection.min; i <= selection.max; ++i) {
+      if (!canada.hasTotal(i)) {
+        console.error("Canada does not have data for year: " + i);
+        return;
+      }
+      canadaData.push(canada.getTotal(i));
+    }
+    let otherData = [];
+    let missingData = [];
+    for (const country in this.dataObject.countries) {
+      if (country == "Canada") {
+        continue;
+      }
+      const minWindow = selection.min - leadLagWindow;
+      const maxWindow = selection.max + leadLagWindow;
+      let currentCountry = this.dataObject.getCountry(country);
+      let currentCountryData = [];
+      for (let i = minWindow; i <= maxWindow; ++i) {
+        if (!currentCountry.hasTotal(i)) {
+          missingData.push(country);
+          break;
+        }
+        currentCountryData.push(currentCountry.getTotal(i));
+      }
+      if (currentCountryData.length == maxWindow - minWindow + 1) {
+        let result = leadlag(canadaData, currentCountryData);
+        otherData.push({
+          country_name: country,
+          leadlag: result.bestOffset,
+          data: currentCountryData
+        });
+      }
+    }
+    otherData.push({ country_name: "Canada", leadlag: 0, data: canadaData });
+
+    return { data: otherData, missingData: missingData };
+  }
   mostLead(dateObject) {
-    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected() + 1;
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
     const currentYear = this.dataObject.currentYearLoading + 1;
     if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
       return;
@@ -2482,7 +2635,7 @@ class MapObj {
     let mostLead = 0;
     let eventRange = {
       max: new Date().getFullYear() - leadLagWindow,
-      min: new Date().getFullYear() - leadLagWindow * 2
+      min: new Date().getFullYear() - (leadLagWindow * 2 - 1)
     };
     for (
       let max = new Date().getFullYear() - leadLagWindow,
@@ -2492,14 +2645,14 @@ class MapObj {
     ) {
       let val = this.leadSum({ min: min, max: max });
       if (val < mostLead) {
-        eventRange = { max: max, min: min };
+        eventRange = { max: max, min: min + 1 };
         mostLead = val;
       }
     }
     this.eventGraph.updateData([{ x1: eventRange.min, x2: eventRange.max }]);
   }
   mostLag(dataObject) {
-    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected() + 1;
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
     const currentYear = this.dataObject.currentYearLoading + 1;
     if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
       return;
@@ -2507,7 +2660,7 @@ class MapObj {
     let mostLead = 0;
     let eventRange = {
       max: new Date().getFullYear() - leadLagWindow,
-      min: new Date().getFullYear() - leadLagWindow * 2
+      min: new Date().getFullYear() - (leadLagWindow * 2 - 1)
     };
     for (
       let max = new Date().getFullYear() - leadLagWindow,
@@ -2517,7 +2670,7 @@ class MapObj {
     ) {
       let val = this.lagSum({ min: min, max: max });
       if (val > mostLead) {
-        eventRange = { max: max, min: min };
+        eventRange = { max: max, min: min + 1 };
         mostLead = val;
       }
     }
