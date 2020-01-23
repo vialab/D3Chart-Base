@@ -21,7 +21,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   transition: all 1s;
-  width: 50px;
+  width: 200px;
   height: 50px;
   background: white;
   box-sizing: border-box;
@@ -29,6 +29,7 @@
   border: 4px solid white;
   padding: 5px;
   pointer-events: all;
+  display: block;
 }
 
 input {
@@ -38,7 +39,7 @@ input {
   width: 100%;
   height: 42.5px;
   line-height: 30px;
-  display: none;
+  display: block;
   font-size: 1em;
   border-radius: 20px;
   padding: 0 20px;
@@ -57,26 +58,15 @@ input {
   text-align: center;
   font-size: 1.2em;
   transition: all 1s;
-  box-shadow: 0 0 3px;
   stroke: black;
 }
 
 #form:hover {
-  width: 200px;
   cursor: pointer;
-}
-
-#form:hover input {
-  display: block;
 }
 
 input:focus {
   outline: none;
-}
-
-#form:hover .fa {
-  outline: 2px;
-  box-shadow: none;
 }
 
 .country {
@@ -282,14 +272,9 @@ svg {
   width: 20%;
   height: 100%;
   background-color: white;
-  border-radius: 15px;
   box-shadow: 0 0 3px;
   stroke: black;
-  position: fixed;
-  padding-bottom: 30px;
-  top: 5;
-  left: 5;
-  bottom: 5;
+  position: absolute;
 }
 
 .btn-group {
@@ -310,4 +295,17 @@ svg {
 
 .handle {
   visibility: hidden;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  position: absolute; /* this is very important*/
+  bottom: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  overflow: -moz-hidden-unscrollable;
+  overflow: hidden;
 }

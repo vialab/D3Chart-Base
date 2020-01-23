@@ -431,6 +431,7 @@ $(function() {
     //cmpCountries contains all of the country rendering data
     //json.features is all of the country names and their svg line data
     mapObj.createCountries(countriesGroup, json.features, path);
+    mapObj.projection = projection;
     //defining map boundaries, struggled with this working with the easyPZ library
     //TODO implement map boundary
     mapBoundaries = countriesGroup.node().getBBox();
@@ -444,6 +445,7 @@ $(function() {
         152})scale(0.1)`
     );
     mapObj.createInteraction(svg.node());
+    mapObj.svg = svg;
     mapObj.interaction.addElementToTransform(countriesGroup);
   }
 
