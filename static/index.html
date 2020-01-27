@@ -12,9 +12,6 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome
   <body>
     <div id="map-holder"></div>
     <div id= "analytics-panel"> 
-        <div id=title style="text-align: center; font-family: Arial, Helvetica, sans-serif">
-          <h1>Canada vs the World</h1>
-        </div>
       <div id="scrollable">
         <div class="searchbar">
             <form action="" id='form'>
@@ -23,14 +20,21 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome
               </input>
             </form>
           </div>
+          <div class="title"><h4>Publishing output by year for Canada</h4></div>
         <div id="timeline"></div>
-        <div class="btn-group">
-            <button>Deviation: Institute -> Country</button>
-            <button>Paper Citations</button>
-            <button>Consistency</button>
-            <button>Funding</button>
-            <button>Deviation: Institute -> World</button>
+        <div>
+          <h4 class="title">Institution Filters</h4>
+        </div>
+        <div>
+          <svg id="glyph-legend" style="width:49%; height:50%; display:inline-block;"></svg>
+        <div class="btn-group" >
+            <button class="metric-button">Deviation: Institute -> Country</button>
+            <button class="metric-button">Deviation: Institute -> World</button>
+            <button class="metric-button">Paper Citations</button>
+            <button class="metric-button">Consistency</button>
+            <button class="metric-button">Funding</button>
           </div>
+        </div>
       </div>
       <div id="legend">
       </div>

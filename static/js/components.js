@@ -1607,9 +1607,21 @@ class EventGraph {
   events = null;
   eventName = null;
   color = null;
-  constructor(size, data, parentID, eventName, color = null, margin = null) {
+  title = null;
+  constructor(
+    size,
+    data,
+    parentID,
+    eventName,
+    title = null,
+    color = null,
+    margin = null
+  ) {
     if (margin != null) {
       this.margin = margin;
+    }
+    if (title != null) {
+      this.title = title;
     }
     this.size = size;
     this.data = [...data];
@@ -1757,6 +1769,13 @@ class EventGraph {
         return self.scales.x(d.x2) - self.scales.x(d.x1);
       })
       .style("fill", this.color);
+    this.svg
+      .append("text")
+      .attr("x", 0)
+      .attr("y", self.scales.y(0.1))
+      .text(this.title)
+      .attr("font-family", "helvetica")
+      .attr("font-size", "8px");
   }
 }
 class TimeView {
@@ -2586,6 +2605,108 @@ class MapInteraction {
     this.elements.splice(this.elements.indexOf(element), 1);
   }
 }
+class GlyphLegend {
+  constructor(color) {
+    this.svg = d3.select("#glyph-legend");
+    if (this.svg == null) {
+      console.error("Error finding glyph legend svg");
+      return;
+    }
+    this.color = color;
+    this.render();
+  }
+  svg = null;
+  color = null;
+  render() {
+    if (this.svg == null) {
+      return;
+    }
+    const box = this.svg.node().getBoundingClientRect();
+    const radius = box.height / 4;
+    this.svg
+      .append("circle")
+      .attr("cx", box.width / 2)
+      .attr("cy", box.height / 2)
+      .attr("r", radius)
+      .attr("fill", this.color)
+      .attr("stroke-width", 3);
+    this.svg
+      .append("line")
+      .attr("x1", box.width / 2 - radius)
+      .attr("y1", box.height / 2)
+      .attr("x2", box.width / 2 + radius)
+      .attr("y2", box.height / 2)
+      .attr("stroke-width", "3px");
+
+    var defs = this.svg.append("defs");
+    const thickness = 2;
+    defs
+      .append("marker")
+      .attr("id", "arrow")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 5)
+      .attr("refY", 0)
+      .attr("markerWidth", 4)
+      .attr("markerHeight", 4)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("class", "arrowHead");
+
+    this.svg
+      .append("svg:line")
+      .attr("x1", box.width / 2 - radius)
+      .attr("x2", box.width / 2)
+      .attr("y1", 10)
+      .attr("y2", box.height / 2 - 6)
+      .attr("marker-end", "url(#arrow)")
+      .attr("stroke", "#000")
+      .attr("stroke-width", thickness);
+
+    this.svg
+      .append("text")
+      .attr("x", box.width / 2 - radius)
+      .attr("y", 8)
+      .text("Trend Line")
+      .attr("font-size", 10)
+      .attr("text-anchor", "middle");
+
+    this.svg
+      .append("svg:line")
+      .attr("x1", box.width / 4)
+      .attr("x2", box.width / 2 - radius / 2)
+      .attr("y1", box.height - 30)
+      .attr("y2", box.height / 2 + radius / 2)
+      .attr("marker-end", "url(#arrow)")
+      .attr("stroke", "#000")
+      .attr("stroke-width", thickness);
+
+    this.svg
+      .append("text")
+      .attr("x", box.width / 4)
+      .attr("y", box.height - 20)
+      .text("Lead Lag")
+      .attr("font-size", 10)
+      .attr("text-anchor", "middle");
+
+    this.svg
+      .append("svg:line")
+      .attr("x1", box.width * 0.75)
+      .attr("x2", box.width * 0.64)
+      .attr("y1", box.height / 2 - radius)
+      .attr("y2", box.height / 2 - radius * 0.88)
+      .attr("marker-end", "url(#arrow)")
+      .attr("stroke", "#000")
+      .attr("stroke-width", thickness);
+
+    this.svg
+      .append("text")
+      .attr("x", box.width * 0.76)
+      .attr("y", box.height / 2 - radius * 0.97)
+      .text("# of papers")
+      .attr("font-size", 10);
+  }
+}
 class ColorScale {
   constructor(numYears) {
     //account for negative
@@ -2691,23 +2812,41 @@ class MapObj {
   projection = null;
   colorScale = new ColorScale(3);
   dataObject = new DataObject();
+  glyphLegend = new GlyphLegend(this.colorScale.get(3));
   stdGraph = new STDGraph(
     { width: $("#timeline").width(), height: 300 },
     [],
     "#timeline"
   );
   eventGraph = new EventGraph(
-    { width: $("#timeline").width(), height: 30 },
+    { width: $("#timeline").width(), height: 35 },
     [],
     "#timeline",
-    "testEvent"
+    "testEvent",
+    "Most Lead"
   );
   eventGraph2 = new EventGraph(
-    { width: $("#timeline").width(), height: 30 },
+    { width: $("#timeline").width(), height: 35 },
     [],
     "#timeline",
-    "testEvent2"
+    "testEvent2",
+    "Most Lag"
   );
+  eventGraph3 = new EventGraph(
+    { width: $("#timeline").width(), height: 35 },
+    [],
+    "#timeline",
+    "testEvent3",
+    "Most Countries"
+  );
+  eventGraph4 = new EventGraph(
+    { width: $("#timeline").width(), height: 35 },
+    [],
+    "#timeline",
+    "testEvent4",
+    "Largest Total Lead Lag"
+  );
+
   constructor() {
     this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
     this.stdGraph.scrubber.onBrushed(
@@ -2716,10 +2855,18 @@ class MapObj {
     this.stdGraph.scrubber.onBrushed(
       this.eventGraph2.createScrubberLines.bind(this.eventGraph2)
     );
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph3.createScrubberLines.bind(this.eventGraph3)
+    );
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph4.createScrubberLines.bind(this.eventGraph4)
+    );
     this.stdGraph.scrubber.onEnd(this.onScrubberSelection.bind(this));
     this.stdGraph.scrubber.onResize(this.onScrubberResize.bind(this));
     this.dataObject.onData(this.mostLead.bind(this));
     this.dataObject.onData(this.mostLag.bind(this));
+    this.dataObject.onData(this.getMostChaoticLeadLagCountries.bind(this));
+    this.dataObject.onData(this.getLargestSumOfCountries.bind(this));
   }
   createCountries(svg, json, projection) {
     this.countries = new Countries(json);
@@ -2839,9 +2986,76 @@ class MapObj {
         }
       }
     }
-
     return otherData;
   }
+  getMostChaoticLeadLagCountries(selection) {
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
+    const currentYear = this.dataObject.currentYearLoading + 1;
+    if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
+      return;
+    }
+    let maxNumOfCountries = 0;
+    let eventLocation = {};
+    for (
+      let max = new Date().getFullYear() - leadLagWindow,
+        min = new Date().getFullYear() - leadLagWindow * 2;
+      min > currentYear + leadLagWindow;
+      --min, --max
+    ) {
+      let result = [];
+      for (const country in this.dataObject.countries) {
+        const currentCountry = this.dataObject.countries[country];
+        for (let i = min; i <= max; ++i) {
+          if (!currentCountry.hasTotal(i)) {
+            break;
+          }
+          result.push(i);
+        }
+        if (result.length == max - min + 1) {
+          result.push(country);
+        }
+      }
+      if (result.length > maxNumOfCountries) {
+        maxNumOfCountries = result.length;
+        eventLocation = { min: min + 1, max: max };
+      }
+    }
+    this.eventGraph3.updateData([
+      { x1: eventLocation.min, x2: eventLocation.max }
+    ]);
+  }
+  getLargestSumOfCountries(selection) {
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
+    const currentYear = this.dataObject.currentYearLoading + 1;
+    if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
+      return;
+    }
+    let maxNumOfCountries = 0;
+    let eventLocation = {};
+    for (
+      let max = new Date().getFullYear() - leadLagWindow,
+        min = new Date().getFullYear() - (leadLagWindow * 2 - 1);
+      min > currentYear + leadLagWindow;
+      --min, --max
+    ) {
+      let result = this.getLeadLagCountries({ min: min, max: max });
+      let sum = 0;
+      for (let i = 0; i < result.data.length; ++i) {
+        sum += Math.abs(result.data[i].leadlag);
+      }
+      if (sum > maxNumOfCountries) {
+        maxNumOfCountries = sum;
+        eventLocation = { min: min, max: max };
+      }
+    }
+    this.eventGraph4.updateData([
+      { x1: eventLocation.min, x2: eventLocation.max }
+    ]);
+  }
+  /**
+   *
+   * @param {{min:Number, max:Number}} selection
+   */
   getLeadLagCountries(selection) {
     let canada = this.dataObject.getCountry("Canada");
     let canadaData = [];

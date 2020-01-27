@@ -278,14 +278,21 @@ svg {
 }
 
 .btn-group {
-  width: 100%;
-  padding: 10px;
+  width: 49%;
+  display: inline-block;
+  position: relative;
 }
+.metric-button {
+  display: block;
+  margin: 3px;
+}
+
 #scrollable {
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
 }
+
 #legend {
   height: 20%;
   width: 100%;
