@@ -1334,9 +1334,11 @@ class Scrubber {
   }
   hidden() {
     this.parent.select(".brush").attr("opacity", `${0}%`);
+    this.hiddenCheck = true;
   }
   visible() {
     this.parent.select(".brush").attr("opacity", `${30}%`);
+    this.hiddenCheck = false;
   }
   brushed() {
     if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return;
@@ -1378,9 +1380,23 @@ class Scrubber {
       this.updateOnResize(d0);
     }
   }
+  /**
+   * @return {Number}
+   */
   getNumYearsSelected() {
     return this.currentSelection.max - this.currentSelection.min + 1;
   }
+  /**
+   * @return {{min:Number, max:Number}}
+   */
+  getSelected() {
+    return this.currentSelection;
+  }
+
+  isHidden() {
+    return this.hiddenCheck;
+  }
+  hiddenCheck = true;
   scales = null;
   parent = null;
   brush = null;
@@ -1869,6 +1885,30 @@ class InstitutionData {
   addFunding(year, value) {
     this.funding[year] = value;
   }
+  /**
+   *
+   * @param {Number} year
+   * @return {Boolean}
+   */
+  hasCitations(year) {
+    return year in this.citations;
+  }
+  /**
+   *
+   * @param {Number} year
+   * @return {Number}
+   */
+  getCitations(year) {
+    return this.citations[year];
+  }
+  /**
+   *
+   * @param {Number} year
+   * @param {Number} value
+   */
+  addCitations(year, value) {
+    this.citations[year] = value;
+  }
 }
 class CountryData {
   institutes = {};
@@ -2047,9 +2087,11 @@ class DataObject {
   minYearLoaded = 1950;
   intervalRate = 5000;
   countries = {};
-
+  currentKeyword = "";
   callback = null;
   intervalVar = null;
+
+  paused = false;
 
   onDataCallbacks = [];
 
@@ -2098,13 +2140,16 @@ class DataObject {
       this.onDataCallbacks[i](this);
     }
   }
-
   /**
    *
    * @param {string} keyword
    */
   getAllPapers(keyword) {
+    if (this.paused) {
+      return;
+    }
     let self = this;
+    this.currentKeyword = keyword;
     this.intervalVar = setInterval(function() {
       self.queryPapers(keyword);
     }, this.intervalRate);
@@ -2113,6 +2158,11 @@ class DataObject {
     if (this.intervalVar != null) {
       clearInterval(this.intervalVar);
     }
+    this.paused = true;
+  }
+  unpauseLoading() {
+    this.paused = false;
+    this.getAllPapers(this.currentKeyword);
   }
   /**
    *
@@ -2497,15 +2547,14 @@ class Institutions {
       d3.select(this).attr("fill", colorScale.get(d.lead));
     });
   }
-  setRadius() {
-    let svg = d3.select("svg");
+  setRadius(scale) {
     let g = this.group.selectAll("g");
     g.each(function(d, i) {
       d3.select(this)
         .select("circle")
         .attr("r", function(d) {
           if (d.name in scale) {
-            d.scale = scalarFunction(scale[d.name]);
+            d.scale = scale[d.name];
             return d.scale;
           }
         });
@@ -2513,12 +2562,12 @@ class Institutions {
         .select("line")
         .attr("x1", function(d) {
           if (d.name in scale) {
-            return scalarFunction(scale[d.name]);
+            return scale[d.name];
           }
         })
         .attr("x2", function(d) {
           if (d.name in scale) {
-            return 0 - scalarFunction(scale[d.name]);
+            return 0 - scale[d.name];
           }
         });
     });
@@ -2763,6 +2812,203 @@ class ColorScale {
       .attr("height", size.height / 2);
   }
 }
+class MetricButtonGroup {
+  /**
+   *
+   * @param {DataObject} dataObject
+   * @param {Scrubber} scrubber
+   * @param {Institutions} institutes
+   */
+  constructor(dataObject, scrubber) {
+    this.dataObject = dataObject;
+    this.scrubber = scrubber;
+    $("#deviation-world").on("click", this.deviationToWorld.bind(this));
+    $("#paper-citations").on("click", this.paperCitations.bind(this));
+  }
+  dataObject = null;
+  scrubber = null;
+  institutes = null;
+  fundingHistory = {};
+  citationHistory = {};
+  /**
+   *
+   * @param {Institutions} institutes
+   */
+  setInstitutions(institutes) {
+    this.institutes = institutes;
+  }
+
+  deviationToWorld() {
+    if (this.scrubber.isHidden()) {
+      return;
+    }
+    let selection = this.scrubber.getSelected();
+    //calculate institution sizes.
+    let institutes = {};
+    for (const country in this.dataObject.countries) {
+      let tmpCountry = this.dataObject.getCountry(country);
+      for (const ins in tmpCountry.institutes) {
+        let instituteSequence = [];
+        for (let i = selection.min; i <= selection.max; ++i) {
+          let tmpInstitute = tmpCountry.getInstitute(ins);
+          if (tmpInstitute.hasPapers(i)) {
+            instituteSequence.push(tmpInstitute.getPapers(i));
+          }
+        }
+        if (instituteSequence.length == this.scrubber.getNumYearsSelected()) {
+          institutes[ins] = instituteSequence.reduce(
+            (acc, cur) => acc + cur,
+            0
+          );
+        }
+      }
+    }
+    let result = this.standardDeviation(Object.values(institutes));
+    for (const ins in institutes) {
+      institutes[ins] = 14 + ((institutes[ins] - result.avg) / result.std) * 4;
+    }
+    this.institutes.setRadius(institutes);
+  }
+
+  async paperCitations() {
+    let selection = this.scrubber.getSelected();
+    if (selection.min + "-" + selection.max in this.citationHistory) {
+      return;
+    }
+    this.dataObject.pauseLoading();
+    let promises = await this.getPaperCitations();
+    let citations = {};
+    for (let i = 0; i < promises.length; ++i) {
+      let data = JSON.parse(promises[i].body).publications;
+      console.log(data);
+      for (let j = 0; j < data.length; ++j) {
+        if ("research_orgs" in data[j] && "times_cited" in data[j]) {
+          for (let k = 0; k < data[j].research_orgs.length; ++k) {
+            if (data[j].research_orgs[k].name in citations) {
+              citations[data[j].research_orgs[k].name] += data[j].times_cited;
+            } else {
+              citations[data[j].research_orgs[k].name] = data[j].times_cited;
+            }
+          }
+        }
+      }
+    }
+    let max = 0;
+    for (const ins in citations) {
+      let comp = citations[ins];
+      if (comp > max) {
+        max = comp;
+      }
+    }
+    for (const ins in citations) {
+      citations[ins] = 10 + (citations[ins] / max) * 15;
+    }
+    this.institutes.setRadius(citations);
+    this.dataObject.unpauseLoading();
+  }
+
+  consistency() {
+    let result = {};
+    let selection = this.scrubber.getSelected();
+    const end = cmp.dataObject.queries.length - 1;
+    for (const country in this.dataObject.countries) {
+      for (const institute in this.dataObject.countries[country].institutes) {
+        let tmpInstitute = this.dataObject.countries[country].institutes[
+          institute
+        ];
+        let sequence = [];
+        for (let i = selection.min; i <= selection.max; ++i) {
+          if (tmpInstitute.hasPapers(i)) {
+            sequence.push(tmpInstitute.getPapers(i));
+          }
+        }
+        if (sequence.length != this.scrubber.getNumYearsSelected()) {
+          continue;
+        }
+        let slopes = [];
+        const sequenceEnd = sequence.length - 1;
+        //calculate slope assume x distance is 1 || which it has to be for lead lag so it is fine to assume
+        for (let i = 0; i < sequenceEnd; ++i) {
+          const next = i + 1;
+          let slope = sequence[next] - sequence[i];
+          slopes.push(slope);
+        }
+        let sum = slopes.reduce(function(acc, val) {
+          return acc + val;
+        }, 0);
+        let avg = sum / slopes.length;
+        let std = 0;
+        for (let i = 0; i < slopes.length; ++i) {
+          std += (slopes[i] - avg) * (slopes[i] - avg);
+        }
+        std /= slopes.length - 1;
+        std = Math.sqrt(std);
+        result[institute] = 20 - std * 50;
+      }
+    }
+    this.institutes.setRadius(result);
+  }
+
+  funding(){
+    if (this.scrubber.isHidden()) {
+      return;
+    }
+    
+  }
+  async getPaperCitations() {
+    let selection = this.scrubber.getSelected();
+    let promises = [];
+    for (let i = selection.min; i <= selection.max; ++i) {
+      promises.push(
+        await this.query("/institute-citations", {
+          country: "Canada",
+          year: i,
+          keyword: this.dataObject.currentKeyword
+        })
+      );
+    }
+    for (let i = selection.min; i <= selection.max; ++i) {
+      promises.push(
+        await this.query("/institute-citations-not", {
+          country: "Canada",
+          year: i,
+          keyword: this.dataObject.currentKeyword
+        })
+      );
+    }
+    return promises;
+  }
+
+  standardDeviation(values) {
+    let sum = 0;
+    let avg = 0;
+    for (let i = 0; i < values.length; ++i) {
+      sum += values[i];
+    }
+    avg = sum / values.length;
+    let std = 0;
+    for (let i = 0; i < values.length; ++i) {
+      std += (values[i] - avg) * (values[i] - avg);
+    }
+    std /= values.length - 1;
+    std = Math.sqrt(std);
+    return { avg: avg, std: std, total: sum };
+  }
+  async query(route, params) {
+    let response = await d3.json(route, {
+      method: "POST",
+      body: JSON.stringify({
+        country_name: params.country,
+        keyword: params.keyword,
+        year: params.year
+      }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    });
+    return response;
+  }
+}
 class Tooltip {
   /**
    *
@@ -2817,6 +3063,11 @@ class MapObj {
     { width: $("#timeline").width(), height: 300 },
     [],
     "#timeline"
+  );
+
+  metricButtons = new MetricButtonGroup(
+    this.dataObject,
+    this.stdGraph.scrubber
   );
   eventGraph = new EventGraph(
     { width: $("#timeline").width(), height: 35 },
@@ -2923,6 +3174,7 @@ class MapObj {
       this.interaction,
       this.projection
     );
+    this.metricButtons.setInstitutions(this.institutes);
   }
   getLeadLagInstitutes(selection) {
     let canada = this.dataObject.getCountry("Canada");
@@ -2979,7 +3231,7 @@ class MapObj {
                 currentInstituteData.length - 1 - leadLagWindow
               ],
             total: total,
-            country_total: otherCountry.getPaperTotalAtYears(selection),
+            country_total: countryTotal,
             scale: scale,
             id: otherCountry.getInstitute(institute).getGridID()
           });
