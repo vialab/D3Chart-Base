@@ -446,6 +446,7 @@ $(function() {
     );
     mapObj.createInteraction(svg.node());
     mapObj.svg = svg;
+    mapObj.metricButtons.svg = svg;
     mapObj.interaction.addElementToTransform(countriesGroup);
   }
 

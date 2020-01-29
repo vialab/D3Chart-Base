@@ -1261,6 +1261,34 @@ let cmp = {
     }
   }
 };
+class LoadingSpinner {
+  /**
+   *
+   * @param {Array.<Element>} svg
+   * @param {Element} parent
+   */
+  constructor(svg, parent) {
+    for (let i = 0; i < svg.length; ++i) {
+      this.greyBox.push(
+        svg[i]
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", $("#map-holder").width())
+          .attr("height", $("#map-holder").height())
+          .attr("fill", "rgba(1.0,1.0,1.0,0.3)")
+      );
+    }
+    $(parent).append('<div class="lds-dual-ring"></div>');
+  }
+  greyBox = [];
+  destroy() {
+    for (let i = 0; i < this.greyBox.length; ++i) {
+      this.greyBox[i].remove();
+    }
+    $(".lds-dual-ring").remove();
+  }
+}
 class ProgressBar {
   /**
    *
@@ -1543,6 +1571,7 @@ class STDGraph {
     this.svg = d3
       .select(this.parentID)
       .append("svg")
+      .attr("id", "publishing-output")
       .attr("width", this.size.width + this.margin.left + this.margin.right)
       .attr("height", this.size.height + this.margin.bottom + this.margin.top)
       .append("g")
@@ -2345,7 +2374,6 @@ class Countries {
       this.countryNames[data[i].properties.name] = data[i].properties.iso_a3;
     }
   }
-
   render(svg, projection) {
     var self = this;
     this.group = svg
@@ -2401,6 +2429,7 @@ class Countries {
         $(`#country${acronym}`).css({
           fill: colorScale.get(data[i].leadlag)
         });
+        $(`#country${acronym}`).attr("leadlag", data[i].leadlag);
       } else {
         console.log(`${data[i].country_name} does not exist in dictionary`);
       }
@@ -2411,6 +2440,15 @@ class Countries {
         $(`#country${acronym}`).css({ fill: "url(#missing-data)" });
       }
     }
+  }
+  updateColorScale(colorScale) {
+    d3.selectAll(".country")
+      .each()
+      .style("fill", function(d) {
+        if (d3.select(this).attr("leadlag")) {
+          return colorScale.get(d3.select(this).attr("leadlag"));
+        }
+      });
   }
   reset(color = "#f5f5f5") {
     $(".country").css("fill", color);
@@ -2818,18 +2856,33 @@ class MetricButtonGroup {
    * @param {DataObject} dataObject
    * @param {Scrubber} scrubber
    * @param {Institutions} institutes
+   * @param {function({min:Number, max:Number})} deviationCountry
    */
-  constructor(dataObject, scrubber) {
+  constructor(dataObject, scrubber, deviationCountry, stdGraph, svg) {
     this.dataObject = dataObject;
     this.scrubber = scrubber;
+    this.stdGraph = stdGraph;
+    this.svg = svg;
+    this.deviationCountry = deviationCountry;
     $("#deviation-world").on("click", this.deviationToWorld.bind(this));
     $("#paper-citations").on("click", this.paperCitations.bind(this));
+    $("#consistency").on("click", this.consistency.bind(this));
+    $("#funding").on("click", this.funding.bind(this));
+    $("#deviation-country").on("click", this.deviationCountryClick.bind(this));
   }
+  stdGraph = null;
   dataObject = null;
   scrubber = null;
   institutes = null;
   fundingHistory = {};
   citationHistory = {};
+  deviationCountry = null;
+  spinner = null;
+  svg = null;
+  deviationCountryClick() {
+    let selection = this.scrubber.getSelected();
+    this.deviationCountry(selection);
+  }
   /**
    *
    * @param {Institutions} institutes
@@ -2872,9 +2925,19 @@ class MetricButtonGroup {
 
   async paperCitations() {
     let selection = this.scrubber.getSelected();
-    if (selection.min + "-" + selection.max in this.citationHistory) {
+    if (this.scrubber.isHidden()) {
       return;
     }
+    if (selection.min + "-" + selection.max in this.citationHistory) {
+      this.institutes.setRadius(
+        this.citationHistory[selection.min + "-" + selection.max]
+      );
+      return;
+    }
+    this.spinner = new LoadingSpinner(
+      [this.svg, d3.select("#publishing-output")],
+      "#map-holder"
+    );
     this.dataObject.pauseLoading();
     let promises = await this.getPaperCitations();
     let citations = {};
@@ -2903,8 +2966,10 @@ class MetricButtonGroup {
     for (const ins in citations) {
       citations[ins] = 10 + (citations[ins] / max) * 15;
     }
+    this.citationHistory[selection.min + "-" + selection.max] = citations;
     this.institutes.setRadius(citations);
     this.dataObject.unpauseLoading();
+    this.spinner.destroy();
   }
 
   consistency() {
@@ -2941,19 +3006,79 @@ class MetricButtonGroup {
         for (let i = 0; i < slopes.length; ++i) {
           std += (slopes[i] - avg) * (slopes[i] - avg);
         }
-        std /= slopes.length - 1;
+        std /= slopes.length;
         std = Math.sqrt(std);
-        result[institute] = 20 - std * 50;
+        let deviationSum = 0;
+        for (let i = 0; i < slopes.length; ++i) {
+          deviationSum += Math.abs(slopes[i] - avg) / std;
+        }
+        deviationSum /= slopes.length;
+        result[institute] = 20 - deviationSum * 5;
       }
     }
+
     this.institutes.setRadius(result);
   }
 
-  funding(){
+  async funding() {
     if (this.scrubber.isHidden()) {
       return;
     }
-    
+    let selection = this.scrubber.getSelected();
+    if (selection.min + "-" + selection.max in this.fundingHistory) {
+      this.institutes.setRadius(
+        this.fundingHistory[selection.min + "-" + selection.max]
+      );
+      return;
+    }
+    this.spinner = new LoadingSpinner(
+      [this.svg, this.stdGraph.svg],
+      "#map-holder"
+    );
+    this.dataObject.pauseLoading();
+    let results = [];
+    for (let i = selection.min; i <= selection.max; ++i) {
+      results.push(
+        await this.query("/funding-can", {
+          year: i,
+          keyword: this.dataObject.currentKeyword
+        })
+      );
+    }
+    for (let i = selection.min; i <= selection.max; ++i) {
+      results.push(
+        await this.query("/funding", {
+          year: i,
+          keyword: this.dataObject.currentKeyword
+        })
+      );
+    }
+    let funding = {};
+    for (let i = 0; i < results.length; ++i) {
+      let data = JSON.parse(results[i].body).research_orgs;
+      for (let j = 0; j < data.length; ++j) {
+        if (data[j].name in funding) {
+          funding[data[j].name] += data[j].funding;
+        } else {
+          funding[data[j].name] = data[j].funding;
+        }
+      }
+    }
+    let max = 0;
+    for (const ins in funding) {
+      let comp = funding[ins];
+      if (comp > max) {
+        max = comp;
+      }
+    }
+    for (const ins in funding) {
+      funding[ins] = 10 + (funding[ins] / max) * 15;
+    }
+
+    this.fundingHistory[selection.min + "-" + selection.max] = funding;
+    this.institutes.setRadius(funding);
+    this.dataObject.unpauseLoading();
+    this.spinner.destroy();
   }
   async getPaperCitations() {
     let selection = this.scrubber.getSelected();
@@ -3064,10 +3189,12 @@ class MapObj {
     [],
     "#timeline"
   );
-
   metricButtons = new MetricButtonGroup(
     this.dataObject,
-    this.stdGraph.scrubber
+    this.stdGraph.scrubber,
+    this.onScrubberSelection.bind(this),
+    this.stdGraph,
+    this.svg
   );
   eventGraph = new EventGraph(
     { width: $("#timeline").width(), height: 35 },
