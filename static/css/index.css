@@ -279,12 +279,15 @@ svg {
 
 .btn-group {
   width: 49%;
-  display: inline-block;
+  align-items: stretch;
   position: relative;
 }
 .metric-button {
   display: block;
-  margin: 3px;
+  margin: 5px;
+  height: 15%;
+  border-radius: 10px;
+  outline: none;
 }
 
 #scrollable {

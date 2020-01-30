@@ -17,12 +17,19 @@ let cmp = {
     countries: null,
 
     institutions: null,
+    onColorChangeCallback: null,
+    /**
+     *
+     * @param {function(colorScale)} callback
+     */ onColorChange(callback) {
+      this.onColorChangeCallback = callback;
+    },
 
     setKeyword(keyword) {
       this.keyword = keyword;
       if (this.title != null) {
         this.title.text(
-          `Canada vs the World(${this.date.min}, ${this.date.max})"${this.keyword}"`
+          `Canada vs the World (${this.date.min}, ${this.date.max}) "${this.keyword}"`
         );
       }
       return this;
@@ -31,7 +38,7 @@ let cmp = {
       this.date = date;
       if (this.title != null) {
         this.title.text(
-          `Canada vs the World(${date.min}, ${date.max})"${this.keyword}"`
+          `Canada vs the World (${date.min}, ${date.max}) "${this.keyword}"`
         );
       }
       return this;
@@ -64,7 +71,7 @@ let cmp = {
       this.title = this.group
         .append("text")
         .text(
-          `Canada vs the World(${this.date.min}, ${this.date.max})"${this.keyword}"`
+          `Canada vs the World (${this.date.min}, ${this.date.max}) "${this.keyword}"`
         )
         .attr("x", 0)
         .attr("y", 0)
@@ -181,8 +188,12 @@ let cmp = {
             self.colorVis = self.colorScale.visualize(size, self.group, true);
             self.colorVis.attr("transform", `translate(${x},${y})`);
             self.colorVis.on("click", self.swatchClick.bind(self));
+
             self.colorVis.style("cursor", "help");
             self.isSwatch = false;
+            if (self.onColorChangeCallback != null) {
+              self.onColorChangeCallback(self.colorScale);
+            }
           }
         );
         console.log(self.title.node().getBoundingClientRect().y);
@@ -1689,7 +1700,10 @@ class EventGraph {
     this.color = color;
   }
 
-  updateData(data) {
+  updateData(data, color = null) {
+    if (color != null) {
+      this.color = color;
+    }
     this.data = data;
     let self = this;
     this.svg.selectAll("." + this.eventName).remove();
@@ -2441,14 +2455,14 @@ class Countries {
       }
     }
   }
-  updateColorScale(colorScale) {
-    d3.selectAll(".country")
-      .each()
-      .style("fill", function(d) {
-        if (d3.select(this).attr("leadlag")) {
-          return colorScale.get(d3.select(this).attr("leadlag"));
-        }
-      });
+  updateColor(colorScale) {
+    let countries = $(".country");
+    for (let i = 0; i < countries.length; ++i) {
+      let lead = $(countries[i]).attr("leadlag");
+      if (lead != undefined) {
+        $(countries[i]).css({ fill: colorScale.get(Number(lead)) });
+      }
+    }
   }
   reset(color = "#f5f5f5") {
     $(".country").css("fill", color);
@@ -2515,11 +2529,13 @@ class Institutions {
     g.each(function(d, i) {
       d3.select(this)
         .append("circle")
+        .attr("class", "institution")
         .attr("cx", 0)
         .attr("cy", 0)
         .attr("r", d.scale)
         .attr("stroke", "black")
         .attr("stroke-width", 3)
+        .attr("leadlag", d.lead)
         .attr("fill", colorScale.get(d.lead));
     });
     g.each(function(d, i) {
@@ -2579,12 +2595,6 @@ class Institutions {
       .alpha(1)
       .on("tick", this.tick.bind(this));
   }
-  color(colorScale) {
-    let g = this.group.selectAll("g");
-    g.each(function(d, i) {
-      d3.select(this).attr("fill", colorScale.get(d.lead));
-    });
-  }
   setRadius(scale) {
     let g = this.group.selectAll("g");
     g.each(function(d, i) {
@@ -2615,6 +2625,11 @@ class Institutions {
   tick() {
     this.group.selectAll("g").attr("transform", function(d, i) {
       return `translate(${d.x},${d.y})`;
+    });
+  }
+  updateColor(colorScale) {
+    d3.selectAll(".institution").style("fill", function(d, i) {
+      return colorScale.get(d.lead);
     });
   }
   destroy() {
@@ -2792,6 +2807,10 @@ class GlyphLegend {
       .attr("y", box.height / 2 - radius * 0.97)
       .text("# of papers")
       .attr("font-size", 10);
+  }
+  updateColor(color) {
+    this.color = color;
+    this.svg.select("circle").attr("fill", color);
   }
 }
 class ColorScale {
@@ -3179,11 +3198,12 @@ class MapObj {
   countries = null;
   institutes = null;
   interaction = null;
+  legend = null;
   svg = null;
   projection = null;
   colorScale = new ColorScale(3);
   dataObject = new DataObject();
-  glyphLegend = new GlyphLegend(this.colorScale.get(3));
+  glyphLegend = new GlyphLegend(this.colorScale.get(1));
   stdGraph = new STDGraph(
     { width: $("#timeline").width(), height: 300 },
     [],
@@ -3246,11 +3266,23 @@ class MapObj {
     this.dataObject.onData(this.getMostChaoticLeadLagCountries.bind(this));
     this.dataObject.onData(this.getLargestSumOfCountries.bind(this));
   }
+  setLegend(legend) {
+    this.legend = legend;
+    this.legend.onColorChange(this.updateColor.bind(this));
+  }
+  updateColor(colorScale) {
+    this.countries.updateColor(colorScale);
+    if (this.institutes != null) {
+      this.institutes.updateColor(colorScale);
+    }
+    this.glyphLegend.updateColor(colorScale.get(1));
+  }
   createCountries(svg, json, projection) {
     this.countries = new Countries(json);
     this.countries.render(svg, projection);
     this.projection = projection;
   }
+
   /**
    *
    * @param {Element} svg svg element
@@ -3282,13 +3314,19 @@ class MapObj {
     console.log("resize event");
     this.mostLag(this.dataObject);
     this.mostLead(this.dataObject);
+    this.legend.setDate(selection);
   }
   onScrubberSelection(selection) {
     console.log(selection);
+    this.legend.setDate(selection);
     //update the color of the countries
     this.colorScale.setRange(this.stdGraph.scrubber.getNumYearsSelected());
     let result = this.getLeadLagCountries(selection);
-    this.countries.color(result.data, this.colorScale, result.missingData);
+    this.countries.color(
+      result.data,
+      this.legend.colorScale,
+      result.missingData
+    );
     //update the institutions
     let institutionsResult = this.getLeadLagInstitutes(selection);
     if (this.institutes != null) {
@@ -3297,7 +3335,7 @@ class MapObj {
     this.institutes = new Institutions(
       this.svg,
       institutionsResult,
-      this.colorScale,
+      this.legend.colorScale,
       this.interaction,
       this.projection
     );
@@ -3399,9 +3437,10 @@ class MapObj {
         eventLocation = { min: min + 1, max: max };
       }
     }
-    this.eventGraph3.updateData([
-      { x1: eventLocation.min, x2: eventLocation.max }
-    ]);
+    this.eventGraph3.updateData(
+      [{ x1: eventLocation.min, x2: eventLocation.max }],
+      this.legend.colorScale.get(1)
+    );
   }
   getLargestSumOfCountries(selection) {
     let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
@@ -3427,9 +3466,10 @@ class MapObj {
         eventLocation = { min: min, max: max };
       }
     }
-    this.eventGraph4.updateData([
-      { x1: eventLocation.min, x2: eventLocation.max }
-    ]);
+    this.eventGraph4.updateData(
+      [{ x1: eventLocation.min, x2: eventLocation.max }],
+      this.legend.colorScale.get(-1)
+    );
   }
   /**
    *
@@ -3500,7 +3540,10 @@ class MapObj {
         mostLead = val;
       }
     }
-    this.eventGraph.updateData([{ x1: eventRange.min, x2: eventRange.max }]);
+    this.eventGraph.updateData(
+      [{ x1: eventRange.min, x2: eventRange.max }],
+      this.legend.colorScale.get(leadLagWindow)
+    );
   }
   mostLag(dataObject) {
     let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
@@ -3525,7 +3568,10 @@ class MapObj {
         mostLead = val;
       }
     }
-    this.eventGraph2.updateData([{ x1: eventRange.min, x2: eventRange.max }]);
+    this.eventGraph2.updateData(
+      [{ x1: eventRange.min, x2: eventRange.max }],
+      this.legend.colorScale.get(-leadLagWindow)
+    );
   }
   /**
    *
