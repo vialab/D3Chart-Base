@@ -207,6 +207,12 @@ let cmp = {
         );
         this.isSwatch = true;
       }
+    },
+    updateColorScaleYears(colorScale) {
+      let transform = this.group.attr("transform");
+      this.group.remove();
+      this.visualize(colorScale, this.svg);
+      this.group.attr("transform", transform);
     }
   },
 
@@ -216,42 +222,46 @@ let cmp = {
     rect: undefined,
     start: undefined,
     end: undefined,
-
+    size: undefined,
+    svg: undefined,
+    group: undefined,
     setGradient(colorGradient) {
       this.gradient = colorGradient;
       return this;
     },
-
+    setScaleByYearsSelected(value) {
+      let tmp = [];
+      const max = value * 2 + 1;
+      for (let i = 0; i < max; ++i) {
+        tmp.push(-value + i);
+      }
+      this.scale = tmp;
+      return this;
+    },
     setScale(values) {
       this.scale = values;
       return this;
     },
     updateScale() {
-      const end = this.scale.length - 1;
-      this.rect
-        .selectAll("rect.scale")
-        .data(this.scale)
-        .attr(
-          "fill",
-          function(d, i) {
-            return this.gradient(i / end);
-          }.bind(this)
-        );
-      this.start.attr("fill", this.gradient(0));
-      this.end.attr("fill", this.gradient(100));
+      let transform = this.group.attr("transform");
+      this.group.remove();
+      this.visualize(this.size, this.svg, true);
+      this.group.attr("transform", transform);
     },
     visualize(size, svg, renderText = false) {
       const radius = size.height / 2;
       const end = this.scale.length - 1;
       const cy = size.height / 2;
+      this.size = size;
+      this.svg = svg;
+      this.group = svg.append("g");
 
-      let group = svg.append("g");
-
-      this.rect = group
+      this.rect = this.group
         .selectAll("rect.scale")
         .data(this.scale)
         .enter()
         .append("rect")
+        .attr("class", "rect.scale")
         .attr("x", function(d, i) {
           return i * size.width;
         })
@@ -265,14 +275,14 @@ let cmp = {
           }.bind(this)
         );
 
-      this.start = group
+      this.start = this.group
         .append("circle")
         .attr("cx", 0)
         .attr("cy", cy)
         .attr("r", radius)
         .attr("fill", this.gradient(0));
 
-      this.end = group
+      this.end = this.group
         .append("circle")
         .attr("cx", this.scale.length * size.width)
         .attr("cy", cy)
@@ -280,7 +290,7 @@ let cmp = {
         .attr("fill", this.gradient(100));
 
       if (renderText) {
-        let text = group
+        let text = this.group
           .selectAll("text")
           .data(this.scale)
           .enter()
@@ -297,7 +307,7 @@ let cmp = {
           .attr("y", rectBBox.height + textBBox.height)
           .attr("text-anchor", "middle");
       }
-      return group;
+      return this.group;
     },
     get(value) {
       let index = this.scale.indexOf(value);
@@ -3269,6 +3279,10 @@ class MapObj {
   setLegend(legend) {
     this.legend = legend;
     this.legend.onColorChange(this.updateColor.bind(this));
+    this.legend.colorScale.setScaleByYearsSelected(
+      this.stdGraph.scrubber.getNumYearsSelected()
+    );
+    this.legend.updateColorScaleYears(this.legend.colorScale);
   }
   updateColor(colorScale) {
     this.countries.updateColor(colorScale);
@@ -3312,6 +3326,10 @@ class MapObj {
   }
   onScrubberResize(selection) {
     console.log("resize event");
+    this.legend.colorScale.setScaleByYearsSelected(
+      this.stdGraph.scrubber.getNumYearsSelected()
+    );
+    this.legend.updateColorScaleYears(this.legend.colorScale);
     this.mostLag(this.dataObject);
     this.mostLead(this.dataObject);
     this.legend.setDate(selection);

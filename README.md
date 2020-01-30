@@ -26,4 +26,4 @@ I also implemented the algorithm from the 'whom leads who' lead-lag paper, find 
 - Adam Bradley PhD, Research Lead
 - Chris Collins PhD, Research Supervisor
 - Nathan Beals, Software Developer
-- Zachary Hills MsC, Software Developer
+- Zachary Hills MSc, Software Developer
