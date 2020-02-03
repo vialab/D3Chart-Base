@@ -63,9 +63,9 @@ class ChartView {
       data.chartName,
       { x: uniformSize, y: uniformSize }
     );
-    this.charts[view][elementId].chart.getParentOnClick(
-      this.chartClicked.bind(this)
-    );
+    //this.charts[view][elementId].chart.getParentOnClick(
+    //  this.chartClicked.bind(this)
+    //);
     this.charts[view][elementId].chart.getGraphOnShiftClick(
       this.shiftAggregate.bind(this)
     );
@@ -105,7 +105,6 @@ class ChartView {
       this.viewList[view].setAttribute("id", `${view}`);
       this.viewList[view].setAttribute("class", "multi-container");
       this.viewList[view].setAttribute("itemscale", 1.0);
-      this.viewList[view].setAttribute("marginBottom", "20px");
       this.parent.appendChild(this.viewList[view]);
       this.charts[view] = {};
       this.scaleViews(this.parent.children);

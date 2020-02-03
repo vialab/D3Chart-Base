@@ -9,14 +9,17 @@ module.exports = class CallReferenceTimer {
   incrementCalls() {
     if (!this.checkTime()) {
       if (this.numberOfCalls > this.maxNumberOfCalls) {
-        return false;
+        this.sleepFor(this.timeTillNextInterval());
+        this.setInterval();
+        this.numberOfCalls = 1;
+        return;
       }
       this.numberOfCalls += 1;
-      return true;
+      return;
     } else {
       this.setInterval();
       this.numberOfCalls = 1;
-      return true;
+      return;
     }
   }
   setInterval() {
@@ -25,8 +28,20 @@ module.exports = class CallReferenceTimer {
   checkTime() {
     return this.getTime() > this.nextInterval;
   }
-
+  timeTillNextInterval() {
+    return this.nextInterval - this.getTime();
+  }
   getTime() {
     return Math.floor(Date.now() / 1000);
+  }
+  /**
+   *
+   * @param {Number} ms
+   */
+  sleepFor(time) {
+    while (new Date().now() < time) {
+      console.log("doing nothing");
+      /* do nothing */
+    }
   }
 };

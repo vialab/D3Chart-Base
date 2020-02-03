@@ -62,27 +62,24 @@ if (authorizationExpiration(lastAuthorization)) {
  * @param  {} resp
  */
 const queryDimensions = async (req, resp) => {
-  if (timer.incrementCalls()) {
-    console.log(req.body.query);
-    const options = {
-      url: api_url,
-      method: "POST",
-      headers: {
-        Authorization: jwt_token.Authorization
-      },
-      body: req.body.query
-    };
+  timer.incrementCalls();
+  console.log(req.body.query);
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: req.body.query
+  };
 
-    request.post(options, (error, res) => {
-      if (error) {
-        console.log(error);
-        throw error;
-      }
-      resp.send(res);
-    });
-  } else {
-    console.log("Reached API limit");
-  }
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+    resp.send(res);
+  });
 };
 
 function sleepFor(sleepDuration) {
@@ -97,6 +94,7 @@ const queryNotCanada = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",
@@ -121,6 +119,7 @@ const queryCanada = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",
@@ -141,70 +140,61 @@ const queryCanada = async function(req, resp) {
 };
 
 const queryCategory = async function(req, resp) {
-  if (timer.incrementCalls()) {
-    const options = {
-      url: api_url,
-      method: "POST",
-      headers: {
-        Authorization: jwt_token.Authorization
-      },
-      body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return category_for limit 1000`
-    };
-    console.log(options);
-    request.post(options, (error, res) => {
-      if (error) {
-        console.log(error);
-      }
+  timer.incrementCalls();
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return category_for limit 1000`
+  };
+  console.log(options);
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+    }
 
-      console.log(res.body);
-      resp.status(200).send(res);
-    });
-  } else {
-    console.log("Reached API limit");
-  }
+    console.log(res.body);
+    resp.status(200).send(res);
+  });
 };
 
 const queryInstituteCitationsCan = async function(req, resp) {
-  if (timer.incrementCalls()) {
-    const options = {
-      url: api_url,
-      method: "POST",
-      headers: {
-        Authorization: jwt_token.Authorization
-      },
-      body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
-    };
-    request.post(options, (error, res) => {
-      if (error) {
-        console.log(error);
-      }
-      console.log(res);
-      resp.status(200).send(res);
-    });
-  } else {
-    console.log("Reached API limit");
-  }
+  timer.incrementCalls();
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
+  };
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+    }
+    console.log(res);
+    resp.status(200).send(res);
+  });
 };
 const queryInstituteCitationsNotCan = async function(req, resp) {
-  if (timer.incrementCalls()) {
-    const options = {
-      url: api_url,
-      method: "POST",
-      headers: {
-        Authorization: jwt_token.Authorization
-      },
-      body: `search publications for "${req.body.keyword}" where research_org_country_names!="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
-    };
-    request.post(options, (error, res) => {
-      if (error) {
-        console.log(error);
-      }
-      console.log(res);
-      resp.status(200).send(res);
-    });
-  } else {
-    console.log("Reached API limit");
-  }
+  timer.incrementCalls();
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications for "${req.body.keyword}" where research_org_country_names!="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
+  };
+  request.post(options, (error, res) => {
+    if (error) {
+      console.log(error);
+    }
+    console.log(res);
+    resp.status(200).send(res);
+  });
 };
 
 const queryCanadaFunding = async function(req, resp) {
@@ -212,6 +202,7 @@ const queryCanadaFunding = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",
@@ -235,6 +226,7 @@ const queryFunding = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",

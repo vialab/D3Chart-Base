@@ -24,7 +24,6 @@ let cmp = {
      */ onColorChange(callback) {
       this.onColorChangeCallback = callback;
     },
-
     setKeyword(keyword) {
       this.keyword = keyword;
       if (this.title != null) {
@@ -476,7 +475,14 @@ let cmp = {
     categories: {},
     recommended: [],
     numberRecommended: 4,
-    async getData(keyword, otherName, year) {
+    /**
+     *
+     * @param {string} keyword
+     * @param {string} otherName
+     * @param {{min:Number, max:Number}} year
+     * @param {DataObject} dataObject
+     */
+    async getData(keyword, otherName, year, dataObject) {
       let response = [];
       for (let i = year.min; i <= year.max; ++i) {
         response.push(
@@ -487,7 +493,7 @@ let cmp = {
           })
         );
       }
-      if (cmp.info.canadaCategories == null) {
+      if (!("categories" in dataObject.canadaCategories)) {
         let canResponse = [];
         for (let i = year.min; i <= year.max; ++i) {
           canResponse.push(
@@ -498,33 +504,56 @@ let cmp = {
             })
           );
         }
-        cmp.info.canadaCategories = { categories: {} };
+        dataObject.canadaCategories = { categories: {} };
         for (let i = 0; i < canResponse.length; ++i) {
           let obj = JSON.parse(canResponse[i].body);
           let categories = obj.category_for;
           for (const category in categories) {
             if (
-              categories[category].name in cmp.info.canadaCategories.categories
+              categories[category].name in
+              dataObject.canadaCategories.categories
             ) {
-              cmp.info.canadaCategories.categories[
+              dataObject.canadaCategories.categories[
                 categories[category].name
               ].push(categories[category].count);
             } else {
-              cmp.info.canadaCategories.categories[
+              dataObject.canadaCategories.categories[
                 categories[category].name
               ] = [];
-              cmp.info.canadaCategories.categories[
+              dataObject.canadaCategories.categories[
                 categories[category].name
               ].push(categories[category].count);
             }
           }
-          cmp.info.normalizeCategories();
+        }
+        for (const category in dataObject.canadaCategories.categories) {
+          let sum = dataObject.canadaCategories.categories[category].reduce(
+            function(acc, cur) {
+              return acc + cur;
+            },
+            0
+          );
+          dataObject.canadaCategories.categories[
+            category
+          ] = dataObject.canadaCategories.categories[category].map(x => {
+            return x / sum;
+          });
         }
       }
       return response;
     },
-    async visualize(canada, other, otherName, year) {
-      let res = await this.getData(cmp.info.currentKeyword, otherName, year);
+    /**
+     *
+     * @param {*} canada
+     * @param {*} other
+     * @param {string} keyword
+     * @param {string} otherName
+     * @param {{min:Number, max:Number}} year
+     * @param {DataObject} dataObject
+     */
+    async visualize(canada, other, keyword, otherName, year, dataObject) {
+      dataObject.pauseLoading();
+      let res = await this.getData(keyword, otherName, year, dataObject);
       let categories = this.parse(res);
       var self = this;
       $("#graph-holder").remove();
@@ -541,7 +570,7 @@ let cmp = {
           e.stopPropagation();
         }
       });
-      $("#graph-holder").one(
+      $("#graph-holder").on(
         "animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
         function() {
           self.chartView = new ChartView("graph-holder");
@@ -582,11 +611,49 @@ let cmp = {
 
           $("#recommended-view").css({ "overflow-y": "hidden" });
           $("#main-view").css({ "overflow-y": "hidden" });
+
+          $("#category-view").append(
+            `<div id=${"total"} display="block" class="category" name=${"total"}><div display="block" style='background-color:#ffffff' id=${"head" +
+              "total"}><p>${"\t\ttotal"}</p></div></div>`
+          );
+          $("#" + "total").on("click", function() {
+            self.chartView.clearView("main-view");
+            self.chartView.addChart(
+              "main-view",
+              {
+                xdomain: [year.min, year.max],
+                ydomain: [0.0, 1.0],
+                lines: [
+                  {
+                    name: "Canada",
+                    rawdata: Array.from(canada, (d, i) => {
+                      return { x: year.min + i, y: d };
+                    }),
+                    data: Array.from(canada, (d, i) => {
+                      return { x: year.min + i, y: d };
+                    })
+                  },
+                  {
+                    name: otherName,
+                    rawdata: Array.from(other, (d, i) => {
+                      return { x: year.min + i, y: d };
+                    }),
+                    data: Array.from(other, (d, i) => {
+                      return { x: year.min + i, y: d };
+                    })
+                  }
+                ]
+              },
+              data => {
+                data.chartName = "total";
+              }
+            );
+          });
           let counter = 0;
           for (const category in categories) {
-            if (category in cmp.info.canadaCategories.categories) {
+            if (category in dataObject.canadaCategories.categories) {
               let line1 = Array.from(
-                cmp.info.canadaCategories.categories[category],
+                dataObject.canadaCategories.categories[category],
                 (d, i) => {
                   return d;
                 }
@@ -599,7 +666,7 @@ let cmp = {
             }
           }
           for (const category in categories) {
-            if (category in cmp.info.canadaCategories.categories) {
+            if (category in dataObject.canadaCategories.categories) {
               if (self.isRecommended(category)) {
                 self.chartView.addChart(
                   "recommended-view",
@@ -610,13 +677,13 @@ let cmp = {
                       {
                         name: "Canada",
                         rawdata: Array.from(
-                          cmp.info.canadaCategories.categories[category],
+                          dataObject.canadaCategories.categories[category],
                           (d, i) => {
                             return { x: year.min + i, y: d };
                           }
                         ),
                         data: Array.from(
-                          cmp.info.canadaCategories.categories[category],
+                          dataObject.canadaCategories.categories[category],
                           (d, i) => {
                             return { x: year.min + i, y: d };
                           }
@@ -641,18 +708,20 @@ let cmp = {
               }
               let category_id = "category" + counter++;
               self.categories[category_id] = category;
+              let codeIndex = category.indexOf(" ");
+              let space = "";
+              for (let i = 0; i < 3 - codeIndex; ++i) {
+                space += " ";
+              }
               $("#category-view").append(
-                `<div id=${category_id} display="block" class="category" name=${category}><div display="block" style='background-color:#D3D3D3' id=${"head" +
-                  category_id}>${category}  +</div></div>`
+                `<div id=${category_id} display="block" class="category" name=${category}><div display="block" style='background-color:#ffffff' id=${"head" +
+                  category_id}><p>${"    " +
+                  category.replace(" ", space + "\t\t")} </p></div></div>`
               );
               $("#" + category_id).on("click", function() {
                 if ($("#" + category_id).find("svg").length == 0) {
                   self.chartView.clearView("main-view");
                   let name = self.categories[category_id];
-                  //chart = new D3Chart("#" + category_id, true, name, {
-                  //  x: width - padding,
-                  //  y: height - padding
-                  //});
                   self.chartView.addChart(
                     "main-view",
                     {
@@ -662,13 +731,13 @@ let cmp = {
                         {
                           name: "Canada",
                           rawdata: Array.from(
-                            cmp.info.canadaCategories.categories[name],
+                            dataObject.canadaCategories.categories[name],
                             (d, i) => {
                               return { x: year.min + i, y: d };
                             }
                           ),
                           data: Array.from(
-                            cmp.info.canadaCategories.categories[name],
+                            dataObject.canadaCategories.categories[name],
                             (d, i) => {
                               return { x: year.min + i, y: d };
                             }
@@ -699,6 +768,7 @@ let cmp = {
           }
         }
       );
+      dataObject.unpauseLoading();
     },
     parse(res) {
       let result = {};
@@ -885,10 +955,10 @@ class Scrubber {
     const d0 = d3.event.selection.map(this.scales.x.invert);
     d0[0] = Math.round(d0[0]);
     d0[1] = Math.round(d0[1]);
-    if (d0[1] - d0[0] > this.maxSelection) {
+    if (d0[1] - d0[0] >= this.maxSelection) {
       d0[0] += d0[1] - d0[0] - this.maxSelection;
     }
-    if (d0[1] - d0[0] < this.minSelection) {
+    if (d0[1] - d0[0] <= this.minSelection) {
       d0[1] += this.minSelection - (d0[1] - d0[0]);
       if (d0[1] > this.maxYear) {
         let offset = d0[1] - this.maxYear;
@@ -948,8 +1018,8 @@ class Scrubber {
   minYear = 1950;
   maxYear = new Date().getFullYear();
   currentSelection = {
-    min: new Date().getFullYear() - 3,
-    max: new Date().getFullYear()
+    min: new Date().getFullYear() - 7,
+    max: new Date().getFullYear() - 4
   };
   onBrushedCallbacks = [];
   /**
@@ -1036,6 +1106,8 @@ class STDGraph {
     if (this.scrubber != null && this.data.length > 12) {
       this.scrubber.visible();
     }
+    let self = this;
+
     let maxY = Math.max(...data.map(val => val.y));
     let minY = Math.min(...data.map(val => val.y));
 
@@ -1053,8 +1125,8 @@ class STDGraph {
         .duration(3000)
         .call(this.axii.y);
     }
-    let self = this;
-    var u = this.svg.selectAll(".line-path").data([this.data]);
+
+    var u = this.svg.selectAll(".line-path").data([data]);
 
     this.scrubber.setExtent({ min: minX, max: maxX });
     // Updata the line
@@ -1150,8 +1222,65 @@ class STDGraph {
       .attr("fill", "none")
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2.5);
+    this.svg
+      .append("rect")
+      .attr("class", "deadzone")
+      .attr("x", this.scales.x(this.xRange[1] - 4))
+      .attr("y", -this.margin.top / 2)
+      .attr(
+        "width",
+        this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - 4)
+      )
+      .attr("height", this.size.height + this.margin.top / 2)
+      .attr("rx", 0)
+      .attr("ry", 0)
+      .style("fill", "#FF000033")
+      .attr("stroke", "none");
+    this.svg
+      .append("rect")
+      .attr("class", "deadzone")
+      .attr("x", this.scales.x(this.xRange[0]))
+      .attr("y", -this.margin.top / 2)
+      .attr("width", this.scales.x(this.xRange[0] + 4))
+      .attr("height", this.size.height + this.margin.top / 2)
+      .attr("rx", 0)
+      .attr("ry", 0)
+      .style("fill", "#FF000033")
+      .attr("stroke", "none");
+
     this.scrubber = new Scrubber(this.size, this.svg, this.scales);
+    this.scrubber.onResize(this.onScrubberResize.bind(this));
     this.scrubber.hidden();
+  }
+  onScrubberResize(selection) {
+    let years = this.scrubber.getNumYearsSelected();
+
+    this.svg.selectAll(".deadzone").remove();
+    this.svg
+      .append("rect")
+      .attr("class", "deadzone")
+      .attr("x", this.scales.x(this.xRange[1] - years))
+      .attr("y", -this.margin.top / 2)
+      .attr(
+        "width",
+        this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - years)
+      )
+      .attr("height", this.size.height + this.margin.top / 2)
+      .attr("rx", 0)
+      .attr("ry", 0)
+      .style("fill", "#FF000033")
+      .attr("stroke", "none");
+    this.svg
+      .append("rect")
+      .attr("class", "deadzone")
+      .attr("x", this.scales.x(this.xRange[0]))
+      .attr("y", -this.margin.top / 2)
+      .attr("width", this.scales.x(this.xRange[0] + years))
+      .attr("height", this.size.height + this.margin.top / 2)
+      .attr("rx", 0)
+      .attr("ry", 0)
+      .style("fill", "#FF000033")
+      .attr("stroke", "none");
   }
 }
 class EventGraph {
@@ -1580,6 +1709,24 @@ class CountryData {
   }
   /**
    *
+   * @param {{min:Number, max:Number}} range
+   * @returns {Array.<Number>}
+   * returns empty array if country is missing any year of data
+   */
+
+  getPapersAtYears(range) {
+    let result = [];
+    for (let i = range.min; i <= range.max; ++i) {
+      if (this.hasTotal(i)) {
+        result.push(this.getTotal(i));
+      } else {
+        return [];
+      }
+    }
+    return result;
+  }
+  /**
+   *
    * @param {string} year - year of interest
    * @param {Number} value - country total
    */
@@ -1631,6 +1778,8 @@ class DataObject {
   minYearLoaded = 1950;
   intervalRate = 5000;
   countries = {};
+
+  canadaCategories = {};
   currentKeyword = "";
   callback = null;
   intervalVar = null;
@@ -1889,7 +2038,13 @@ class Countries {
       this.countryNames[data[i].properties.name] = data[i].properties.iso_a3;
     }
   }
-  render(svg, projection) {
+  /**
+   *
+   * @param {Element} svg
+   * @param {*} projection
+   * @param {function(string)} onclickCallback
+   */
+  render(svg, projection, onclickCallback) {
     var self = this;
     this.group = svg
       .selectAll("path")
@@ -1928,7 +2083,9 @@ class Countries {
         self.tooltip.destroy();
         self.tooltip = null;
       })
-      .on("click", function(d, i) {});
+      .on("click", function(d, i) {
+        onclickCallback(d.properties.name);
+      });
   }
   /**
    *
@@ -2784,7 +2941,7 @@ class MapObj {
   }
   createCountries(svg, json, projection) {
     this.countries = new Countries(json);
-    this.countries.render(svg, projection);
+    this.countries.render(svg, projection, this.countryClick.bind(this));
     this.projection = projection;
   }
 
@@ -3156,7 +3313,40 @@ class MapObj {
     }
     return sum;
   }
-
+  countryClick(countryName) {
+    if (this.stdGraph.scrubber.isHidden()) {
+      return;
+    }
+    let temp = cmp.graphwindow;
+    let canada = this.dataObject
+      .getCountry("Canada")
+      .getPapersAtYears(this.stdGraph.scrubber.getSelected());
+    let other = this.dataObject
+      .getCountry(countryName)
+      .getPapersAtYears(this.stdGraph.scrubber.getSelected());
+    if (canada.length && other.length) {
+      let sum = canada.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      canada = canada.map(function(d) {
+        return d / sum;
+      });
+      sum = other.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      other = other.map(function(d) {
+        return d / sum;
+      });
+      temp.visualize(
+        canada,
+        other,
+        this.dataObject.currentKeyword,
+        countryName,
+        this.stdGraph.scrubber.getSelected(),
+        this.dataObject
+      );
+    }
+  }
   reset() {
     if (this.countries != null) {
       this.countries.reset();
