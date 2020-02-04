@@ -42,6 +42,9 @@ let cmp = {
       }
       return this;
     },
+    raise() {
+      this.group.raise();
+    },
     /**
      *
      * @param {Object} colorScale - cmp.colorScale object
@@ -849,19 +852,23 @@ class LoadingSpinner {
    * @param {Array.<Element>} svg
    * @param {Element} parent
    */
-  constructor(svg, parent) {
+  constructor(svg, parent = null) {
     for (let i = 0; i < svg.length; ++i) {
+      let box = svg[i].node().getBoundingClientRect();
       this.greyBox.push(
         svg[i]
           .append("rect")
           .attr("x", 0)
           .attr("y", 0)
-          .attr("width", $("#map-holder").width())
-          .attr("height", $("#map-holder").height())
-          .attr("fill", "rgba(1.0,1.0,1.0,0.3)")
+          .attr("width", box.width)
+          .attr("height", box.height)
+          .attr("fill", "rgba(0.8,0.8,0.8,0.3)")
+          .attr("stroke", "none")
       );
     }
-    $(parent).append('<div class="lds-dual-ring"></div>');
+    if (parent != null) {
+      $(parent).append('<div class="lds-dual-ring"></div>');
+    }
   }
   greyBox = [];
   destroy() {
@@ -936,7 +943,7 @@ class Scrubber {
     this.minYear = extent.min;
     this.maxYear = extent.max;
     this.maxSelection = Math.min(
-      ...[10, Math.floor((this.maxYear - this.minYear) / 3)]
+      ...[10, Math.floor((this.maxYear - this.minYear) / 4)]
     );
   }
   setOpacity(value) {
@@ -960,11 +967,6 @@ class Scrubber {
     }
     if (d0[1] - d0[0] <= this.minSelection) {
       d0[1] += this.minSelection - (d0[1] - d0[0]);
-      if (d0[1] > this.maxYear) {
-        let offset = d0[1] - this.maxYear;
-        d0[1] = this.maxYear;
-        d0[0] -= offset;
-      }
     }
     let selection = d0[1] - d0[0] + 1;
     if (d0[1] > this.maxYear - selection) {
@@ -1093,6 +1095,7 @@ class STDGraph {
 
   line = null;
   scrubber = null;
+  loadingSpinner = null;
 
   raise() {
     this.svg.raise();
@@ -1105,6 +1108,7 @@ class STDGraph {
     this.data = data;
     if (this.scrubber != null && this.data.length > 12) {
       this.scrubber.visible();
+      this.loadingSpinner.destroy();
     }
     let self = this;
 
@@ -1251,6 +1255,9 @@ class STDGraph {
     this.scrubber = new Scrubber(this.size, this.svg, this.scales);
     this.scrubber.onResize(this.onScrubberResize.bind(this));
     this.scrubber.hidden();
+    this.loadingSpinner = new LoadingSpinner([
+      d3.select(this.parentID).select("svg")
+    ]);
   }
   onScrubberResize(selection) {
     let years = this.scrubber.getNumYearsSelected();
@@ -2123,7 +2130,9 @@ class Countries {
     }
   }
   reset(color = "#f5f5f5") {
-    $(".country").css("fill", color);
+    $(".country")
+      .removeAttr("leadlag")
+      .css("fill", color);
   }
   /**
    *
@@ -2134,7 +2143,26 @@ class Countries {
   }
 }
 class Institutions {
-  constructor(svg, data, colorScale, mapInteraction, projection) {
+  /**
+   *
+   * @param {Element} svg
+   * @param {*} data
+   * @param {ColorScale} colorScale
+   * @param {MapInteraction} mapInteraction
+   * @param {*} projection
+   * @param {function(box,d):Tooltip} toolTipFunction
+   */
+  constructor(
+    svg,
+    data,
+    colorScale,
+    mapInteraction,
+    projection,
+    toolTipFunction = null
+  ) {
+    if (toolTipFunction != null) {
+      this.tooltipFunction = toolTipFunction;
+    }
     let location_ids = Array.from(data, x => x.id);
     let self = this;
     this.getLocations(location_ids, function(res) {
@@ -2223,6 +2251,10 @@ class Institutions {
         .select("circle")
         .node()
         .getBoundingClientRect();
+      if (self.tooltipFunction != null) {
+        self.tooltip = self.tooltipFunction(box, d);
+        return;
+      }
       self.tooltip = new Tooltip(
         "#map-holder",
         box,
@@ -2301,6 +2333,7 @@ class Institutions {
   tooltip = null;
   simulation = null;
   collision = null;
+  tooltipFunction = null;
 }
 class MapInteraction {
   easyPZ = null;
@@ -2858,6 +2891,7 @@ class MapObj {
   interaction = null;
   legend = null;
   svg = null;
+  spinner = null;
   projection = null;
   colorScale = new ColorScale(3);
   dataObject = new DataObject();
@@ -2938,6 +2972,7 @@ class MapObj {
       this.institutes.updateColor(colorScale);
     }
     this.glyphLegend.updateColor(colorScale.get(1));
+    this.legend.raise();
   }
   createCountries(svg, json, projection) {
     this.countries = new Countries(json);
@@ -2980,7 +3015,10 @@ class MapObj {
     this.legend.updateColorScaleYears(this.legend.colorScale);
     this.mostLag(this.dataObject);
     this.mostLead(this.dataObject);
+    this.getLargestSumOfCountries(selection);
+    this.getMostChaoticLeadLagCountries(selection);
     this.legend.setDate(selection);
+    this.legend.raise();
   }
   onScrubberSelection(selection) {
     console.log(selection);
@@ -3003,9 +3041,11 @@ class MapObj {
       institutionsResult,
       this.legend.colorScale,
       this.interaction,
-      this.projection
+      this.projection,
+      this.onHoverToolTip.bind(this)
     );
     this.metricButtons.setInstitutions(this.institutes);
+    this.legend.raise();
   }
   getLeadLagInstitutes(selection) {
     let canada = this.dataObject.getCountry("Canada");
@@ -3346,6 +3386,200 @@ class MapObj {
         this.dataObject
       );
     }
+  }
+  onHoverToolTip(box, d) {
+    console.log(d);
+    let result = new Tooltip(
+      "#map-holder",
+      box,
+      `<p>${d.country_name} total papers: ${d.country_total} <br>${d.name} total papers: ${d.total}</p>`
+    );
+    let visBox = result.vis.node().getBoundingClientRect();
+    let svg = result.vis
+      .append("svg")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 4)
+      .attr("display", "block");
+    let ins = this.dataObject.getCountry(d.country_name).getInstitute(d.name);
+    let canada = this.dataObject.getCountry("Canada");
+    let selection = this.stdGraph.scrubber.getSelected();
+    let canLine = [];
+    let insLine = [];
+    for (let i = selection.min; i <= selection.max; ++i) {
+      insLine.push({ x: i, y: ins.getPapers(i) });
+      canLine.push({ x: i, y: canada.getTotal(i) });
+    }
+    let sum = canLine.reduce(function(acc, cur) {
+      return acc + cur.y;
+    }, 0);
+    canLine = canLine.map(function(d) {
+      return { x: d.x, y: d.y / sum };
+    });
+    sum = insLine.reduce(function(acc, cur) {
+      return acc + cur.y;
+    }, 0);
+    insLine = insLine.map(function(d) {
+      return { x: d.x, y: d.y / sum };
+    });
+    let minY = Math.min(
+      ...insLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          canLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    let maxY = Math.max(
+      ...canLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          insLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    let xScale = d3
+      .scaleLinear()
+      .domain([selection.min, selection.max])
+      .range([0, visBox.width]);
+    let yScale = d3
+      .scaleLinear()
+      .domain([minY, maxY])
+      .range([visBox.height / 4, 0]);
+
+    svg
+      .append("path")
+      .datum(insLine)
+      .attr("class", "path1")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+    svg
+      .append("path")
+      .datum(canLine)
+      .attr("class", "path2")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+
+    let svg2 = result.vis
+      .append("svg")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 4)
+      .attr("display", "block");
+    let leadLagSelection = {
+      min: selection.min + d.lead,
+      max: selection.max + d.lead
+    };
+    insLine = [];
+    for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
+      insLine.push({ x: i - d.lead, y: ins.getPapers(i) });
+    }
+    sum = insLine.reduce(function(acc, cur) {
+      return acc + cur.y;
+    }, 0);
+    insLine = insLine.map(function(d) {
+      return { x: d.x, y: d.y / sum };
+    });
+    minY = Math.min(
+      ...insLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          canLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    maxY = Math.max(
+      ...canLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          insLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    xScale = d3
+      .scaleLinear()
+      .domain([selection.min, selection.max])
+      .range([0, visBox.width]);
+    yScale = d3
+      .scaleLinear()
+      .domain([minY, maxY])
+      .range([visBox.height / 4, 0]);
+    svg2
+      .append("path")
+      .datum(insLine)
+      .attr("class", "path1")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+    svg2
+      .append("path")
+      .datum(canLine)
+      .attr("class", "path2")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+
+    return result;
   }
   reset() {
     if (this.countries != null) {
