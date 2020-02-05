@@ -617,7 +617,7 @@ let cmp = {
 
           $("#category-view").append(
             `<div id=${"total"} display="block" class="category" name=${"total"}><div display="block" style='background-color:#ffffff' id=${"head" +
-              "total"}><p>${"\t\ttotal"}</p></div></div>`
+              "total"}><p style="font-family:helvetica">${"\t\tTotal"}</p></div></div>`
           );
           $("#" + "total").on("click", function() {
             self.chartView.clearView("main-view");
@@ -648,7 +648,7 @@ let cmp = {
                 ]
               },
               data => {
-                data.chartName = "total";
+                data.chartName = "Total";
               }
             );
           });
@@ -718,7 +718,7 @@ let cmp = {
               }
               $("#category-view").append(
                 `<div id=${category_id} display="block" class="category" name=${category}><div display="block" style='background-color:#ffffff' id=${"head" +
-                  category_id}><p>${"    " +
+                  category_id}><p style="font-family:helvetica">${"    " +
                   category.replace(" ", space + "\t\t")} </p></div></div>`
               );
               $("#" + category_id).on("click", function() {
@@ -2972,6 +2972,7 @@ class MapObj {
       this.institutes.updateColor(colorScale);
     }
     this.glyphLegend.updateColor(colorScale.get(1));
+    this.colorScale = colorScale;
     this.legend.raise();
   }
   createCountries(svg, json, projection) {
@@ -3579,7 +3580,62 @@ class MapObj {
       .attr("stroke-width", 2.5)
       .style("opacity", "0.5");
 
+    let svg5 = result.vis
+      .append("svg")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 2)
+      .attr("display", "block");
+
+    svg5
+      .append("circle")
+      .attr("cx", visBox.width / 2)
+      .attr("cy", visBox.height / 4)
+      .attr("r", visBox.height / 4 - 3)
+      .attr("stroke-width", 3)
+      .style("fill", this.colorScale.get(Number(d.lead)));
+
+    svg5
+      .append("text")
+      .attr("dx", visBox.width / 2)
+      .attr("dy", visBox.height / 4)
+      .style("fill", "white")
+      .attr("stroke", "black")
+      .attr("stroke-width", 0.5)
+      .attr("font-family", "helvetica")
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .text(d.lead);
+
     return result;
+  }
+
+  recommendedAnalysis(mostLead, mostLag, largestTotalLeadLag) {
+    let numOfCountries = { mostLead: 0, mostLag: 0, largestTotalLeadLag: 0 };
+    let recommendedValue = 0;
+    for (const country in this.dataObject.countries) {
+      let result = this.dataObject
+        .getCountry(country)
+        .getPapersAtYears(mostLead.selection);
+      if (result.length) {
+        numOfCountries.mostLead += 1;
+      }
+      result = this.dataObject
+        .getCountry(country)
+        .getPapersAtYears(mostLag.selection);
+      if (result.length) {
+        numOfCountries.mostLag += 1;
+      }
+      result = this.dataObject
+        .getCountry(country)
+        .getPapersAtYears(largestTotalLeadLag.selection);
+      if (result.length) {
+        numOfCountries.largestTotalLeadLag += 1;
+      }
+    }
+    let countryLeadLag = this.getLeadLagCountries(mostLead.selection);
+
+    countryLeadLag = this.getLeadLagCountries(mostLag.selection);
+    countryLeadLag = this.getLeadLagCountries(largestTotalLeadLag.selection);
   }
   reset() {
     if (this.countries != null) {

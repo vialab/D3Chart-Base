@@ -33,15 +33,15 @@ class D3Chart {
 		width: 146,
 		title: 'Legend',
 		padding: {
-			title: 32,
+			title: 60,
 			top: 6,
 			bottom: 4,
 			left: 4,
 			right: 4,
 		},
 		spacing: {
-			itemSpacing: 2,
-			itemSize: 16,
+			itemSpacing: 5,
+			itemSize: 30,
 		},
 		outlineColour: '#808080',
 		outlineWidth: 1,
@@ -482,7 +482,7 @@ class D3Chart {
 
 		this.legend.titleNode = this.legendBase.append('text');
 
-		// this.updateLegend();
+		this.updateLegend();
 	}
 	
 	/**
@@ -526,12 +526,14 @@ class D3Chart {
 		this.legend.clipArea
 			.attr('x', this.legend.padding.left)
 			.attr('y', 0)
-			.attr('width', this.legend.width - this.legend.padding.right - this.legend.padding.left)
+			.attr('width', this.chartWidth - this.legend.padding.right - this.legend.padding.left)
 			.attr('height', this.chartHeight);
 
 		this.legend.titleNode.text(this.legend.titleText)
 			.attr('x', 0)
-			.attr('dy', 17);
+			.attr('dy', 30)
+			.attr("font-size", (this.chartWidth - this.legend.padding.right - this.legend.padding.left)*0.003+"em")
+			.attr("font-family", "helvetica");
 
 		this.legend.entries = this.legendBase.selectAll('.legend')
 			.data(this.data, d => d.name)
@@ -545,7 +547,8 @@ class D3Chart {
 						this.legend.dataNodes[d.name] = {
 							node: d3.select(nodes[i]),
 							update: (val) => {
-								d3.select(nodes[i]).text(`${d.name}: ${val}`);
+								d3.select(nodes[i]).text(`${d.name}: ${val}`).attr("font-size", (this.chartWidth - this.legend.padding.right - this.legend.padding.left)*0.003+"em").attr("font-family", "helvetica");
+								
 							},
 						};
 					}),
@@ -556,7 +559,9 @@ class D3Chart {
 					.remove(),
 			)
 			.text(d => `${d.name}`)
+			.attr("font-family", "helvetica")
 			.attr('fill', (d, i) => d3.schemeCategory10[i])
+			.attr("font-size", (this.chartWidth - this.legend.padding.right - this.legend.padding.left)*0.003+"em")
 			.attr('dy', (d, i) => this.legend.padding.title + this.legend.padding.top + (this.legend.spacing.itemSpacing + this.legend.spacing.itemSize) * i)
 			.attr('x', this.legend.padding.left);
 	}

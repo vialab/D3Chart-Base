@@ -97,10 +97,10 @@ svg {
 }
 
 .graph-window {
-  top: 15%;
-  left: 25%;
-  bottom: 15%;
-  right: 5%;
+  top: 10%;
+  left: 21%;
+  bottom: 10%;
+  right: 1%;
   background-color: white;
   border-radius: 25px;
   position: fixed;
@@ -118,10 +118,10 @@ svg {
     right: 50%;
   }
   to {
-    top: 15%;
-    left: 25%;
-    bottom: 15%;
-    right: 5%;
+    top: 10%;
+    left: 21%;
+    bottom: 10%;
+    right: 1%;
   }
 }
 
