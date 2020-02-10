@@ -11,6 +11,8 @@ var api_url = "https://app.dimensions.ai/api/dsl.json";
 
 let jwt_token = require("./resources/credentials.json");
 
+let recommended = [];
+
 console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
 var timer = new callLimit();
@@ -246,6 +248,29 @@ const queryFunding = async function(req, resp) {
   });
 };
 
+const recommendedList = async function(req, res) {
+  if ("recommended" in req.body) {
+    for (const rec in req.body.recommended) {
+      let min = Math.min(
+        ...recommended.map(function(x) {
+          return x.val;
+        })
+      );
+      if (req.body.recommended[rec].val > min) {
+        let idx = recommended
+          .map(function(x) {
+            return x.val;
+          })
+          .indexOf(min);
+        recommended[idx] = req.body.recommended[rec];
+      }
+    }
+  }
+};
+
+const getRecommendedList = async function(req, res) {
+  res.status(200).send(recommended);
+};
 module.exports = {
   queryDimensions,
   queryNotCanada,
@@ -254,5 +279,7 @@ module.exports = {
   queryInstituteCitationsCan,
   queryInstituteCitationsNotCan,
   queryCanadaFunding,
-  queryFunding
+  queryFunding,
+  recommendedList,
+  getRecommendedList
 };

@@ -43,6 +43,10 @@ module.exports = app => {
 
   app.post("/funding", queryDimensions.queryFunding);
 
+  app.post("/recommended-list", queryDimensions.recommendedList);
+
+  app.post("/get-recommended-list", queryDimensions.getRecommendedList);
+
   app.post("/default-view", (req, res) => {
     res.json(defaultData);
   });

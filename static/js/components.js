@@ -43,7 +43,7 @@ let cmp = {
       return this;
     },
     raise() {
-      this.group.raise();
+      this.svg.raise();
     },
     /**
      *
@@ -249,6 +249,12 @@ let cmp = {
     setScale(values) {
       this.scale = values;
       return this;
+    },
+    setRange(numYears) {
+      this.scale = [];
+      for (let i = 0 - numYears; i <= 0 + numYears; ++i) {
+        this.scale.push(i);
+      }
     },
     updateScale() {
       let transform = this.group.attr("transform");
@@ -1294,6 +1300,7 @@ class EventGraph {
   parent = null;
   margin = { top: 0, right: 30, bottom: 0, left: 40 };
   data = [];
+  value = 0;
   size = null;
   xRange = [1950, new Date().getFullYear()];
   scales = { x: null, y: null };
@@ -1301,6 +1308,7 @@ class EventGraph {
   eventName = null;
   color = null;
   title = null;
+  selection = { x1: 0, x2: 0 };
   constructor(
     size,
     data,
@@ -1337,10 +1345,11 @@ class EventGraph {
     this.color = color;
   }
 
-  updateData(data, color = null) {
+  updateData(data, value, color = null) {
     if (color != null) {
       this.color = color;
     }
+    this.value = value;
     this.data = data;
     let self = this;
     this.svg.selectAll("." + this.eventName).remove();
@@ -1357,7 +1366,8 @@ class EventGraph {
       .attr("stroke-width", 1)
       .attr("stroke", "black")
       .style("stroke-dasharray", "1,5");
-
+    this.selection.x1 = data[0].x1;
+    this.selection.x2 = data[0].x2;
     this.svg
       .selectAll("." + this.eventName)
       .data(this.data)
@@ -1472,6 +1482,14 @@ class EventGraph {
       .text(this.title)
       .attr("font-family", "helvetica")
       .attr("font-size", "8px");
+  }
+  /**
+   *
+   * @param {string} color
+   */
+  updateColor(color) {
+    this.color = color;
+    this.svg.select("." + this.eventName).style("stroke", this.color);
   }
 }
 class TimeView {
@@ -1738,6 +1756,9 @@ class CountryData {
    * @param {Number} value - country total
    */
   addTotal(year, value) {
+    if (!value) {
+      return;
+    }
     this.countryTotal[year] = value;
   }
   /**
@@ -1776,7 +1797,7 @@ class CountryData {
         sum += this.institutes[institute].getPapers(year);
       }
     }
-    this.countryTotal[year] = sum;
+    this.addTotal(year, sum);
   }
 }
 class DataObject {
@@ -2151,6 +2172,7 @@ class Institutions {
    * @param {MapInteraction} mapInteraction
    * @param {*} projection
    * @param {function(box,d):Tooltip} toolTipFunction
+   * @param {function()} afterLoaded
    */
   constructor(
     svg,
@@ -2158,6 +2180,7 @@ class Institutions {
     colorScale,
     mapInteraction,
     projection,
+    afterLoaded = null,
     toolTipFunction = null
   ) {
     if (toolTipFunction != null) {
@@ -2172,8 +2195,10 @@ class Institutions {
         data[idx].lat = coords[0];
         data[idx].lng = coords[1];
       }
-      //TODO finish institution location
       self.render(svg, data, colorScale, mapInteraction);
+      if (afterLoaded != null) {
+        afterLoaded();
+      }
     });
   }
   /**
@@ -2957,6 +2982,7 @@ class MapObj {
     this.dataObject.onData(this.mostLag.bind(this));
     this.dataObject.onData(this.getMostChaoticLeadLagCountries.bind(this));
     this.dataObject.onData(this.getLargestSumOfCountries.bind(this));
+    this.dataObject.onData(this.recommendedAnalysis.bind(this));
   }
   setLegend(legend) {
     this.legend = legend;
@@ -2972,6 +2998,14 @@ class MapObj {
       this.institutes.updateColor(colorScale);
     }
     this.glyphLegend.updateColor(colorScale.get(1));
+    this.eventGraph.updateColor(
+      colorScale.get(-this.stdGraph.scrubber.getNumYearsSelected())
+    );
+    this.eventGraph2.updateColor(
+      colorScale.get(this.stdGraph.scrubber.getNumYearsSelected())
+    );
+    this.eventGraph3.updateColor(colorScale.get(1));
+    this.eventGraph4.updateColor(colorScale.get(-1));
     this.colorScale = colorScale;
     this.legend.raise();
   }
@@ -3013,11 +3047,12 @@ class MapObj {
     this.legend.colorScale.setScaleByYearsSelected(
       this.stdGraph.scrubber.getNumYearsSelected()
     );
-    this.legend.updateColorScaleYears(this.legend.colorScale);
     this.mostLag(this.dataObject);
     this.mostLead(this.dataObject);
     this.getLargestSumOfCountries(selection);
     this.getMostChaoticLeadLagCountries(selection);
+    this.recommendedAnalysis(selection);
+    this.legend.updateColorScaleYears(this.legend.colorScale);
     this.legend.setDate(selection);
     this.legend.raise();
   }
@@ -3043,10 +3078,12 @@ class MapObj {
       this.legend.colorScale,
       this.interaction,
       this.projection,
+      function() {
+        this.legend.raise();
+      }.bind(this),
       this.onHoverToolTip.bind(this)
     );
     this.metricButtons.setInstitutions(this.institutes);
-    this.legend.raise();
   }
   getLeadLagInstitutes(selection) {
     let canada = this.dataObject.getCountry("Canada");
@@ -3146,6 +3183,7 @@ class MapObj {
     }
     this.eventGraph3.updateData(
       [{ x1: eventLocation.min, x2: eventLocation.max }],
+      maxNumOfCountries,
       this.legend.colorScale.get(1)
     );
   }
@@ -3165,6 +3203,9 @@ class MapObj {
     ) {
       let result = this.getLeadLagCountries({ min: min, max: max });
       let sum = 0;
+      if (!("data" in result)) {
+        break;
+      }
       for (let i = 0; i < result.data.length; ++i) {
         sum += Math.abs(result.data[i].leadlag);
       }
@@ -3175,6 +3216,7 @@ class MapObj {
     }
     this.eventGraph4.updateData(
       [{ x1: eventLocation.min, x2: eventLocation.max }],
+      maxNumOfCountries,
       this.legend.colorScale.get(-1)
     );
   }
@@ -3222,7 +3264,11 @@ class MapObj {
     }
     otherData.push({ country_name: "Canada", leadlag: 0, data: canadaData });
 
-    return { data: otherData, missingData: missingData };
+    return {
+      data: otherData,
+      missingData: missingData,
+      canadaData: canadaData
+    };
   }
   mostLead(dateObject) {
     let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
@@ -3249,7 +3295,8 @@ class MapObj {
     }
     this.eventGraph.updateData(
       [{ x1: eventRange.min, x2: eventRange.max }],
-      this.legend.colorScale.get(leadLagWindow)
+      mostLead,
+      this.legend.colorScale.get(-leadLagWindow)
     );
   }
   mostLag(dataObject) {
@@ -3258,7 +3305,7 @@ class MapObj {
     if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
       return;
     }
-    let mostLead = 0;
+    let mostLag = 0;
     let eventRange = {
       max: new Date().getFullYear() - leadLagWindow,
       min: new Date().getFullYear() - (leadLagWindow * 2 - 1)
@@ -3270,14 +3317,15 @@ class MapObj {
       --min, --max
     ) {
       let val = this.lagSum({ min: min, max: max });
-      if (val > mostLead) {
+      if (val > mostLag) {
         eventRange = { max: max, min: min + 1 };
-        mostLead = val;
+        mostLag = val;
       }
     }
     this.eventGraph2.updateData(
       [{ x1: eventRange.min, x2: eventRange.max }],
-      this.legend.colorScale.get(-leadLagWindow)
+      mostLag,
+      this.legend.colorScale.get(leadLagWindow)
     );
   }
   /**
@@ -3609,7 +3657,33 @@ class MapObj {
     return result;
   }
 
-  recommendedAnalysis(mostLead, mostLag, largestTotalLeadLag) {
+  recommendedAnalysis(d) {
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
+    const currentYear = this.dataObject.currentYearLoading + 1;
+    if (new Date().getFullYear() - currentYear < leadLagWindow * 3) {
+      return;
+    }
+    let mostLead = {
+      selection: {
+        min: this.eventGraph.selection.x1,
+        max: this.eventGraph.selection.x2
+      },
+      value: this.eventGraph.value
+    };
+    let mostLag = {
+      selection: {
+        min: this.eventGraph2.selection.x1,
+        max: this.eventGraph2.selection.x2
+      },
+      value: this.eventGraph2.value
+    };
+    let largestTotalLeadLag = {
+      selection: {
+        min: this.eventGraph4.selection.x1,
+        max: this.eventGraph4.selection.x2
+      },
+      value: this.eventGraph4.value
+    };
     let numOfCountries = { mostLead: 0, mostLag: 0, largestTotalLeadLag: 0 };
     let recommendedValue = 0;
     for (const country in this.dataObject.countries) {
@@ -3633,13 +3707,109 @@ class MapObj {
       }
     }
     let countryLeadLag = this.getLeadLagCountries(mostLead.selection);
+    let diff = 0;
+    for (let i = 0; i < countryLeadLag.data.length; ++i) {
+      let offset = countryLeadLag.data[i].leadlag;
+      let currentCountry = countryLeadLag.data[i].data;
+      let canData = countryLeadLag.canadaData;
+      currentCountry = currentCountry.slice(
+        canData.length + offset,
+        canData.length + offset + canData.length
+      );
+      let sum = currentCountry.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      currentCountry = currentCountry.map(function(x) {
+        return x / sum;
+      });
+      sum = canData.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      canData = canData.map(function(x) {
+        return x / sum;
+      });
 
+      for (let j = 0; j < currentCountry.length; ++j) {
+        diff += Math.abs(canData[j] - currentCountry[j]);
+      }
+    }
+    //diff /= leadLagWindow;
+    recommendedValue += (mostLead.value / diff) * countryLeadLag.data.length;
+    diff = 0;
     countryLeadLag = this.getLeadLagCountries(mostLag.selection);
+    for (let i = 0; i < countryLeadLag.data.length; ++i) {
+      let offset = countryLeadLag.data[i].leadlag;
+      let currentCountry = countryLeadLag.data[i].data;
+      let canData = countryLeadLag.canadaData;
+      currentCountry = currentCountry.slice(
+        canData.length + offset,
+        canData.length + offset + canData.length
+      );
+      let sum = currentCountry.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      currentCountry = currentCountry.map(function(x) {
+        return x / sum;
+      });
+      sum = canData.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      canData = canData.map(function(x) {
+        return x / sum;
+      });
+
+      for (let j = 0; j < currentCountry.length; ++j) {
+        diff += Math.abs(canData[j] - currentCountry[j]);
+      }
+    }
+    //diff /= leadLagWindow;
+    recommendedValue += (mostLag.value / diff) * countryLeadLag.data.length;
+    diff = 0;
     countryLeadLag = this.getLeadLagCountries(largestTotalLeadLag.selection);
+    for (let i = 0; i < countryLeadLag.data.length; ++i) {
+      let offset = countryLeadLag.data[i].leadlag;
+      let currentCountry = countryLeadLag.data[i].data;
+      let canData = countryLeadLag.canadaData;
+      currentCountry = currentCountry.slice(
+        canData.length + offset,
+        canData.length + offset + canData.length
+      );
+      let sum = currentCountry.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      currentCountry = currentCountry.map(function(x) {
+        return x / sum;
+      });
+      sum = canData.reduce(function(acc, cur) {
+        return acc + cur;
+      }, 0);
+      canData = canData.map(function(x) {
+        return x / sum;
+      });
+      for (let j = 0; j < currentCountry.length; ++j) {
+        diff += Math.abs(canData[j] - currentCountry[j]);
+      }
+    }
+    //diff /= leadLagWindow;
+    recommendedValue +=
+      (largestTotalLeadLag.value / diff) * countryLeadLag.data.length;
+    diff = 0;
+    recommendedValue /= leadLagWindow;
+    console.log("recommender value: " + recommendedValue);
   }
   reset() {
     if (this.countries != null) {
       this.countries.reset();
     }
+    if(this.institutes != null)
+    {
+      this.institutes.reset();
+    }
+    this.stdGraph.reset();
+    this.eventGraph.reset();
+    this.eventGraph2.reset();
+    this.eventGraph3.reset();
+    this.eventGraph4.reset();
+    this.dataObject.reset();
   }
 }
