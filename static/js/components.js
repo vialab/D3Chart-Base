@@ -2910,6 +2910,61 @@ class Tooltip {
     this.vis.remove();
   }
 }
+class RecommendedKeywords {
+  /**
+   *
+   * @param {string} parent
+   * @param {function(null)} submission
+   */
+  constructor(parent, submission) {
+    this.getRecommended(function(result) {
+      d3.select(parent)
+        .selectAll("input")
+        .data(result)
+        .enter()
+        .append("button")
+        .attr("class", "recommend-button")
+        .html(function(d, i) {
+          return `<b>${i +
+            1}. </b> <span style="color:#0000EE;"><b>${d.keyword}, ${d.selection} years</b></span>`;
+        })
+        .on("click", function(d) {
+          d3.event.stopPropagation();
+          d3.event.preventDefault();
+          d3.select("#search-field").attr("value", d.keyword);
+          submission(null);
+        });
+    });
+  }
+
+  async getRecommended(callback) {
+    d3.json("/get-recommended-list", {
+      method: "POST",
+      body: "",
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    }).then(function(res) {
+      callback(res);
+    });
+  }
+  /**
+   *
+   * @param {Array.<{val:Number, keyword:String, selection:Number}>} recommended
+   */
+  async putRecommended(recommended) {
+    let response = await d3.json("/recommended-list", {
+      method: "POST",
+      body: JSON.stringify({
+        recommended: recommended
+      }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    });
+    return response;
+  }
+}
 class MapObj {
   countries = null;
   institutes = null;
@@ -2962,7 +3017,9 @@ class MapObj {
     "Largest Total Lead Lag"
   );
 
-  constructor() {
+  recommendedList = null;
+
+  constructor(submission) {
     this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
     this.stdGraph.scrubber.onBrushed(
       this.eventGraph.createScrubberLines.bind(this.eventGraph)
@@ -2983,7 +3040,12 @@ class MapObj {
     this.dataObject.onData(this.getMostChaoticLeadLagCountries.bind(this));
     this.dataObject.onData(this.getLargestSumOfCountries.bind(this));
     this.dataObject.onData(this.recommendedAnalysis.bind(this));
+    this.recommendedList = new RecommendedKeywords(
+      "#recommended-list",
+      submission
+    );
   }
+
   setLegend(legend) {
     this.legend = legend;
     this.legend.onColorChange(this.updateColor.bind(this));
@@ -3796,13 +3858,17 @@ class MapObj {
     diff = 0;
     recommendedValue /= leadLagWindow;
     console.log("recommender value: " + recommendedValue);
+    this.recommendedList.putRecommended({
+      keyword: this.dataObject.currentKeyword,
+      val: recommendedValue,
+      selection: leadLagWindow
+    });
   }
   reset() {
     if (this.countries != null) {
       this.countries.reset();
     }
-    if(this.institutes != null)
-    {
+    if (this.institutes != null) {
       this.institutes.reset();
     }
     this.stdGraph.reset();

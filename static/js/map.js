@@ -14,7 +14,7 @@ $(function() {
   let defs;
   let currentKeyword;
   let pz;
-  let mapObj = new MapObj();
+  let mapObj = new MapObj(keywordSubmission.bind(this));
   //test.dataObject.getAllPapers("Video cassette recorder");
   let colorScale = cmp.colorScale;
   //setting the color gradient to be the red->blue color scale
@@ -38,7 +38,9 @@ $(function() {
   $("#form").on("submit", keywordSubmission);
 
   function keywordSubmission(event) {
-    event.preventDefault();
+    if (event != null) {
+      event.preventDefault();
+    }
     let defaultSelection = 1;
     $("#metric-selection").val(defaultSelection);
     let keyword = $("#search-field").val();

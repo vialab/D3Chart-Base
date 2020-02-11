@@ -11,7 +11,7 @@ var api_url = "https://app.dimensions.ai/api/dsl.json";
 
 let jwt_token = require("./resources/credentials.json");
 
-let recommended = [];
+let recommended = require("./resources/recommendedList.json");
 
 console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
@@ -250,21 +250,36 @@ const queryFunding = async function(req, resp) {
 
 const recommendedList = async function(req, res) {
   if ("recommended" in req.body) {
-    for (const rec in req.body.recommended) {
-      let min = Math.min(
-        ...recommended.map(function(x) {
+    let min = Math.min(
+      ...recommended.map(function(x) {
+        return x.val;
+      })
+    );
+    console.log(min);
+    if (req.body.recommended.val > min) {
+      for (let i = 0; i < recommended.length; ++i) {
+        if (
+          recommended[i].keyword == req.body.recommended.keyword &&
+          recommended[i].selection == req.body.recommended.selection
+        ) {
+          res.status(200).send();
+          return;
+        }
+      }
+      let idx = recommended
+        .map(function(x) {
           return x.val;
         })
+        .indexOf(min);
+      recommended[idx] = req.body.recommended;
+      console.log(idx);
+      console.log(recommended);
+      fs.writeFileSync(
+        "./server/resources/recommendedList.json",
+        JSON.stringify(recommended)
       );
-      if (req.body.recommended[rec].val > min) {
-        let idx = recommended
-          .map(function(x) {
-            return x.val;
-          })
-          .indexOf(min);
-        recommended[idx] = req.body.recommended[rec];
-      }
     }
+    res.status(200).send();
   }
 };
 
