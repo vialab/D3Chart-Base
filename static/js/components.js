@@ -1087,6 +1087,9 @@ class STDGraph {
     this.size.height = this.size.height - this.margin.top - this.margin.bottom;
     this.render();
   }
+  reset() {
+    d3.select("#publishing-output").remove();
+  }
   data = [];
   size = { width: null, height: null };
 
@@ -1103,9 +1106,6 @@ class STDGraph {
   scrubber = null;
   loadingSpinner = null;
 
-  raise() {
-    this.svg.raise();
-  }
   /**
    *
    * @param {Array<>.{x:Number, y:Number}} data
@@ -1336,6 +1336,9 @@ class EventGraph {
     this.color = randomHsl();
     this.eventName = eventName;
     this.render();
+  }
+  reset() {
+    d3.select(this.svg.node().parentNode).remove();
   }
   /**
    *
@@ -1611,7 +1614,6 @@ class InstitutionData {
 class CountryData {
   institutes = {};
   countryTotal = {};
-
   contributors = {};
   /**
    *
@@ -2051,6 +2053,9 @@ class DataObject {
         this.getAllPapers(keyword);
       }
     }
+  }
+  reset() {
+    this.pauseLoading();
   }
 }
 class Countries {
@@ -2605,6 +2610,13 @@ class MetricButtonGroup {
     $("#funding").on("click", this.funding.bind(this));
     $("#deviation-country").on("click", this.deviationCountryClick.bind(this));
   }
+  reset() {
+    $("#deviation-world").off();
+    $("#paper-citations").off();
+    $("#consistency").off();
+    $("#funding").off();
+    $("#deviation-country").off();
+  }
   stdGraph = null;
   dataObject = null;
   scrubber = null;
@@ -2710,7 +2722,6 @@ class MetricButtonGroup {
   consistency() {
     let result = {};
     let selection = this.scrubber.getSelected();
-    const end = cmp.dataObject.queries.length - 1;
     for (const country in this.dataObject.countries) {
       for (const institute in this.dataObject.countries[country].institutes) {
         let tmpInstitute = this.dataObject.countries[country].institutes[
@@ -2918,9 +2929,10 @@ class RecommendedKeywords {
    */
   constructor(parent, submission) {
     this.getRecommended(function(result) {
+      let filteredResult = result.slice(0, 6);
       d3.select(parent)
         .selectAll("input")
-        .data(result)
+        .data(filteredResult)
         .enter()
         .append("button")
         .attr("class", "recommend-button")
@@ -3869,13 +3881,75 @@ class MapObj {
       this.countries.reset();
     }
     if (this.institutes != null) {
-      this.institutes.reset();
+      this.institutes.destroy();
     }
+    this.dataObject.reset();
+    this.dataObject = new DataObject();
     this.stdGraph.reset();
     this.eventGraph.reset();
     this.eventGraph2.reset();
     this.eventGraph3.reset();
     this.eventGraph4.reset();
-    this.dataObject.reset();
+    this.stdGraph = new STDGraph(
+      { width: $("#timeline").width(), height: 300 },
+      [],
+      "#timeline"
+    );
+    this.metricButtons.reset();
+    this.eventGraph = new EventGraph(
+      { width: $("#timeline").width(), height: 35 },
+      [],
+      "#timeline",
+      "testEvent",
+      "Most Lead"
+    );
+    this.eventGraph2 = new EventGraph(
+      { width: $("#timeline").width(), height: 35 },
+      [],
+      "#timeline",
+      "testEvent2",
+      "Most Lag"
+    );
+    this.eventGraph3 = new EventGraph(
+      { width: $("#timeline").width(), height: 35 },
+      [],
+      "#timeline",
+      "testEvent3",
+      "Most Countries"
+    );
+    this.eventGraph4 = new EventGraph(
+      { width: $("#timeline").width(), height: 35 },
+      [],
+      "#timeline",
+      "testEvent4",
+      "Largest Total Lead Lag"
+    );
+    this.metricButtons = new MetricButtonGroup(
+      this.dataObject,
+      this.stdGraph.scrubber,
+      this.onScrubberSelection.bind(this),
+      this.stdGraph,
+      this.svg
+    );
+    this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph.createScrubberLines.bind(this.eventGraph)
+    );
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph2.createScrubberLines.bind(this.eventGraph2)
+    );
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph3.createScrubberLines.bind(this.eventGraph3)
+    );
+    this.stdGraph.scrubber.onBrushed(
+      this.eventGraph4.createScrubberLines.bind(this.eventGraph4)
+    );
+    this.stdGraph.scrubber.onEnd(this.onScrubberSelection.bind(this));
+    this.stdGraph.scrubber.onResize(this.onScrubberResize.bind(this));
+    this.dataObject.onData(this.mostLead.bind(this));
+    this.dataObject.onData(this.mostLag.bind(this));
+    this.dataObject.onData(this.getMostChaoticLeadLagCountries.bind(this));
+    this.dataObject.onData(this.getLargestSumOfCountries.bind(this));
+    this.dataObject.onData(this.recommendedAnalysis.bind(this));
   }
 }

@@ -41,6 +41,7 @@ $(function() {
     if (event != null) {
       event.preventDefault();
     }
+    mapObj.reset();
     let defaultSelection = 1;
     $("#metric-selection").val(defaultSelection);
     let keyword = $("#search-field").val();
