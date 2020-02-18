@@ -2758,7 +2758,7 @@ class MetricButtonGroup {
         for (let i = 0; i < slopes.length; ++i) {
           deviationSum += Math.abs(slopes[i] - avg) / std;
         }
-        deviationSum /= slopes.length;
+        //deviationSum /= slopes.length;
         result[institute] = 20 - deviationSum * 5;
       }
     }
