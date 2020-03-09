@@ -105,6 +105,7 @@ $(function() {
     svg = d3
       .select("#map-holder")
       .append("svg")
+      .attr("id", "main-svg")
       // set to the same size as the "map-holder" div
       .attr("width", $("#map-holder").width())
       .attr("height", $("#map-holder").height());
@@ -147,16 +148,34 @@ $(function() {
 
     defs
       .append("pattern")
-      .attr("id", "missing-data")
-      .attr("width", 40)
-      .attr("height", 25)
+      .attr("id", "missing-data-misc")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", 3)
+      .attr("height", 3)
       .attr("patternUnits", "userSpaceOnUse")
-      .append("path")
-      .attr("fill", "none")
-      .attr("opacity", 0.8)
-      .attr("stroke", "#335553")
-      .attr("stroke-width", "3")
-      .attr("d", "M0,0 Q10,20  20,10 T 40,0");
+      .append("circle")
+      .attr("cx", 1.5)
+      .attr("cy", 1.5)
+      .attr("r", 0.25)
+      .style("opacity", 0.8)
+      .style("fill", "#0f0f0f");
+
+    defs
+      .append("pattern")
+      .attr("id", "missing-data")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("patternUnits", "userSpaceOnUse")
+      .append("circle")
+      .attr("cx", 15)
+      .attr("cy", 15)
+      .attr("r", 2)
+      .style("opacity", 0.8)
+      .style("fill", "#0f0f0f");
+
     //group containing countries
     let countriesGroup = svg.append("g").attr("id", "map");
     //the rect to be drawn on

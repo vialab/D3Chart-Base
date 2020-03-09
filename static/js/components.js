@@ -457,7 +457,7 @@ let cmp = {
         .attr("rx", 8)
         .attr("border", "1px")
         .attr("stroke", "black")
-        .style("fill", "url(#missing-data-img)");
+        .style("fill", "url(#missing-data-misc)");
 
       let text2 = group
         .append("text")
@@ -2092,17 +2092,26 @@ class Countries {
         d3.select(this).style("stroke", "black");
         d3.select(this).style("stroke-width", "5px");
         if (self.onHoverCallback == null) {
+          console.log(d3.mouse(d3.select("#main-svg").node())[0]);
           let box = d3
             .select(this)
             .node()
             .getBoundingClientRect();
+          box.x = d3.mouse(d3.select("#main-svg").node())[0];
           self.tooltip = new Tooltip(
             "#map-holder",
             box,
             `<p>${d.properties.name}</p`
           );
         } else {
-          self.onHoverCallback(self.tooltip);
+          self.tooltip = self.onHoverCallback(
+            d3
+              .select(this)
+              .node()
+              .getBoundingClientRect(),
+            d,
+            d3.select(this).attr("leadlag")
+          );
         }
       })
       .on("mouseout", function(d, i) {
@@ -2710,7 +2719,6 @@ class MetricButtonGroup {
   consistency() {
     let result = {};
     let selection = this.scrubber.getSelected();
-    const end = cmp.dataObject.queries.length - 1;
     for (const country in this.dataObject.countries) {
       for (const institute in this.dataObject.countries[country].institutes) {
         let tmpInstitute = this.dataObject.countries[country].institutes[
@@ -3073,6 +3081,7 @@ class MapObj {
   }
   createCountries(svg, json, projection) {
     this.countries = new Countries(json);
+    this.countries.onHoverCallback = this.onHoverCountryToolTip.bind(this);
     this.countries.render(svg, projection, this.countryClick.bind(this));
     this.projection = projection;
   }
@@ -3497,6 +3506,200 @@ class MapObj {
         this.dataObject
       );
     }
+  }
+  onHoverCountryToolTip(box, d, leadlag) {
+    let ins = this.dataObject.getCountry(d.properties.name);
+    if (ins == null || leadlag == null) {
+      return null;
+    }
+    console.log(d);
+    let result = new Tooltip("#map-holder", box, `<p>${d.properties.name}</p>`);
+    let visBox = result.vis.node().getBoundingClientRect();
+    let svg = result.vis
+      .append("svg")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 4)
+      .attr("display", "block");
+    let canada = this.dataObject.getCountry("Canada");
+    let selection = this.stdGraph.scrubber.getSelected();
+    let canLine = [];
+    let insLine = [];
+    for (let i = selection.min; i <= selection.max; ++i) {
+      insLine.push({ x: i, y: ins.getTotal(i) });
+      canLine.push({ x: i, y: canada.getTotal(i) });
+    }
+    let sum = canLine.reduce(function(acc, cur) {
+      return acc + cur.y;
+    }, 0);
+    canLine = canLine.map(function(d) {
+      return { x: d.x, y: d.y / sum };
+    });
+    sum = insLine.reduce(function(acc, cur) {
+      return acc + cur.y;
+    }, 0);
+    insLine = insLine.map(function(d) {
+      return { x: d.x, y: d.y / sum };
+    });
+    let minY = Math.min(
+      ...insLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          canLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    let maxY = Math.max(
+      ...canLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          insLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    let xScale = d3
+      .scaleLinear()
+      .domain([selection.min, selection.max])
+      .range([0, visBox.width]);
+    let yScale = d3
+      .scaleLinear()
+      .domain([minY, maxY])
+      .range([visBox.height / 4, 0]);
+
+    svg
+      .append("path")
+      .datum(insLine)
+      .attr("class", "path1")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+    svg
+      .append("path")
+      .datum(canLine)
+      .attr("class", "path2")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+
+    let svg2 = result.vis
+      .append("svg")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 4)
+      .attr("display", "block");
+    console.log(leadlag);
+    let leadLagSelection = {
+      min: selection.min + Number(leadlag),
+      max: selection.max + Number(leadlag)
+    };
+    insLine = [];
+    for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
+      insLine.push({ x: i - Number(leadlag), y: ins.getTotal(i) });
+    }
+    sum = insLine.reduce(function(acc, cur) {
+      return acc + cur.y;
+    }, 0);
+    insLine = insLine.map(function(d) {
+      return { x: d.x, y: d.y / sum };
+    });
+    minY = Math.min(
+      ...insLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          canLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    maxY = Math.max(
+      ...canLine
+        .map(function(d) {
+          return d.y;
+        })
+        .concat(
+          insLine.map(function(d) {
+            return d.y;
+          })
+        )
+    );
+    xScale = d3
+      .scaleLinear()
+      .domain([selection.min, selection.max])
+      .range([0, visBox.width]);
+    yScale = d3
+      .scaleLinear()
+      .domain([minY, maxY])
+      .range([visBox.height / 4, 0]);
+    svg2
+      .append("path")
+      .datum(insLine)
+      .attr("class", "path1")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+    svg2
+      .append("path")
+      .datum(canLine)
+      .attr("class", "path2")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x(function(e) {
+            return xScale(e.x);
+          })
+          .y(function(e) {
+            return yScale(e.y);
+          })
+      )
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-width", 2.5)
+      .style("opacity", "0.5");
+
+    return result;
   }
   onHoverToolTip(box, d) {
     console.log(d);
