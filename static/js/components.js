@@ -3320,6 +3320,12 @@ class MapObj {
       }
       canadaData.push(canada.getTotal(i));
     }
+    let sum = canadaData.reduce((acc, cur) => {
+      return acc + cur;
+    }, 0);
+    canadaData = canadaData.map(x => {
+      return (x /= sum);
+    });
     let otherData = [];
     let missingData = [];
     for (const country in this.dataObject.countries) {
@@ -3337,6 +3343,12 @@ class MapObj {
         }
         currentCountryData.push(currentCountry.getTotal(i));
       }
+      sum = currentCountryData.reduce((acc, cur) => {
+        return acc + cur;
+      }, 0);
+      currentCountryData = currentCountryData.map(x => {
+        return (x /= sum);
+      });
       if (currentCountryData.length == maxWindow - minWindow + 1) {
         let result = leadlag(canadaData, currentCountryData);
         otherData.push({
@@ -3420,14 +3432,19 @@ class MapObj {
     let offset = years.max - years.min + 1;
     const canada = this.dataObject.getCountry("Canada");
     let canadaData = [];
-    let sum = 0;
+    let leadsum = 0;
     for (let i = years.min; i <= years.max; ++i) {
       if (!canada.hasTotal(i)) {
         return 0;
       }
       canadaData.push(canada.getTotal(i));
     }
-
+    let sum = canadaData.reduce((acc, cur) => {
+      return acc + cur;
+    }, 0);
+    canadaData = canadaData.map(x => {
+      return (x /= sum);
+    });
     for (const country in this.dataObject.countries) {
       if (country == "Canada") {
         continue;
@@ -3440,14 +3457,20 @@ class MapObj {
         }
         currentCountryData.push(currentCountry.getTotal(i));
       }
+      sum = currentCountryData.reduce((acc, cur) => {
+        return acc + cur;
+      }, 0);
+      currentCountryData = currentCountryData.map(x => {
+        return (x /= sum);
+      });
       if (currentCountryData.length == canadaData.length * 3) {
         let lead = leadlag(canadaData, currentCountryData);
         if (lead.bestOffset < 0) {
-          sum += lead.bestOffset;
+          leadsum += lead.bestOffset;
         }
       }
     }
-    return sum;
+    return leadsum;
   }
   /**
    *
@@ -3457,13 +3480,19 @@ class MapObj {
     let offset = years.max - years.min + 1;
     const canada = this.dataObject.getCountry("Canada");
     let canadaData = [];
-    let sum = 0;
+    let lagsum = 0;
     for (let i = years.min; i <= years.max; ++i) {
       if (!canada.hasTotal(i)) {
         return 0;
       }
       canadaData.push(canada.getTotal(i));
     }
+    let sum = canadaData.reduce((acc, cur) => {
+      return acc + cur;
+    }, 0);
+    canadaData = canadaData.map(x => {
+      return (x /= sum);
+    });
 
     for (const country in this.dataObject.countries) {
       if (country == "Canada") {
@@ -3477,14 +3506,20 @@ class MapObj {
         }
         currentCountryData.push(currentCountry.getTotal(i));
       }
+      sum = currentCountryData.reduce((acc, cur) => {
+        return acc + cur;
+      }, 0);
+      currentCountryData = currentCountryData.map(x => {
+        return (x /= sum);
+      });
       if (currentCountryData.length == canadaData.length * 3) {
         let lead = leadlag(canadaData, currentCountryData);
         if (lead.bestOffset > 0) {
-          sum += lead.bestOffset;
+          lagsum += lead.bestOffset;
         }
       }
     }
-    return sum;
+    return lagsum;
   }
   countryClick(countryName) {
     if (this.stdGraph.scrubber.isHidden()) {

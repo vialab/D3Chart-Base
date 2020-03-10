@@ -13,6 +13,8 @@ let jwt_token = require("./resources/credentials.json");
 
 let recommended = require("./resources/recommendedList.json");
 
+let geoData = require("./resources/custom.geo.json");
+
 console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
 var timer = new callLimit();
@@ -282,10 +284,88 @@ const recommendedList = async function(req, res) {
     res.status(200).send();
   }
 };
+const query = async function(req, res){
+   const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications return research_org_countries limit 1000`
+  };
+  request.post(options, (error, res)=>{
+    console.log(res);
+    let data = JSON.parse(res.body);
+    let countryNames = [];
+    for(let i=0; i < data.research_org_countries.length; ++i)
+    {
+      countryNames.push(data.research_org_countries[i].name);
+    }
+      fs.writeFileSync(
+    "./server/resources/countryNames.json",
+    JSON.stringify(countryNames)
+  );
+  });
+}
+const getCountryTotalPapers = async function(req, resp) {
+  const options = {
+    url: api_url,
+    method: "POST",
+    headers: {
+      Authorization: jwt_token.Authorization
+    },
+    body: `search publications where research_org_country_names="${req.body.country}" and year=${req.body.year} return publications`
+  };
 
+  return new Promise(function(resolve, reject) {
+    request.post(options, (error, res) => {
+      if (error) {
+        console.error(error);
+        reject(error);
+      }
+      resolve(res.body);
+    });
+  });
+};
 const getRecommendedList = async function(req, res) {
   res.status(200).send(recommended);
 };
+
+function sleep(ms) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function getCountries() {
+  let countryData = {};
+  //countryData[d._stats]
+  for (let i = 0; i < geoData.features.length; ++i) {
+    console.log(geoData.features[i].properties.name);
+    countryData[geoData.features[i].properties.name] = {};
+    for (let j = 1950; j <= 2020; ++j) {
+      let data = await getCountryTotalPapers({
+        body: { country: geoData.features[i].properties.name, year: j }
+      });
+      await sleep(5000);
+      data = JSON.parse(data);
+      countryData[geoData.features[i].properties.name][j] =
+        data._stats.total_count;
+      fs.writeFileSync(
+        "./server/resources/countryTotals.json",
+        JSON.stringify(countryData)
+      );
+    }
+  }
+  //save json
+  fs.writeFileSync(
+    "./server/resources/countryTotals.json",
+    JSON.stringify(countryData)
+  );
+}
+//getCountries();
+//getCountryTotalPapers({ body: { country: "United States", year: 2019 } });
+
 module.exports = {
   queryDimensions,
   queryNotCanada,
