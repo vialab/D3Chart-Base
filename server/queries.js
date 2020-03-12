@@ -343,7 +343,7 @@ async function getCountries() {
   const currentIndex = Object.keys(countryTotals).length - 1;
   for (let i = currentIndex; i < countryNames.length; ++i) {
     countryTotals[countryNames[i]] = {};
-    console.log(countryNames[i]);
+    console.log(countryNames[i], i, countryNames.length);
     for (let j = 1950; j <= 2020; ++j) {
       let data = await getCountryTotalPapers({
         body: { country: countryNames[i], year: j }
@@ -363,7 +363,7 @@ async function getCountries() {
     JSON.stringify(countryTotals)
   );
 }
-getCountries();
+//getCountries();
 //getCountryTotalPapers({ body: { country: "United States", year: 2019 } });
 
 module.exports = {

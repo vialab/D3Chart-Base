@@ -66,7 +66,8 @@ let cmp = {
         .attr("width", this.size.width)
         .attr("x", 0)
         .attr("y", 0)
-        .attr("fill", "none")
+        .attr("fill", "white")
+        .attr("opacity", "0.3")
         .attr("rx", 15)
         .attr("filter", "url(#dropshadow)");
 
@@ -1097,7 +1098,7 @@ class STDGraph {
   svg = null;
   parentID = null;
 
-  xRange = [1950, new Date().getFullYear()];
+  xRange = [1950, new Date().getFullYear()-1]; // not including current year in graph, it is problematic due to partial year completion
 
   scales = { x: null, y: null };
   axii = { x: null, y: null };
@@ -1232,34 +1233,43 @@ class STDGraph {
       .attr("fill", "none")
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2.5);
-    this.svg
-      .append("rect")
-      .attr("class", "deadzone")
-      .attr("x", this.scales.x(this.xRange[1] - 4))
-      .attr("y", -this.margin.top / 2)
-      .attr(
-        "width",
-        this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - 4)
-      )
-      .attr("height", this.size.height + this.margin.top / 2)
-      .attr("rx", 0)
-      .attr("ry", 0)
-      .style("fill", "#FF000033")
-      .attr("stroke", "none");
-    this.svg
-      .append("rect")
-      .attr("class", "deadzone")
-      .attr("x", this.scales.x(this.xRange[0]))
-      .attr("y", -this.margin.top / 2)
-      .attr("width", this.scales.x(this.xRange[0] + 4))
-      .attr("height", this.size.height + this.margin.top / 2)
-      .attr("rx", 0)
-      .attr("ry", 0)
-      .style("fill", "#FF000033")
-      .attr("stroke", "none");
-
+    //this.svg
+    //  .append("rect")
+    //  .attr("class", "deadzone")
+    //  .attr("x", this.scales.x(this.xRange[1] - 4))
+    //  .attr("y", -this.margin.top / 2)
+    //  .attr(
+    //    "width",
+    //    this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - 4)
+    //  )
+    //  .attr("height", this.size.height + this.margin.top / 2)
+    //  .attr("rx", 0)
+    //  .attr("ry", 0)
+    //  .style("fill", "#9746b433")
+    //  .attr("stroke", "none")
+    //  .transition()
+    //  .duration(2000)
+    //  .style("opacity", 0)
+    //  .remove();
+    //  
+    //this.svg
+    //  .append("rect")
+    //  .attr("class", "deadzone")
+    //  .attr("x", this.scales.x(this.xRange[0]))
+    //  .attr("y", -this.margin.top / 2)
+    //  .attr("width", this.scales.x(this.xRange[0] + 4))
+    //  .attr("height", this.size.height + this.margin.top / 2)
+    //  .attr("rx", 0)
+    //  .attr("ry", 0)
+    //  .style("fill", "#9746b433")
+    //  .attr("stroke", "none")
+    //  .transition()
+    //  .duration(2000)
+    //  .style("opacity", 0)
+    //  .remove();
     this.scrubber = new Scrubber(this.size, this.svg, this.scales);
     this.scrubber.onResize(this.onScrubberResize.bind(this));
+    this.scrubber.onBrushed(this.onScrubberBrushed.bind(this));
     this.scrubber.hidden();
     this.loadingSpinner = new LoadingSpinner([
       d3.select(this.parentID).select("svg")
@@ -1281,8 +1291,12 @@ class STDGraph {
       .attr("height", this.size.height + this.margin.top / 2)
       .attr("rx", 0)
       .attr("ry", 0)
-      .style("fill", "#FF000033")
-      .attr("stroke", "none");
+      .style("fill", "#9746b433")
+      .attr("stroke", "none")
+      .transition()
+      .duration(2000)
+      .style("opacity", 0)
+      .remove();
     this.svg
       .append("rect")
       .attr("class", "deadzone")
@@ -1293,7 +1307,50 @@ class STDGraph {
       .attr("rx", 0)
       .attr("ry", 0)
       .style("fill", "#FF000033")
-      .attr("stroke", "none");
+      .attr("stroke", "#9746b433")
+      .transition()
+      .duration(2000)
+      .style("opacity", 0)
+      .remove();
+  }
+
+  onScrubberBrushed(selection){
+    let years = this.scrubber.getNumYearsSelected();
+
+    this.svg.selectAll(".deadzone").remove();
+    this.svg
+      .append("rect")
+      .attr("class", "deadzone")
+      .attr("x", this.scales.x(this.xRange[1] - years))
+      .attr("y", -this.margin.top / 2)
+      .attr(
+        "width",
+        this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - years)
+      )
+      .attr("height", this.size.height + this.margin.top / 2)
+      .attr("rx", 0)
+      .attr("ry", 0)
+      .style("fill", "#9746b433")
+      .attr("stroke", "none")
+      .transition()
+      .duration(2000)
+      .style("opacity", 0)
+      .remove();
+    this.svg
+      .append("rect")
+      .attr("class", "deadzone")
+      .attr("x", this.scales.x(this.xRange[0]))
+      .attr("y", -this.margin.top / 2)
+      .attr("width", this.scales.x(this.xRange[0] + years))
+      .attr("height", this.size.height + this.margin.top / 2)
+      .attr("rx", 0)
+      .attr("ry", 0)
+      .style("fill", "#FF000033")
+      .attr("stroke", "#9746b433")
+      .transition()
+      .duration(2000)
+      .style("opacity", 0)
+      .remove();
   }
 }
 class EventGraph {
@@ -1381,10 +1438,10 @@ class EventGraph {
         return self.scales.x(d.x1);
       })
       .attr("y1", function(d) {
-        return self.scales.y(0.5);
+        return self.scales.y(0.4);
       })
       .attr("y2", function(d) {
-        return self.scales.y(0.5);
+        return self.scales.y(0.4);
       })
       .attr("x2", function(d) {
         console.log(d);
@@ -2461,7 +2518,8 @@ class GlyphLegend {
       .attr("cy", box.height / 2)
       .attr("r", radius)
       .attr("fill", this.color)
-      .attr("stroke-width", 3);
+      .attr("stroke-width", 3)
+      .attr('filter', "url(#dropshadow)");
     this.svg
       .append("line")
       .attr("x1", box.width / 2 - radius)
@@ -2618,13 +2676,14 @@ class MetricButtonGroup {
     $("#consistency").on("click", this.consistency.bind(this));
     $("#funding").on("click", this.funding.bind(this));
     $("#deviation-country").on("click", this.deviationCountryClick.bind(this));
+    $("#deviation-country").css('background-color', this.highlightColor);
   }
   reset() {
-    $("#deviation-world").off();
-    $("#paper-citations").off();
-    $("#consistency").off();
-    $("#funding").off();
-    $("#deviation-country").off();
+    $("#deviation-world").css('background-color','white');
+    $("#paper-citations").css('background-color','white');
+    $("#consistency").css('background-color','white');
+    $("#funding").css('background-color','white');
+    $("#deviation-country").css('background-color','white');
   }
   stdGraph = null;
   dataObject = null;
@@ -2635,8 +2694,11 @@ class MetricButtonGroup {
   deviationCountry = null;
   spinner = null;
   svg = null;
+  highlightColor="#4682b460";
   deviationCountryClick() {
     let selection = this.scrubber.getSelected();
+    this.reset();
+    $("#deviation-country").css('background-color', this.highlightColor);
     this.deviationCountry(selection);
   }
   /**
@@ -2651,6 +2713,8 @@ class MetricButtonGroup {
     if (this.scrubber.isHidden()) {
       return;
     }
+    this.reset();
+    $("#deviation-world").css('background-color', this.highlightColor);
     let selection = this.scrubber.getSelected();
     //calculate institution sizes.
     let institutes = {};
@@ -2684,6 +2748,8 @@ class MetricButtonGroup {
     if (this.scrubber.isHidden()) {
       return;
     }
+    this.reset();
+    $("#paper-citations").css('background-color', this.highlightColor);
     if (selection.min + "-" + selection.max in this.citationHistory) {
       this.institutes.setRadius(
         this.citationHistory[selection.min + "-" + selection.max]
@@ -2729,7 +2795,13 @@ class MetricButtonGroup {
   }
 
   consistency() {
+    if (this.scrubber.isHidden()) {
+      return;
+    }
     let result = {};
+    this.reset();
+    $("#consistency").css('background-color', this.highlightColor);
+    
     let selection = this.scrubber.getSelected();
     for (const country in this.dataObject.countries) {
       for (const institute in this.dataObject.countries[country].institutes) {
@@ -2779,6 +2851,8 @@ class MetricButtonGroup {
     if (this.scrubber.isHidden()) {
       return;
     }
+    this.reset();
+    $("#funding").css('background-color', this.highlightColor);
     let selection = this.scrubber.getSelected();
     if (selection.min + "-" + selection.max in this.fundingHistory) {
       this.institutes.setRadius(
@@ -2947,7 +3021,7 @@ class RecommendedKeywords {
         .attr("class", "recommend-button")
         .html(function(d, i) {
           return `<b>${i +
-            1}. </b> <span style="color:#0000EE;"><b>${d.keyword}, ${d.selection} years</b></span>`;
+            1}. </b> <span style="color:#b46e46;"><b>${d.keyword}, ${d.selection} years</b></span>`;
         })
         .on("click", function(d) {
           d3.event.stopPropagation();
