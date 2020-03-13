@@ -1098,7 +1098,7 @@ class STDGraph {
   svg = null;
   parentID = null;
 
-  xRange = [1950, new Date().getFullYear()-1]; // not including current year in graph, it is problematic due to partial year completion
+  xRange = [1950, new Date().getFullYear() - 1]; // not including current year in graph, it is problematic due to partial year completion
 
   scales = { x: null, y: null };
   axii = { x: null, y: null };
@@ -1251,7 +1251,7 @@ class STDGraph {
     //  .duration(2000)
     //  .style("opacity", 0)
     //  .remove();
-    //  
+    //
     //this.svg
     //  .append("rect")
     //  .attr("class", "deadzone")
@@ -1314,7 +1314,7 @@ class STDGraph {
       .remove();
   }
 
-  onScrubberBrushed(selection){
+  onScrubberBrushed(selection) {
     let years = this.scrubber.getNumYearsSelected();
 
     this.svg.selectAll(".deadzone").remove();
@@ -1875,11 +1875,29 @@ class DataObject {
 
   onDataCallbacks = [];
 
+  countryYearTotals = {};
+  constructor() {}
   /**
    *
-   * @param {TimeView} timeview
+   * @param {JSON} json
    */
-  constructor() {}
+  setYearTotals(json) {
+    this.countryYearTotals = json;
+  }
+  /**
+   *
+   * @param {string} countryName
+   * @param {string} year
+   */
+  getYearTotal(countryName, year) {
+    if (countryName in this.countryYearTotals) {
+      if (year in this.countryYearTotals[countryName]) {
+        return this.countryYearTotals[countryName][year];
+      }
+    }
+    console.error(countryName, year, "not in dataset");
+    return null;
+  }
   onFinished(callback) {
     this.callback = callback;
   }
@@ -1908,6 +1926,7 @@ class DataObject {
   addCountry(name, country) {
     this.countries[name] = country;
   }
+
   /**
    *
    * @param {function(DataObject)} callback
@@ -2519,7 +2538,7 @@ class GlyphLegend {
       .attr("r", radius)
       .attr("fill", this.color)
       .attr("stroke-width", 3)
-      .attr('filter', "url(#dropshadow)");
+      .attr("filter", "url(#dropshadow)");
     this.svg
       .append("line")
       .attr("x1", box.width / 2 - radius)
@@ -2676,14 +2695,14 @@ class MetricButtonGroup {
     $("#consistency").on("click", this.consistency.bind(this));
     $("#funding").on("click", this.funding.bind(this));
     $("#deviation-country").on("click", this.deviationCountryClick.bind(this));
-    $("#deviation-country").css('background-color', this.highlightColor);
+    $("#deviation-country").css("background-color", this.highlightColor);
   }
   reset() {
-    $("#deviation-world").css('background-color','white');
-    $("#paper-citations").css('background-color','white');
-    $("#consistency").css('background-color','white');
-    $("#funding").css('background-color','white');
-    $("#deviation-country").css('background-color','white');
+    $("#deviation-world").css("background-color", "white");
+    $("#paper-citations").css("background-color", "white");
+    $("#consistency").css("background-color", "white");
+    $("#funding").css("background-color", "white");
+    $("#deviation-country").css("background-color", "white");
   }
   stdGraph = null;
   dataObject = null;
@@ -2694,11 +2713,11 @@ class MetricButtonGroup {
   deviationCountry = null;
   spinner = null;
   svg = null;
-  highlightColor="#4682b460";
+  highlightColor = "#4682b460";
   deviationCountryClick() {
     let selection = this.scrubber.getSelected();
     this.reset();
-    $("#deviation-country").css('background-color', this.highlightColor);
+    $("#deviation-country").css("background-color", this.highlightColor);
     this.deviationCountry(selection);
   }
   /**
@@ -2714,7 +2733,7 @@ class MetricButtonGroup {
       return;
     }
     this.reset();
-    $("#deviation-world").css('background-color', this.highlightColor);
+    $("#deviation-world").css("background-color", this.highlightColor);
     let selection = this.scrubber.getSelected();
     //calculate institution sizes.
     let institutes = {};
@@ -2749,7 +2768,7 @@ class MetricButtonGroup {
       return;
     }
     this.reset();
-    $("#paper-citations").css('background-color', this.highlightColor);
+    $("#paper-citations").css("background-color", this.highlightColor);
     if (selection.min + "-" + selection.max in this.citationHistory) {
       this.institutes.setRadius(
         this.citationHistory[selection.min + "-" + selection.max]
@@ -2800,8 +2819,8 @@ class MetricButtonGroup {
     }
     let result = {};
     this.reset();
-    $("#consistency").css('background-color', this.highlightColor);
-    
+    $("#consistency").css("background-color", this.highlightColor);
+
     let selection = this.scrubber.getSelected();
     for (const country in this.dataObject.countries) {
       for (const institute in this.dataObject.countries[country].institutes) {
@@ -2852,7 +2871,7 @@ class MetricButtonGroup {
       return;
     }
     this.reset();
-    $("#funding").css('background-color', this.highlightColor);
+    $("#funding").css("background-color", this.highlightColor);
     let selection = this.scrubber.getSelected();
     if (selection.min + "-" + selection.max in this.fundingHistory) {
       this.institutes.setRadius(
@@ -3115,6 +3134,13 @@ class MapObj {
   recommendedList = null;
 
   constructor(submission) {
+    d3.json("./resources/countryTotals.json")
+      .then(res => {
+        this.dataObject.setYearTotals(JSON.parse(JSON.stringify(res)));
+      })
+      .catch(err => {
+        console.error(err);
+      });
     this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
     this.stdGraph.scrubber.onBrushed(
       this.eventGraph.createScrubberLines.bind(this.eventGraph)
@@ -3185,7 +3211,6 @@ class MapObj {
     if (!dataObject.hasCountry("Canada")) {
       return;
     }
-    let previousYear = dataObject.currentYearLoading + 1;
     let canada = dataObject.countries["Canada"];
     let sum = 0;
     let counter = 0;
@@ -3193,7 +3218,6 @@ class MapObj {
       ++counter;
       sum += canada.countryTotal[value];
     }
-    let avg = sum / counter;
     let data = [];
     for (let value in canada.countryTotal) {
       data.push({ x: Number(value), y: canada.countryTotal[value] });
@@ -3253,23 +3277,26 @@ class MapObj {
         console.error("Canada does not have data for year: " + i);
         return;
       }
-      canadaData.push(canada.getTotal(i));
+      canadaData.push(
+        canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      );
     }
-    const reducer = (acc, cur) => acc + cur;
-    let sum = canadaData.reduce(reducer, 0);
-    for (let i = 0; i < canadaData.length; ++i) {
-      canadaData[i] /= sum;
-    }
+
     let otherData = [];
     for (const country in this.dataObject.countries) {
       let otherCountry = this.dataObject.getCountry(country);
       for (const institute in otherCountry.institutes) {
+        let currentInstituteData = [];
         const minWindow = selection.min - leadLagWindow;
         const maxWindow = selection.max + leadLagWindow;
-        let currentInstituteData = otherCountry.getNormalizedPapers(institute, {
-          min: minWindow,
-          max: maxWindow
-        });
+        let ins = otherCountry.getInstitute(institute);
+        for (let j = minWindow; j <= maxWindow; ++j) {
+          if (ins.hasPapers(j)) {
+            currentInstituteData.push(
+              ins.getPapers(j) / this.dataObject.getYearTotal("Canada", j)
+            );
+          }
+        }
         if (currentInstituteData.length == maxWindow - minWindow + 1) {
           let result = leadlag(canadaData, currentInstituteData);
           let total = otherCountry
@@ -3277,7 +3304,9 @@ class MapObj {
             .getPaperTotalAtYears(selection);
           let countryTotal = otherCountry.getPaperTotalAtYears(selection);
           let otherInstitutions = otherCountry.getInstitutionTotals(selection);
-          let avg = otherInstitutions.reduce(reducer, 0);
+          let avg = otherInstitutions.reduce((curr, acc) => {
+            return curr + acc;
+          }, 0);
           avg /= otherInstitutions.length;
           const std = (acc, cur) => {
             return acc + (cur - avg) * (cur - avg);
@@ -3392,14 +3421,10 @@ class MapObj {
         console.error("Canada does not have data for year: " + i);
         return;
       }
-      canadaData.push(canada.getTotal(i));
+      canadaData.push(
+        canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      );
     }
-    let sum = canadaData.reduce((acc, cur) => {
-      return acc + cur;
-    }, 0);
-    canadaData = canadaData.map(x => {
-      return (x /= sum);
-    });
     let otherData = [];
     let missingData = [];
     for (const country in this.dataObject.countries) {
@@ -3415,14 +3440,10 @@ class MapObj {
           missingData.push(country);
           break;
         }
-        currentCountryData.push(currentCountry.getTotal(i));
+        currentCountryData.push(
+          currentCountry.getTotal(i) / this.dataObject.getYearTotal(country, i)
+        );
       }
-      sum = currentCountryData.reduce((acc, cur) => {
-        return acc + cur;
-      }, 0);
-      currentCountryData = currentCountryData.map(x => {
-        return (x /= sum);
-      });
       if (currentCountryData.length == maxWindow - minWindow + 1) {
         let result = leadlag(canadaData, currentCountryData);
         otherData.push({
@@ -3511,14 +3532,10 @@ class MapObj {
       if (!canada.hasTotal(i)) {
         return 0;
       }
-      canadaData.push(canada.getTotal(i));
+      canadaData.push(
+        canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      );
     }
-    let sum = canadaData.reduce((acc, cur) => {
-      return acc + cur;
-    }, 0);
-    canadaData = canadaData.map(x => {
-      return (x /= sum);
-    });
     for (const country in this.dataObject.countries) {
       if (country == "Canada") {
         continue;
@@ -3529,14 +3546,10 @@ class MapObj {
         if (!currentCountry.hasTotal(i)) {
           break;
         }
-        currentCountryData.push(currentCountry.getTotal(i));
+        currentCountryData.push(
+          currentCountry.getTotal(i) / this.dataObject.getYearTotal(country, i)
+        );
       }
-      sum = currentCountryData.reduce((acc, cur) => {
-        return acc + cur;
-      }, 0);
-      currentCountryData = currentCountryData.map(x => {
-        return (x /= sum);
-      });
       if (currentCountryData.length == canadaData.length * 3) {
         let lead = leadlag(canadaData, currentCountryData);
         if (lead.bestOffset < 0) {
@@ -3559,14 +3572,10 @@ class MapObj {
       if (!canada.hasTotal(i)) {
         return 0;
       }
-      canadaData.push(canada.getTotal(i));
+      canadaData.push(
+        canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      );
     }
-    let sum = canadaData.reduce((acc, cur) => {
-      return acc + cur;
-    }, 0);
-    canadaData = canadaData.map(x => {
-      return (x /= sum);
-    });
 
     for (const country in this.dataObject.countries) {
       if (country == "Canada") {
@@ -3578,14 +3587,10 @@ class MapObj {
         if (!currentCountry.hasTotal(i)) {
           break;
         }
-        currentCountryData.push(currentCountry.getTotal(i));
+        currentCountryData.push(
+          currentCountry.getTotal(i) / this.dataObject.getYearTotal(country, i)
+        );
       }
-      sum = currentCountryData.reduce((acc, cur) => {
-        return acc + cur;
-      }, 0);
-      currentCountryData = currentCountryData.map(x => {
-        return (x /= sum);
-      });
       if (currentCountryData.length == canadaData.length * 3) {
         let lead = leadlag(canadaData, currentCountryData);
         if (lead.bestOffset > 0) {
@@ -3647,21 +3652,16 @@ class MapObj {
     let canLine = [];
     let insLine = [];
     for (let i = selection.min; i <= selection.max; ++i) {
-      insLine.push({ x: i, y: ins.getTotal(i) });
-      canLine.push({ x: i, y: canada.getTotal(i) });
+      insLine.push({
+        x: i,
+        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i)
+      });
+      canLine.push({
+        x: i,
+        y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      });
     }
-    let sum = canLine.reduce(function(acc, cur) {
-      return acc + cur.y;
-    }, 0);
-    canLine = canLine.map(function(d) {
-      return { x: d.x, y: d.y / sum };
-    });
-    sum = insLine.reduce(function(acc, cur) {
-      return acc + cur.y;
-    }, 0);
-    insLine = insLine.map(function(d) {
-      return { x: d.x, y: d.y / sum };
-    });
+
     let minY = Math.min(
       ...insLine
         .map(function(d) {
@@ -3744,14 +3744,11 @@ class MapObj {
     };
     insLine = [];
     for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
-      insLine.push({ x: i - Number(leadlag), y: ins.getTotal(i) });
+      insLine.push({
+        x: i - Number(leadlag),
+        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i)
+      });
     }
-    sum = insLine.reduce(function(acc, cur) {
-      return acc + cur.y;
-    }, 0);
-    insLine = insLine.map(function(d) {
-      return { x: d.x, y: d.y / sum };
-    });
     minY = Math.min(
       ...insLine
         .map(function(d) {
@@ -3842,21 +3839,15 @@ class MapObj {
     let canLine = [];
     let insLine = [];
     for (let i = selection.min; i <= selection.max; ++i) {
-      insLine.push({ x: i, y: ins.getPapers(i) });
-      canLine.push({ x: i, y: canada.getTotal(i) });
+      insLine.push({
+        x: i,
+        y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
+      });
+      canLine.push({
+        x: i,
+        y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      });
     }
-    let sum = canLine.reduce(function(acc, cur) {
-      return acc + cur.y;
-    }, 0);
-    canLine = canLine.map(function(d) {
-      return { x: d.x, y: d.y / sum };
-    });
-    sum = insLine.reduce(function(acc, cur) {
-      return acc + cur.y;
-    }, 0);
-    insLine = insLine.map(function(d) {
-      return { x: d.x, y: d.y / sum };
-    });
     let minY = Math.min(
       ...insLine
         .map(function(d) {
@@ -3938,14 +3929,12 @@ class MapObj {
     };
     insLine = [];
     for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
-      insLine.push({ x: i - d.lead, y: ins.getPapers(i) });
+      insLine.push({
+        x: i - d.lead,
+        y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
+      });
     }
-    sum = insLine.reduce(function(acc, cur) {
-      return acc + cur.y;
-    }, 0);
-    insLine = insLine.map(function(d) {
-      return { x: d.x, y: d.y / sum };
-    });
+
     minY = Math.min(
       ...insLine
         .map(function(d) {
@@ -4198,6 +4187,13 @@ class MapObj {
     }
     this.dataObject.reset();
     this.dataObject = new DataObject();
+    d3.json("./resources/countryTotals.json")
+      .then(res => {
+        this.dataObject.setYearTotals(JSON.parse(JSON.stringify(res)));
+      })
+      .catch(err => {
+        console.error(err);
+      });
     this.stdGraph.reset();
     this.eventGraph.reset();
     this.eventGraph2.reset();
