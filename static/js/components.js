@@ -537,16 +537,10 @@ let cmp = {
           }
         }
         for (const category in dataObject.canadaCategories.categories) {
-          let sum = dataObject.canadaCategories.categories[category].reduce(
-            function(acc, cur) {
-              return acc + cur;
-            },
-            0
-          );
           dataObject.canadaCategories.categories[
             category
-          ] = dataObject.canadaCategories.categories[category].map(x => {
-            return x / sum;
+          ] = dataObject.canadaCategories.categories[category].map((x, i) => {
+            return x / dataObject.getYearTotal("Canada", year.min + i);
           });
         }
       }
@@ -565,6 +559,19 @@ let cmp = {
       dataObject.pauseLoading();
       let res = await this.getData(keyword, otherName, year, dataObject);
       let categories = this.parse(res);
+      let categoryMax = 0;
+      //normalize
+      for (const category in categories) {
+        for (let i = 0; i < categories[category].length; ++i) {
+          categories[category][i] /= dataObject.getYearTotal(
+            otherName,
+            year.min + i
+          );
+          if (categories[category][i] > categoryMax) {
+            categoryMax = categories[category][i];
+          }
+        }
+      }
       var self = this;
       $("#graph-holder").remove();
       $("#map-holder").append(
@@ -588,11 +595,13 @@ let cmp = {
           self.chartView.addView("recommended-view");
           self.chartView.addView("category-view");
           self.chartView.setMainView("main-view");
+          let max = Math.max.apply(Math, canada.concat(other));
+          let buffer = 0.1;
           self.chartView.addChart(
             "main-view",
             {
               xdomain: [year.min, year.max],
-              ydomain: [0.0, 1.0],
+              ydomain: [0.0, max + buffer],
               lines: [
                 {
                   name: "Canada",
@@ -615,7 +624,7 @@ let cmp = {
               ]
             },
             data => {
-              data.chartName = "total";
+              data.chartName = "Total";
             }
           );
 
@@ -628,11 +637,12 @@ let cmp = {
           );
           $("#" + "total").on("click", function() {
             self.chartView.clearView("main-view");
+
             self.chartView.addChart(
               "main-view",
               {
                 xdomain: [year.min, year.max],
-                ydomain: [0.0, 1.0],
+                ydomain: [0.0, max + buffer],
                 lines: [
                   {
                     name: "Canada",
@@ -682,7 +692,7 @@ let cmp = {
                   "recommended-view",
                   {
                     xdomain: [year.min, year.max],
-                    ydomain: [0.0, 1.0],
+                    ydomain: [0.0, categoryMax + buffer],
                     lines: [
                       {
                         name: "Canada",
@@ -732,11 +742,12 @@ let cmp = {
                 if ($("#" + category_id).find("svg").length == 0) {
                   self.chartView.clearView("main-view");
                   let name = self.categories[category_id];
+                  let clickMax = categoryMax + buffer;
                   self.chartView.addChart(
                     "main-view",
                     {
                       xdomain: [year.min, year.max],
-                      ydomain: [0.0, 1.0],
+                      ydomain: [0.0, clickMax],
                       lines: [
                         {
                           name: "Canada",
@@ -792,13 +803,6 @@ let cmp = {
             result[categories[category].name] = [];
             result[categories[category].name].push(categories[category].count);
           }
-        }
-      }
-      //normalize
-      for (const category in result) {
-        let sum = result[category].reduce((a, b) => a + b, 0);
-        for (let i = 0; i < result[category].length; ++i) {
-          result[category][i] /= sum;
         }
       }
       return result;
@@ -1233,40 +1237,6 @@ class STDGraph {
       .attr("fill", "none")
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2.5);
-    //this.svg
-    //  .append("rect")
-    //  .attr("class", "deadzone")
-    //  .attr("x", this.scales.x(this.xRange[1] - 4))
-    //  .attr("y", -this.margin.top / 2)
-    //  .attr(
-    //    "width",
-    //    this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - 4)
-    //  )
-    //  .attr("height", this.size.height + this.margin.top / 2)
-    //  .attr("rx", 0)
-    //  .attr("ry", 0)
-    //  .style("fill", "#9746b433")
-    //  .attr("stroke", "none")
-    //  .transition()
-    //  .duration(2000)
-    //  .style("opacity", 0)
-    //  .remove();
-    //
-    //this.svg
-    //  .append("rect")
-    //  .attr("class", "deadzone")
-    //  .attr("x", this.scales.x(this.xRange[0]))
-    //  .attr("y", -this.margin.top / 2)
-    //  .attr("width", this.scales.x(this.xRange[0] + 4))
-    //  .attr("height", this.size.height + this.margin.top / 2)
-    //  .attr("rx", 0)
-    //  .attr("ry", 0)
-    //  .style("fill", "#9746b433")
-    //  .attr("stroke", "none")
-    //  .transition()
-    //  .duration(2000)
-    //  .style("opacity", 0)
-    //  .remove();
     this.scrubber = new Scrubber(this.size, this.svg, this.scales);
     this.scrubber.onResize(this.onScrubberResize.bind(this));
     this.scrubber.onBrushed(this.onScrubberBrushed.bind(this));
@@ -1286,7 +1256,8 @@ class STDGraph {
       .attr("y", -this.margin.top / 2)
       .attr(
         "width",
-        this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - years)
+        this.scales.x(this.xRange[1]) -
+          this.scales.x(this.xRange[1] - (years - 1)) // -1 is added due to the current year being left out
       )
       .attr("height", this.size.height + this.margin.top / 2)
       .attr("rx", 0)
@@ -1297,6 +1268,7 @@ class STDGraph {
       .duration(2000)
       .style("opacity", 0)
       .remove();
+
     this.svg
       .append("rect")
       .attr("class", "deadzone")
@@ -1306,7 +1278,7 @@ class STDGraph {
       .attr("height", this.size.height + this.margin.top / 2)
       .attr("rx", 0)
       .attr("ry", 0)
-      .style("fill", "#FF000033")
+      .style("fill", "#9746b433")
       .attr("stroke", "#9746b433")
       .transition()
       .duration(2000)
@@ -1321,11 +1293,12 @@ class STDGraph {
     this.svg
       .append("rect")
       .attr("class", "deadzone")
-      .attr("x", this.scales.x(this.xRange[1] - years))
+      .attr("x", this.scales.x(this.xRange[1] - (years - 1))) // -1 is added due to the current year being left out
       .attr("y", -this.margin.top / 2)
       .attr(
         "width",
-        this.scales.x(this.xRange[1]) - this.scales.x(this.xRange[1] - years)
+        this.scales.x(this.xRange[1]) -
+          this.scales.x(this.xRange[1] - (years - 1))
       )
       .attr("height", this.size.height + this.margin.top / 2)
       .attr("rx", 0)
@@ -1339,13 +1312,13 @@ class STDGraph {
     this.svg
       .append("rect")
       .attr("class", "deadzone")
-      .attr("x", this.scales.x(this.xRange[0]))
+      .attr("x", this.scales.x(this.xRange[0])) // +1 is added due to the current year being left out
       .attr("y", -this.margin.top / 2)
       .attr("width", this.scales.x(this.xRange[0] + years))
       .attr("height", this.size.height + this.margin.top / 2)
       .attr("rx", 0)
       .attr("ry", 0)
-      .style("fill", "#FF000033")
+      .style("fill", "#9746b433")
       .attr("stroke", "#9746b433")
       .transition()
       .duration(2000)
@@ -1438,16 +1411,16 @@ class EventGraph {
         return self.scales.x(d.x1);
       })
       .attr("y1", function(d) {
-        return self.scales.y(0.4);
+        return self.scales.y(0.5);
       })
       .attr("y2", function(d) {
-        return self.scales.y(0.4);
+        return self.scales.y(0.5);
       })
       .attr("x2", function(d) {
         console.log(d);
         return self.scales.x(d.x2);
       })
-      .attr("stroke-width", 3)
+      .attr("stroke-width", 6)
       .style("stroke", this.color);
   }
   /**
@@ -2144,7 +2117,9 @@ class Countries {
   constructor(data) {
     this.data = data;
     for (let i = 0; i < data.length; ++i) {
-      this.countryNames[data[i].properties.name] = data[i].properties.iso_a3;
+      this.countryNames[data[i].properties.name] = String(
+        data[i].properties.iso_a3
+      );
     }
   }
   /**
@@ -3604,7 +3579,9 @@ class MapObj {
     if (this.stdGraph.scrubber.isHidden()) {
       return;
     }
+    let self = this;
     let temp = cmp.graphwindow;
+    let selection = this.stdGraph.scrubber.getSelected();
     let canada = this.dataObject
       .getCountry("Canada")
       .getPapersAtYears(this.stdGraph.scrubber.getSelected());
@@ -3612,17 +3589,11 @@ class MapObj {
       .getCountry(countryName)
       .getPapersAtYears(this.stdGraph.scrubber.getSelected());
     if (canada.length && other.length) {
-      let sum = canada.reduce(function(acc, cur) {
-        return acc + cur;
-      }, 0);
-      canada = canada.map(function(d) {
-        return d / sum;
+      canada = canada.map(function(d, i) {
+        return d / self.dataObject.getYearTotal("Canada", selection.min + i);
       });
-      sum = other.reduce(function(acc, cur) {
-        return acc + cur;
-      }, 0);
-      other = other.map(function(d) {
-        return d / sum;
+      other = other.map(function(d, i) {
+        return d / self.dataObject.getYearTotal(countryName, selection.min + i);
       });
       temp.visualize(
         canada,
@@ -3828,181 +3799,183 @@ class MapObj {
       `<p>${d.country_name} total papers: ${d.country_total} <br>${d.name} total papers: ${d.total}</p>`
     );
     let visBox = result.vis.node().getBoundingClientRect();
-    let svg = result.vis
-      .append("svg")
-      .attr("width", visBox.width)
-      .attr("height", visBox.height / 4)
-      .attr("display", "block");
-    let ins = this.dataObject.getCountry(d.country_name).getInstitute(d.name);
-    let canada = this.dataObject.getCountry("Canada");
     let selection = this.stdGraph.scrubber.getSelected();
-    let canLine = [];
-    let insLine = [];
-    for (let i = selection.min; i <= selection.max; ++i) {
-      insLine.push({
-        x: i,
-        y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
-      });
-      canLine.push({
-        x: i,
-        y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
-      });
-    }
-    let minY = Math.min(
-      ...insLine
-        .map(function(d) {
-          return d.y;
-        })
-        .concat(
-          canLine.map(function(d) {
-            return d.y;
-          })
-        )
-    );
-    let maxY = Math.max(
-      ...canLine
-        .map(function(d) {
-          return d.y;
-        })
-        .concat(
-          insLine.map(function(d) {
-            return d.y;
-          })
-        )
-    );
-    let xScale = d3
-      .scaleLinear()
-      .domain([selection.min, selection.max])
-      .range([0, visBox.width]);
-    let yScale = d3
-      .scaleLinear()
-      .domain([minY, maxY])
-      .range([visBox.height / 4, 0]);
-
-    svg
-      .append("path")
-      .datum(insLine)
-      .attr("class", "path1")
-      .attr(
-        "d",
-        d3
-          .line()
-          .x(function(e) {
-            return xScale(e.x);
-          })
-          .y(function(e) {
-            return yScale(e.y);
-          })
-      )
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 2.5)
-      .style("opacity", "0.5");
-    svg
-      .append("path")
-      .datum(canLine)
-      .attr("class", "path2")
-      .attr(
-        "d",
-        d3
-          .line()
-          .x(function(e) {
-            return xScale(e.x);
-          })
-          .y(function(e) {
-            return yScale(e.y);
-          })
-      )
-      .attr("fill", "none")
-      .attr("stroke", "red")
-      .attr("stroke-width", 2.5)
-      .style("opacity", "0.5");
-
-    let svg2 = result.vis
-      .append("svg")
-      .attr("width", visBox.width)
-      .attr("height", visBox.height / 4)
-      .attr("display", "block");
-    let leadLagSelection = {
-      min: selection.min + d.lead,
-      max: selection.max + d.lead
-    };
-    insLine = [];
-    for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
-      insLine.push({
-        x: i - d.lead,
-        y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
-      });
-    }
-
-    minY = Math.min(
-      ...insLine
-        .map(function(d) {
-          return d.y;
-        })
-        .concat(
-          canLine.map(function(d) {
-            return d.y;
-          })
-        )
-    );
-    maxY = Math.max(
-      ...canLine
-        .map(function(d) {
-          return d.y;
-        })
-        .concat(
-          insLine.map(function(d) {
-            return d.y;
-          })
-        )
-    );
-    xScale = d3
-      .scaleLinear()
-      .domain([selection.min, selection.max])
-      .range([0, visBox.width]);
-    yScale = d3
-      .scaleLinear()
-      .domain([minY, maxY])
-      .range([visBox.height / 4, 0]);
-    svg2
-      .append("path")
-      .datum(insLine)
-      .attr("class", "path1")
-      .attr(
-        "d",
-        d3
-          .line()
-          .x(function(e) {
-            return xScale(e.x);
-          })
-          .y(function(e) {
-            return yScale(e.y);
-          })
-      )
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 2.5)
-      .style("opacity", "0.5");
-    svg2
-      .append("path")
-      .datum(canLine)
-      .attr("class", "path2")
-      .attr(
-        "d",
-        d3
-          .line()
-          .x(function(e) {
-            return xScale(e.x);
-          })
-          .y(function(e) {
-            return yScale(e.y);
-          })
-      )
-      .attr("fill", "none")
-      .attr("stroke", "red")
-      .attr("stroke-width", 2.5)
-      .style("opacity", "0.5");
+    //const maxSelection = 11;
+    //const scale = 0.25;
+    //let svg = result.vis
+    //  .append("svg")
+    //  .attr("width", visBox.width)
+    //  .attr("height", visBox.height / 4)
+    //  .attr("display", "block");
+    //let ins = this.dataObject.getCountry(d.country_name).getInstitute(d.name);
+    //let canada = this.dataObject.getCountry("Canada");
+    //let canLine = [];
+    //let insLine = [];
+    //for (let i = selection.min; i <= selection.max; ++i) {
+    //  insLine.push({
+    //    x: i,
+    //    y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
+    //  });
+    //  canLine.push({
+    //    x: i,
+    //    y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+    //  });
+    //}
+    //let minY = Math.min(
+    //  ...insLine
+    //    .map(function(d) {
+    //      return d.y;
+    //    })
+    //    .concat(
+    //      canLine.map(function(d) {
+    //        return d.y;
+    //      })
+    //    )
+    //);
+    //let maxY = Math.max(
+    //  ...canLine
+    //    .map(function(d) {
+    //      return d.y;
+    //    })
+    //    .concat(
+    //      insLine.map(function(d) {
+    //        return d.y;
+    //      })
+    //    )
+    //);
+    //let xScale = d3
+    //  .scaleLinear()
+    //  .domain([selection.min, selection.max])
+    //  .range([0, visBox.width]);
+    //let yScale = d3
+    //  .scaleLinear()
+    //  .domain([0, maxY])
+    //  .range([visBox.height / 4, 0]);
+    //
+    //svg
+    //  .append("path")
+    //  .datum(insLine)
+    //  .attr("class", "path1")
+    //  .attr(
+    //    "d",
+    //    d3
+    //      .line()
+    //      .x(function(e) {
+    //        return xScale(e.x);
+    //      })
+    //      .y(function(e) {
+    //        return yScale(e.y);
+    //      })
+    //  )
+    //  .attr("fill", "none")
+    //  .attr("stroke", "steelblue")
+    //  .attr("stroke-width", 2.5)
+    //  .style("opacity", "0.5");
+    //svg
+    //  .append("path")
+    //  .datum(canLine)
+    //  .attr("class", "path2")
+    //  .attr(
+    //    "d",
+    //    d3
+    //      .line()
+    //      .x(function(e) {
+    //        return xScale(e.x);
+    //      })
+    //      .y(function(e) {
+    //        return yScale(e.y);
+    //      })
+    //  )
+    //  .attr("fill", "none")
+    //  .attr("stroke", "red")
+    //  .attr("stroke-width", 2.5)
+    //  .style("opacity", "0.5");
+    //
+    //let svg2 = result.vis
+    //  .append("svg")
+    //  .attr("width", visBox.width)
+    //  .attr("height", visBox.height / 4)
+    //  .attr("display", "block");
+    //let leadLagSelection = {
+    //  min: selection.min + d.lead,
+    //  max: selection.max + d.lead
+    //};
+    //insLine = [];
+    //for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
+    //  insLine.push({
+    //    x: i - d.lead,
+    //    y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
+    //  });
+    //}
+    //
+    //minY = Math.min(
+    //  ...insLine
+    //    .map(function(d) {
+    //      return d.y;
+    //    })
+    //    .concat(
+    //      canLine.map(function(d) {
+    //        return d.y;
+    //      })
+    //    )
+    //);
+    //maxY = Math.max(
+    //  ...canLine
+    //    .map(function(d) {
+    //      return d.y;
+    //    })
+    //    .concat(
+    //      insLine.map(function(d) {
+    //        return d.y;
+    //      })
+    //    )
+    //);
+    //xScale = d3
+    //  .scaleLinear()
+    //  .domain([selection.min, selection.max])
+    //  .range([0, visBox.width]);
+    //yScale = d3
+    //  .scaleLinear()
+    //  .domain([0, maxY])
+    //  .range([visBox.height / 4, 0]);
+    //svg2
+    //  .append("path")
+    //  .datum(insLine)
+    //  .attr("class", "path1")
+    //  .attr(
+    //    "d",
+    //    d3
+    //      .line()
+    //      .x(function(e) {
+    //        return xScale(e.x);
+    //      })
+    //      .y(function(e) {
+    //        return yScale(e.y);
+    //      })
+    //  )
+    //  .attr("fill", "none")
+    //  .attr("stroke", "steelblue")
+    //  .attr("stroke-width", 2.5)
+    //  .style("opacity", "0.5");
+    //svg2
+    //  .append("path")
+    //  .datum(canLine)
+    //  .attr("class", "path2")
+    //  .attr(
+    //    "d",
+    //    d3
+    //      .line()
+    //      .x(function(e) {
+    //        return xScale(e.x);
+    //      })
+    //      .y(function(e) {
+    //        return yScale(e.y);
+    //      })
+    //  )
+    //  .attr("fill", "none")
+    //  .attr("stroke", "red")
+    //  .attr("stroke-width", 2.5)
+    //  .style("opacity", "0.5");
 
     let svg5 = result.vis
       .append("svg")

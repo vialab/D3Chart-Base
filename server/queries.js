@@ -363,8 +363,6 @@ async function getCountries() {
     JSON.stringify(countryTotals)
   );
 }
-//getCountries();
-//getCountryTotalPapers({ body: { country: "United States", year: 2019 } });
 
 module.exports = {
   queryDimensions,
