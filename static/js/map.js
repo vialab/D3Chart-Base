@@ -21,6 +21,14 @@ $(function() {
   colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);
   //this is the country/map data
   //once we receive the json we call the load function which creates the map, legend and timeline
+  $("#myRange").on("change", function() {
+    let currentVal = $("#myRange").val();
+    currentVal /= 100;
+    currentVal *= 2.0;
+    $("#label-myRange").html(`${currentVal}`);
+    mapObj.onLeadLagThresholdChange(currentVal);
+  });
+
   d3.json("./custom.geo.json").then(function(json) {
     onLoad(json);
   });

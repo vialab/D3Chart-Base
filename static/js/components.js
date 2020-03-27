@@ -1143,7 +1143,7 @@ class STDGraph {
 
     var u = this.svg.selectAll(".line-path").data([data]);
 
-    this.scrubber.setExtent({ min: minX, max: maxX });
+    this.scrubber.setExtent({ min: minX, max: maxX + 1 }); // plus 1 due to removing the current year from displaying. We can still use it for lead lag even though it is not displayed.
     // Updata the line
     u.enter()
       .append("path")
@@ -1538,7 +1538,6 @@ class InstitutionData {
   papers = {};
   funding = {};
   citations = {};
-
   grid_id = null;
 
   /**
@@ -2173,7 +2172,7 @@ class Countries {
       .on("mouseout", function(d, i) {
         d3.select(this).style("stroke", "white");
         d3.select(this).style("stroke-width", "1px");
-        self.tooltip.destroy();
+        if (self.tooltip != null) self.tooltip.destroy();
         self.tooltip = null;
       })
       .on("click", function(d, i) {
@@ -2292,6 +2291,9 @@ class Institutions {
       "transform",
       `translate(${transform.translateX}, ${transform.translateY})scale(${transform.scale})`
     );
+    data = data.filter(x => {
+      return !isNaN(x.scale);
+    });
     let g = this.group
       .selectAll("g")
       .data(data)
@@ -2689,7 +2691,13 @@ class MetricButtonGroup {
   spinner = null;
   svg = null;
   highlightColor = "#4682b460";
+  highlightDefault() {
+    $("#deviation-country").css("background-color", this.highlightColor);
+  }
   deviationCountryClick() {
+    if (this.scrubber.isHidden()) {
+      return;
+    }
     let selection = this.scrubber.getSelected();
     this.reset();
     $("#deviation-country").css("background-color", this.highlightColor);
@@ -2834,7 +2842,7 @@ class MetricButtonGroup {
           deviationSum += Math.abs(slopes[i] - avg) / std;
         }
         //deviationSum /= slopes.length;
-        result[institute] = 20 - deviationSum * 5;
+        result[institute] = 40 - deviationSum * 8;
       }
     }
 
@@ -3042,7 +3050,7 @@ class RecommendedKeywords {
    * @param {Array.<{val:Number, keyword:String, selection:Number}>} recommended
    */
   async putRecommended(recommended) {
-    let response = await d3.json("/recommended-list", {
+    d3.json("/recommended-list", {
       method: "POST",
       body: JSON.stringify({
         recommended: recommended
@@ -3050,11 +3058,13 @@ class RecommendedKeywords {
       headers: {
         "Content-type": "application/json; charset=UTF-8"
       }
+    }).catch(function(err) {
+      console.log(err);
     });
-    return response;
   }
 }
 class MapObj {
+  leadLagThreshold = 2.0;
   countries = null;
   institutes = null;
   interaction = null;
@@ -3141,7 +3151,27 @@ class MapObj {
       submission
     );
   }
-
+  onLeadLagThresholdChange(value) {
+    if (isNaN(value)) {
+      return;
+    }
+    this.leadLagThreshold = value;
+    if (this.stdGraph.scrubber.isHidden()) {
+      return;
+    }
+    let selection = this.stdGraph.scrubber.getSelected();
+    let result = this.getLeadLagCountries(selection);
+    for (const el in result.data) {
+      if (result.data[el].distance > this.leadLagThreshold) {
+        result.data[el].leadlag = 0;
+      }
+    }
+    this.countries.color(
+      result.data,
+      this.legend.colorScale,
+      result.missingData
+    );
+  }
   setLegend(legend) {
     this.legend = legend;
     this.legend.onColorChange(this.updateColor.bind(this));
@@ -3195,6 +3225,9 @@ class MapObj {
     }
     let data = [];
     for (let value in canada.countryTotal) {
+      if (value == new Date().getFullYear()) {
+        continue;
+      }
       data.push({ x: Number(value), y: canada.countryTotal[value] });
     }
     this.stdGraph.updateData(data);
@@ -3204,6 +3237,8 @@ class MapObj {
     this.legend.colorScale.setScaleByYearsSelected(
       this.stdGraph.scrubber.getNumYearsSelected()
     );
+    this.metricButtons.reset();
+    this.metricButtons.highlightDefault();
     this.mostLag(this.dataObject);
     this.mostLead(this.dataObject);
     this.getLargestSumOfCountries(selection);
@@ -3216,9 +3251,16 @@ class MapObj {
   onScrubberSelection(selection) {
     console.log(selection);
     this.legend.setDate(selection);
+    this.metricButtons.reset();
+    this.metricButtons.highlightDefault();
     //update the color of the countries
     this.colorScale.setRange(this.stdGraph.scrubber.getNumYearsSelected());
     let result = this.getLeadLagCountries(selection);
+    for (const el in result.data) {
+      if (result.data[el].distance > this.leadLagThreshold) {
+        result.data[el].leadlag = 0;
+      }
+    }
     this.countries.color(
       result.data,
       this.legend.colorScale,
@@ -3421,14 +3463,28 @@ class MapObj {
       }
       if (currentCountryData.length == maxWindow - minWindow + 1) {
         let result = leadlag(canadaData, currentCountryData);
+        let shiftedArray = currentCountryData.slice(
+          leadLagWindow + result.bestOffset,
+          leadLagWindow + result.bestOffset + canadaData.length
+        );
+        let distance = shiftedArray.reduce((acc, cur, idx) => {
+          return acc + Math.pow(cur - canadaData[idx], 2);
+        }, 0);
+        distance = Math.sqrt(distance);
         otherData.push({
           country_name: country,
           leadlag: result.bestOffset,
-          data: currentCountryData
+          data: currentCountryData,
+          distance: distance
         });
       }
     }
-    otherData.push({ country_name: "Canada", leadlag: 0, data: canadaData });
+    otherData.push({
+      country_name: "Canada",
+      leadlag: 0,
+      data: canadaData,
+      distance: 0
+    }); // leadlag and distance are both 0 because they are compared with itself.
 
     return {
       data: otherData,
@@ -3613,13 +3669,9 @@ class MapObj {
     console.log(d);
     let result = new Tooltip("#map-holder", box, `<p>${d.properties.name}</p>`);
     let visBox = result.vis.node().getBoundingClientRect();
-    let svg = result.vis
-      .append("svg")
-      .attr("width", visBox.width)
-      .attr("height", visBox.height / 4)
-      .attr("display", "block");
-    let canada = this.dataObject.getCountry("Canada");
+    let insLine2 = [];
     let selection = this.stdGraph.scrubber.getSelected();
+    let canada = this.dataObject.getCountry("Canada");
     let canLine = [];
     let insLine = [];
     for (let i = selection.min; i <= selection.max; ++i) {
@@ -3632,6 +3684,56 @@ class MapObj {
         y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
       });
     }
+    let leadLagSelection = {
+      min: selection.min + Number(leadlag),
+      max: selection.max + Number(leadlag)
+    };
+    for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
+      insLine2.push({
+        x: i - Number(leadlag),
+        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i)
+      });
+    }
+    let distance = insLine2.reduce((acc, cur, idx) => {
+      return acc + Math.pow(cur.y - canLine[idx].y, 2);
+    }, 0);
+    distance = Math.sqrt(distance);
+    result.vis.append("div").html(`Distance: ${distance.toPrecision(3)}`);
+    result.vis
+      .append("div")
+      .style("width", `${visBox.width}px`)
+      .style("height", `${visBox.height / 4}px`);
+    let svg5 = result.vis
+      .append("svg")
+      .attr("width", visBox.width / 2)
+      .attr("height", visBox.height / 2)
+      .attr("display", "inline-block")
+      .attr("margin-top", "15px");
+
+    svg5
+      .append("circle")
+      .attr("cx", visBox.width / 4)
+      .attr("cy", visBox.height / 4)
+      .attr("r", visBox.height / 4 - 3)
+      .attr("stroke-width", 3)
+      .style("fill", this.colorScale.get(Number(0)));
+
+    svg5
+      .append("text")
+      .attr("dx", visBox.width / 4)
+      .attr("dy", visBox.height / 4)
+      .style("fill", "white")
+      .attr("stroke", "black")
+      .attr("stroke-width", 0.5)
+      .attr("font-family", "helvetica")
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .text(0);
+    let svg = result.vis
+      .append("svg")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 2)
+      .attr("display", "inline-block");
 
     let minY = Math.min(
       ...insLine
@@ -3661,9 +3763,8 @@ class MapObj {
       .range([0, visBox.width]);
     let yScale = d3
       .scaleLinear()
-      .domain([minY, maxY])
+      .domain([0, maxY])
       .range([visBox.height / 4, 0]);
-
     svg
       .append("path")
       .datum(insLine)
@@ -3702,26 +3803,44 @@ class MapObj {
       .attr("stroke", "red")
       .attr("stroke-width", 2.5)
       .style("opacity", "0.5");
+    result.vis
+      .append("div")
+      .attr("width", visBox.width)
+      .attr("height", visBox.height / 4);
+    let svg6 = result.vis
+      .append("svg")
+      .attr("width", visBox.width / 2)
+      .attr("height", visBox.height / 2)
+      .attr("display", "inline-block");
+
+    svg6
+      .append("circle")
+      .attr("cx", visBox.width / 4)
+      .attr("cy", visBox.height / 4)
+      .attr("r", visBox.height / 4 - 3)
+      .attr("stroke-width", 3)
+      .style("fill", this.colorScale.get(Number(leadlag)));
+
+    svg6
+      .append("text")
+      .attr("dx", visBox.width / 4)
+      .attr("dy", visBox.height / 4)
+      .style("fill", "white")
+      .attr("stroke", "black")
+      .attr("stroke-width", 0.5)
+      .attr("font-family", "helvetica")
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .text(leadlag);
 
     let svg2 = result.vis
       .append("svg")
       .attr("width", visBox.width)
-      .attr("height", visBox.height / 4)
-      .attr("display", "block");
+      .attr("height", visBox.height / 2)
+      .attr("display", "inline-block");
     console.log(leadlag);
-    let leadLagSelection = {
-      min: selection.min + Number(leadlag),
-      max: selection.max + Number(leadlag)
-    };
-    insLine = [];
-    for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
-      insLine.push({
-        x: i - Number(leadlag),
-        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i)
-      });
-    }
     minY = Math.min(
-      ...insLine
+      ...insLine2
         .map(function(d) {
           return d.y;
         })
@@ -3737,7 +3856,7 @@ class MapObj {
           return d.y;
         })
         .concat(
-          insLine.map(function(d) {
+          insLine2.map(function(d) {
             return d.y;
           })
         )
@@ -3748,11 +3867,11 @@ class MapObj {
       .range([0, visBox.width]);
     yScale = d3
       .scaleLinear()
-      .domain([minY, maxY])
+      .domain([0, maxY])
       .range([visBox.height / 4, 0]);
     svg2
       .append("path")
-      .datum(insLine)
+      .datum(insLine2)
       .attr("class", "path1")
       .attr(
         "d",
@@ -3792,191 +3911,14 @@ class MapObj {
     return result;
   }
   onHoverToolTip(box, d) {
-    console.log(d);
     let result = new Tooltip(
       "#map-holder",
       box,
       `<p>${d.country_name} total papers: ${d.country_total} <br>${d.name} total papers: ${d.total}</p>`
     );
+
     let visBox = result.vis.node().getBoundingClientRect();
     let selection = this.stdGraph.scrubber.getSelected();
-    //const maxSelection = 11;
-    //const scale = 0.25;
-    //let svg = result.vis
-    //  .append("svg")
-    //  .attr("width", visBox.width)
-    //  .attr("height", visBox.height / 4)
-    //  .attr("display", "block");
-    //let ins = this.dataObject.getCountry(d.country_name).getInstitute(d.name);
-    //let canada = this.dataObject.getCountry("Canada");
-    //let canLine = [];
-    //let insLine = [];
-    //for (let i = selection.min; i <= selection.max; ++i) {
-    //  insLine.push({
-    //    x: i,
-    //    y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
-    //  });
-    //  canLine.push({
-    //    x: i,
-    //    y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
-    //  });
-    //}
-    //let minY = Math.min(
-    //  ...insLine
-    //    .map(function(d) {
-    //      return d.y;
-    //    })
-    //    .concat(
-    //      canLine.map(function(d) {
-    //        return d.y;
-    //      })
-    //    )
-    //);
-    //let maxY = Math.max(
-    //  ...canLine
-    //    .map(function(d) {
-    //      return d.y;
-    //    })
-    //    .concat(
-    //      insLine.map(function(d) {
-    //        return d.y;
-    //      })
-    //    )
-    //);
-    //let xScale = d3
-    //  .scaleLinear()
-    //  .domain([selection.min, selection.max])
-    //  .range([0, visBox.width]);
-    //let yScale = d3
-    //  .scaleLinear()
-    //  .domain([0, maxY])
-    //  .range([visBox.height / 4, 0]);
-    //
-    //svg
-    //  .append("path")
-    //  .datum(insLine)
-    //  .attr("class", "path1")
-    //  .attr(
-    //    "d",
-    //    d3
-    //      .line()
-    //      .x(function(e) {
-    //        return xScale(e.x);
-    //      })
-    //      .y(function(e) {
-    //        return yScale(e.y);
-    //      })
-    //  )
-    //  .attr("fill", "none")
-    //  .attr("stroke", "steelblue")
-    //  .attr("stroke-width", 2.5)
-    //  .style("opacity", "0.5");
-    //svg
-    //  .append("path")
-    //  .datum(canLine)
-    //  .attr("class", "path2")
-    //  .attr(
-    //    "d",
-    //    d3
-    //      .line()
-    //      .x(function(e) {
-    //        return xScale(e.x);
-    //      })
-    //      .y(function(e) {
-    //        return yScale(e.y);
-    //      })
-    //  )
-    //  .attr("fill", "none")
-    //  .attr("stroke", "red")
-    //  .attr("stroke-width", 2.5)
-    //  .style("opacity", "0.5");
-    //
-    //let svg2 = result.vis
-    //  .append("svg")
-    //  .attr("width", visBox.width)
-    //  .attr("height", visBox.height / 4)
-    //  .attr("display", "block");
-    //let leadLagSelection = {
-    //  min: selection.min + d.lead,
-    //  max: selection.max + d.lead
-    //};
-    //insLine = [];
-    //for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
-    //  insLine.push({
-    //    x: i - d.lead,
-    //    y: ins.getPapers(i) / this.dataObject.getYearTotal(d.country_name, i)
-    //  });
-    //}
-    //
-    //minY = Math.min(
-    //  ...insLine
-    //    .map(function(d) {
-    //      return d.y;
-    //    })
-    //    .concat(
-    //      canLine.map(function(d) {
-    //        return d.y;
-    //      })
-    //    )
-    //);
-    //maxY = Math.max(
-    //  ...canLine
-    //    .map(function(d) {
-    //      return d.y;
-    //    })
-    //    .concat(
-    //      insLine.map(function(d) {
-    //        return d.y;
-    //      })
-    //    )
-    //);
-    //xScale = d3
-    //  .scaleLinear()
-    //  .domain([selection.min, selection.max])
-    //  .range([0, visBox.width]);
-    //yScale = d3
-    //  .scaleLinear()
-    //  .domain([0, maxY])
-    //  .range([visBox.height / 4, 0]);
-    //svg2
-    //  .append("path")
-    //  .datum(insLine)
-    //  .attr("class", "path1")
-    //  .attr(
-    //    "d",
-    //    d3
-    //      .line()
-    //      .x(function(e) {
-    //        return xScale(e.x);
-    //      })
-    //      .y(function(e) {
-    //        return yScale(e.y);
-    //      })
-    //  )
-    //  .attr("fill", "none")
-    //  .attr("stroke", "steelblue")
-    //  .attr("stroke-width", 2.5)
-    //  .style("opacity", "0.5");
-    //svg2
-    //  .append("path")
-    //  .datum(canLine)
-    //  .attr("class", "path2")
-    //  .attr(
-    //    "d",
-    //    d3
-    //      .line()
-    //      .x(function(e) {
-    //        return xScale(e.x);
-    //      })
-    //      .y(function(e) {
-    //        return yScale(e.y);
-    //      })
-    //  )
-    //  .attr("fill", "none")
-    //  .attr("stroke", "red")
-    //  .attr("stroke-width", 2.5)
-    //  .style("opacity", "0.5");
-
     let svg5 = result.vis
       .append("svg")
       .attr("width", visBox.width)
@@ -4106,7 +4048,6 @@ class MapObj {
       canData = canData.map(function(x) {
         return x / sum;
       });
-
       for (let j = 0; j < currentCountry.length; ++j) {
         diff += Math.abs(canData[j] - currentCountry[j]);
       }

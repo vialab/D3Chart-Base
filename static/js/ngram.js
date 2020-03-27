@@ -734,7 +734,7 @@ class D3Chart {
             ),
             dat = d.data[idx];
 
-          this.legend.dataNodes[d.name].update(round(dat.y, 8)); // TODO - better number formatting
+          this.legend.dataNodes[d.name].update(round(dat.y, 8).toFixed(3)); // TODO - better number formatting
 
           this.chart.mouseLine.attr(
             "d",

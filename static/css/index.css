@@ -97,9 +97,9 @@ svg {
 }
 
 .graph-window {
-  top: 10%;
+  top: 30%;
   left: 21%;
-  bottom: 10%;
+  bottom: 30%;
   right: 1%;
   background-color: white;
   border-radius: 25px;
@@ -118,9 +118,9 @@ svg {
     right: 50%;
   }
   to {
-    top: 10%;
+    top: 30%;
     left: 21%;
-    bottom: 10%;
+    bottom: 30%;
     right: 1%;
   }
 }
@@ -288,9 +288,9 @@ svg {
   height: 15%;
   border-radius: 10px;
   outline: none;
-  border:none;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 5px rgba(0,0,0,0.24);
-  cursor:pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 5px rgba(0, 0, 0, 0.24);
+  cursor: pointer;
   margin-left: 30px;
 }
 
@@ -357,6 +357,55 @@ body {
     transform: rotate(360deg);
   }
 }
-#glyph-legend{
-  margin-left:10px;
+#glyph-legend {
+  margin-left: 10px;
+}
+
+.slidecontainer {
+  width: 100%; /* Width of the outside container */
+  height: 40px;
+}
+
+/* The slider itself */
+.slider {
+  -webkit-appearance: none; /* Override default CSS styles */
+  appearance: none;
+  width: 70%; /* Full-width */
+  height: 25px; /* Specified height */
+  background: #d3d3d3; /* Grey background */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  -webkit-transition: 0.2s; /* 0.2 seconds transition on hover */
+  transition: opacity 0.2s;
+  flex: left;
+  margin-left: 20px;
+  border-radius: 4px;
+  position: relative;
+  padding: 0 0;
+}
+/* Mouse-over effects */
+.slider:hover {
+  opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 25px; /* Set a specific slider handle width */
+  height: 25px; /* Slider handle height */
+  background: #4caf50; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+  width: 25px; /* Set a specific slider handle width */
+  height: 25px; /* Slider handle height */
+  background: #4caf50; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.label-class {
+  display: flex;
+  align-items: center;
 }

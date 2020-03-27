@@ -1,7 +1,6 @@
 //https://docs.dimensions.ai/dsl/
 const request = require("request");
 const callLimit = require("./apicallrestrict");
-const lastAuthorization = require("./resources/lastauthorization.json");
 const fs = require("fs");
 //use the exampleconfiglogin and input your credentials there
 const login = require("./resources/configlogin.json");
@@ -9,66 +8,53 @@ const login = require("./resources/configlogin.json");
 var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
 
-let jwt_token = require("./resources/credentials.json");
+let jwt_token = JSON.parse(process.env.KEY);
 
-let recommended = require("./resources/recommendedList.json");
+let recommended = JSON.parse(process.env.RECOMMEND_LIST);
 
 let geoData = require("./resources/custom.geo.json");
-
-let countryNames = require("./resources/countryNames.json");
 let countryTotals = require("./resources/countryTotals.json");
 
-console.log(jwt_token);
 //keeps track of the usage and restricts if we are approaching the limit
 var timer = new callLimit();
 /**
  * @param  {JSON} date - JSON object containing date
  * @returns {boolean} - returns false if authorization has not expired, returns true if it has expired and writes to file the current date(it assumes one will get new credentials immediately)
  */
-function authorizationExpiration(date) {
-  date = new Date(date);
+const getAPIKey = async function() {
+  return new Promise(function(resolve, reject) {
+    request.post(api_url_auth, function(error, resp) {
+      if (error) {
+        reject(error);
+      }
+      let cacheToken = JSON.parse(resp.body).token;
+      if (cacheToken != null) {
+        jwt_token = { Authorization: "JWT " + cacheToken };
+        process.env.KEY = JSON.stringify(jwt_token);
+        resolve(cacheToken);
+      } else {
+        console.log("Error getting token.");
+        reject(error);
+      }
+    }).body = JSON.stringify(login);
+  });
+};
+
+const checkKey = async function() {
+  let date = new Date(process.env.LAST_AUTHORIZED);
   let oneDay = 60 * 60 * 1000 * 24;
   if (new Date() - date > oneDay) {
-    fs.writeFile(
-      "./server/resources/lastauthorization.json",
-      JSON.stringify(new Date().toJSON()),
-      err => {
-        console.error(err);
-      }
-    );
-    return true;
+    await getAPIKey();
+    process.env.LAST_AUTHORIZED = new Date().toString();
   }
-  return false;
-}
-
-if (authorizationExpiration(lastAuthorization)) {
-  console.log("Getting authorization tokens");
-  //get credentials
-  request.post(api_url_auth, function(error, resp) {
-    if (error) {
-      throw error;
-    }
-    let cacheToken = JSON.parse(resp.body).token;
-    if (cacheToken != null) {
-      jwt_token = { Authorization: "JWT " + cacheToken };
-      fs.writeFile(
-        "./server/resources/credentials.json",
-        JSON.stringify(jwt_token),
-        err => {
-          console.error(err);
-        }
-      );
-    } else {
-      console.log("Error getting token.");
-    }
-  }).body = JSON.stringify(login);
-}
+};
 
 /**
  * @param  {JSON} req - format {query:}
  * @param  {} resp
  */
 const queryDimensions = async (req, resp) => {
+  await checkKey();
   timer.incrementCalls();
   console.log(req.body.query);
   const options = {
@@ -101,6 +87,7 @@ const queryNotCanada = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -126,6 +113,7 @@ const queryCanada = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -147,6 +135,7 @@ const queryCanada = async function(req, resp) {
 };
 
 const queryCategory = async function(req, resp) {
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -168,6 +157,7 @@ const queryCategory = async function(req, resp) {
 };
 
 const queryInstituteCitationsCan = async function(req, resp) {
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -186,6 +176,7 @@ const queryInstituteCitationsCan = async function(req, resp) {
   });
 };
 const queryInstituteCitationsNotCan = async function(req, resp) {
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -209,6 +200,7 @@ const queryCanadaFunding = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -233,6 +225,7 @@ const queryFunding = async function(req, resp) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
   }
+  await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
@@ -279,10 +272,7 @@ const recommendedList = async function(req, res) {
       recommended[idx] = req.body.recommended;
       console.log(idx);
       console.log(recommended);
-      fs.writeFileSync(
-        "./server/resources/recommendedList.json",
-        JSON.stringify(recommended)
-      );
+      process.env.RECOMMEND_LIST = JSON.stringify(recommended);
     }
     res.status(200).send();
   }
@@ -294,19 +284,13 @@ const query = async function(req, res) {
     headers: {
       Authorization: jwt_token.Authorization
     },
-    body: `search publications return research_org_countries limit 1000`
+    body: `search publications where id = "pub.1123731914" return publications[concepts] limit 1000`
   };
   request.post(options, (error, res) => {
     console.log(res);
     let data = JSON.parse(res.body);
     let countryNames = [];
-    for (let i = 0; i < data.research_org_countries.length; ++i) {
-      countryNames.push(data.research_org_countries[i].name);
-    }
-    fs.writeFileSync(
-      "./server/resources/countryNames.json",
-      JSON.stringify(countryNames)
-    );
+    //fs.writeFileSync("concept.json", JSON.stringify(data));
   });
 };
 const getCountryTotalPapers = async function(req, resp) {
@@ -318,7 +302,7 @@ const getCountryTotalPapers = async function(req, resp) {
     },
     body: `search publications where research_org_country_names="${req.body.country}" and year=${req.body.year} return publications`
   };
-
+  await checkKey();
   return new Promise(function(resolve, reject) {
     request.post(options, (error, res) => {
       if (error) {
