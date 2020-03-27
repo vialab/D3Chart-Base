@@ -341,7 +341,6 @@ async function getCountries() {
       );
     }
   }
-  //save json
   fs.writeFileSync(
     "./server/resources/countryTotals.json",
     JSON.stringify(countryTotals)
