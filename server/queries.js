@@ -36,7 +36,7 @@ const getAPIKey = async function() {
         console.log("Error getting token.");
         reject(error);
       }
-    }).body = JSON.stringify(login);
+    }).body = login;
   });
 };
 

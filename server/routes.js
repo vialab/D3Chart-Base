@@ -2,7 +2,6 @@ const bodyParser = require("body-parser");
 const queryDimensions = require("./queries");
 const defaultData = require("./resources/defaultData.json");
 const locations = require("./geolocation");
-//const metricsDB = require("./metricsdb");
 
 module.exports = app => {
   app.use(bodyParser.json());
