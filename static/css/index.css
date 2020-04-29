@@ -30,6 +30,7 @@
   padding: 5px;
   pointer-events: all;
   display: block;
+  margin-top: 200px;
 }
 
 input {
@@ -105,9 +106,9 @@ svg {
   border-radius: 25px;
   position: fixed;
   box-shadow: 0 0 3px;
-  stroke: black;
   animation-name: graph-window-animation;
   animation-duration: 500ms;
+  display: flex;
 }
 
 @keyframes graph-window-animation {
@@ -275,6 +276,7 @@ svg {
   box-shadow: 0 0 3px;
   stroke: black;
   position: absolute;
+  max-width: 512px;
 }
 
 .btn-group {
@@ -377,7 +379,7 @@ body {
   opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
   -webkit-transition: 0.2s; /* 0.2 seconds transition on hover */
   transition: opacity 0.2s;
-  flex: left;
+  flex: middle;
   margin-left: 20px;
   border-radius: 4px;
   position: relative;
@@ -394,18 +396,27 @@ body {
   appearance: none;
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
-  background: #4caf50; /* Green background */
+  background: rgb(187, 208, 226); /* Green background */
   cursor: pointer; /* Cursor on hover */
+  border-radius: 4px;
 }
 
 .slider::-moz-range-thumb {
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
-  background: #4caf50; /* Green background */
+  background: rgb(187, 208, 226); /* Green background */
   cursor: pointer; /* Cursor on hover */
+  border-radius: 4px;
 }
 
 .label-class {
   display: flex;
   align-items: center;
+}
+
+@media screen {
+  @page {
+    margin: 0;
+    size: 2560px 1297px;
+  }
 }

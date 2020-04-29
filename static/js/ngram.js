@@ -7,8 +7,8 @@ class D3Chart {
     maxTicks: 15,
     minTicks: 1,
     clamp: true,
-    leftBisect: d3.bisector(data => data.x).left,
-    rightBisect: d3.bisector(data => data.x).right
+    leftBisect: d3.bisector((data) => data.x).left,
+    rightBisect: d3.bisector((data) => data.x).right,
   };
 
   Y = {
@@ -19,13 +19,13 @@ class D3Chart {
     maxTicks: 10,
     clamp: true,
     prefix: "",
-    suffix: ""
+    suffix: "",
   };
 
   chart = {
     width: null,
     mouseArea: null,
-    mouseLine: null
+    mouseLine: null,
   };
 
   legend = {
@@ -36,11 +36,11 @@ class D3Chart {
       top: 6,
       bottom: 4,
       left: 4,
-      right: 4
+      right: 4,
     },
     spacing: {
       itemSpacing: 5,
-      itemSize: 30
+      itemSize: 30,
     },
     outlineColour: "#808080",
     outlineWidth: 1,
@@ -50,7 +50,8 @@ class D3Chart {
     clipArea: null,
     titleNode: null,
     titleText: "legend",
-    legendToChartRatio: 10
+    legendToChartRatio: 10,
+    drawLineName: true,
   };
 
   normalizeAxis = false;
@@ -68,23 +69,23 @@ class D3Chart {
   chartWidth;
   height;
 
-  shiftClickCallback = data => {};
+  shiftClickCallback = (data) => {};
   bars;
   margin = {
     top: 25,
     right: 25,
     bottom: 25,
-    left: 50
+    left: 50,
   };
   padding = {
     legendPadding: 5,
-    mouseEffectPadding: 12
+    mouseEffectPadding: 12,
     // mouseEffectPadding: 0,
   };
   transition = {
     delay: 0,
     duration: 750,
-    ease: d3.easePoly.exponent(2.5)
+    ease: d3.easePoly.exponent(2.5),
   };
 
   config = {
@@ -93,7 +94,7 @@ class D3Chart {
     innerTickOpacity: 0.3,
     mouseCircleWidth: 1,
     mouseCircleRadius: 4,
-    mouseCircleColour: "#808080"
+    mouseCircleColour: "#808080",
   };
 
   ///////////////////////////////////////////////////////////////
@@ -106,7 +107,13 @@ class D3Chart {
    * @param  {} name='legend'
    * @param  {x:, y: } size
    */
-  constructor(parent = null, isTime = true, name = "legend", size = null) {
+  constructor(
+    parent = null,
+    isTime = true,
+    name = "legend",
+    size = null,
+    drawLineName = true
+  ) {
     if (parent != null) {
       if (size != null) {
         this.setParent(parent, size);
@@ -114,6 +121,7 @@ class D3Chart {
         this.setParent(parent);
       }
     }
+    this.legend.drawLineName = drawLineName;
     this.isTime = isTime;
     this.legend.titleText = name;
     this.transition.trn = d3
@@ -126,7 +134,7 @@ class D3Chart {
     this.createYScale();
 
     this.createLineGenerator();
-    this.svg.on("dragstart", d => {
+    this.svg.on("dragstart", (d) => {
       console.log("dragging");
     });
   }
@@ -149,7 +157,7 @@ class D3Chart {
     this.base = this.parent
       .append("svg")
       .attr("viewBox", `0 0 ${this.width} ${this.height}`)
-      .attr("preserveAspectRatio", "none");
+      .attr("preserveAspectRatio", "xMinYMax meet");
     this.svg = this.base.append("g");
 
     this.updateBase();
@@ -182,10 +190,10 @@ class D3Chart {
   createLineGenerator() {
     this.lineGenerator = d3
       .line()
-      .y(data => this.Y.scale(data.y)) // set the y values for the line generator
-      .x(data => this.X.scale(data.x)) // set the x values for the line generator
+      .y((data) => this.Y.scale(data.y)) // set the y values for the line generator
+      .x((data) => this.X.scale(data.x)) // set the x values for the line generator
       .defined(
-        data =>
+        (data) =>
           data.x >= this.X.scale.domain()[0] &&
           data.x <= this.X.scale.domain()[1]
       )
@@ -318,7 +326,7 @@ class D3Chart {
 
       this.X.axis.tickValues(
         this.X.scale.ticks(
-          interval.filter(date => interval.count(date, xmax) % every === 0)
+          interval.filter((date) => interval.count(date, xmax) % every === 0)
         )
       );
 
@@ -341,7 +349,7 @@ class D3Chart {
         .ease(this.transition.ease);
     }
 
-    context.call(this.X.axis).call(g => {
+    context.call(this.X.axis).call((g) => {
       g.selectAll("line")
         .attr("pointer-events", "none")
         .attr("stroke", this.config.innerTickLineColour)
@@ -428,7 +436,7 @@ class D3Chart {
     let tickFormat = d3.format(
       `.${d3.precisionFixed(round(step, d3.precisionFixed(step)))}f`
     );
-    this.Y.axis.tickFormat(data => {
+    this.Y.axis.tickFormat((data) => {
       return `${this.Y.prefix}${tickFormat(data)}${this.Y.suffix}`;
     });
 
@@ -440,7 +448,7 @@ class D3Chart {
         .delay(this.transition.delay)
         .duration(this.transition.duration);
     }
-    context.call(this.Y.axis.ticks(this.Y.maxTicks)).call(g => {
+    context.call(this.Y.axis.ticks(this.Y.maxTicks)).call((g) => {
       let showDomain = true;
 
       g.selectAll("line")
@@ -483,6 +491,12 @@ class D3Chart {
 
       g.select("path.domain").attr("pointer-events", "none");
     });
+    this.svg
+      .selectAll(".tick")
+      .filter(function (d) {
+        return d === 0;
+      })
+      .remove();
   }
 
   /**
@@ -550,61 +564,45 @@ class D3Chart {
       .text(this.legend.titleText)
       .attr("x", 0)
       .attr("dy", 30)
-      .attr(
-        "font-size",
-        (this.chartWidth -
-          this.legend.padding.right -
-          this.legend.padding.left) *
-          0.003 +
-          "em"
-      )
+      .attr("font-size", "1.308em")
       .attr("font-family", "helvetica");
 
     this.legend.entries = this.legendBase
       .selectAll(".legend")
-      .data(this.data, d => d.name)
+      .data(this.data, (d) => d.name)
       .join(
-        enter =>
+        (enter) =>
           enter
             .append("g")
             .attr("clip-path", "url(#legend-clip)")
             .attr("class", "legend")
-            .attr("id", d => `legend-entry-${d.name}`)
+            .attr("id", (d) => `legend-entry-${d.name}`)
             .append("text") // TODO - add a coloured circle?
             .each((d, i, nodes) => {
               this.legend.dataNodes[d.name] = {
                 node: d3.select(nodes[i]),
-                update: val => {
+                update: (val) => {
                   d3.select(nodes[i])
                     .text(`${d.name}: ${val}`)
-                    .attr(
-                      "font-size",
-                      (this.chartWidth -
-                        this.legend.padding.right -
-                        this.legend.padding.left) *
-                        0.003 +
-                        "em"
-                    )
+                    .attr("font-size", "1.308em")
                     .attr("font-family", "helvetica");
-                }
+                },
               };
             }),
 
-        update => update.select("text"),
+        (update) => update.select("text"),
 
-        exit => exit.remove()
+        (exit) => exit.remove()
       )
-      .text(d => `${d.name}`)
+      .text((d) => `${d.name}`)
+      .attr("display", (d) => {
+        if (!this.legend.drawLineName) {
+          return "none";
+        }
+      })
       .attr("font-family", "helvetica")
       .attr("fill", (d, i) => d3.schemeCategory10[i])
-      .attr(
-        "font-size",
-        (this.chartWidth -
-          this.legend.padding.right -
-          this.legend.padding.left) *
-          0.003 +
-          "em"
-      )
+      .attr("font-size", "1.308em")
       .attr(
         "dy",
         (d, i) =>
@@ -647,31 +645,34 @@ class D3Chart {
 
     // get the max count of visible points inside the chart area (takes into account a changed x domain)
     this.countVisiblePoints = d3.sum(
-      d3.max(this.data, d => d.data).map(d => this.lineGenerator.defined()(d))
+      d3
+        .max(this.data, (d) => d.data)
+        .map((d) => this.lineGenerator.defined()(d))
     );
 
     this.lines = this.svg
       .selectAll(".data-line")
-      .data(this.data, d => d.name)
+      .data(this.data, (d) => d.name)
       .join(
-        enter =>
+        (enter) =>
           enter
             .append("g")
             .attr("class", "data-line")
-            .attr("id", dataset => `data-line-${dataset.name}`)
+            .attr("id", (dataset) => `data-line-${dataset.name}`)
             .attr("pointer-events", "none")
             .append("path")
             .attr("class", "line"),
 
-        update => update.select("path"),
+        (update) => update.select("path"),
 
-        exit => exit.remove()
+        (exit) => exit.remove()
       )
       .transition(trn)
-      .attr("stroke", function(dataset, idx) {
+      .attr("stroke", function (dataset, idx) {
         return d3.schemeCategory10[idx];
       })
-      .attr("d", dataset => this.lineGenerator(dataset.data));
+      .attr("stroke-width", "8px")
+      .attr("d", (dataset) => this.lineGenerator(dataset.data));
 
     this.mouseLineDataMarkers();
     this.updateLegend();
@@ -726,7 +727,7 @@ class D3Chart {
           mouse[0] - this.padding.mouseEffectPadding / 2 - tickwidth / 2
         ); // use 'invert' to get date corresponding to distance from mouse position relative to svg
 
-        this.svg.selectAll(".mouse-per-line").attr("transform", d => {
+        this.svg.selectAll(".mouse-per-line").attr("transform", (d) => {
           let idx = clamp(
               this.X.leftBisect(d.data, xDate),
               0,
@@ -779,11 +780,11 @@ class D3Chart {
 
     this.chart.mousePerLine = this.chart.mouseArea
       .selectAll(".mouse-per-line")
-      .data(this.data, d => d.name);
+      .data(this.data, (d) => d.name);
 
     this.chart.mousePerLine
       .join(
-        enter =>
+        (enter) =>
           enter
             .append("g")
             .attr("class", "mouse-per-line")
@@ -792,9 +793,9 @@ class D3Chart {
             .append("circle")
             .attr("transform", "translate(0.5,0)"),
 
-        update => update.select("circle"),
+        (update) => update.select("circle"),
 
-        exit => exit.remove()
+        (exit) => exit.remove()
       )
       .style("fill", "none")
       .attr("stroke-width", this.config.mouseCircleWidth)
@@ -820,7 +821,7 @@ class D3Chart {
         .data(values[value].rawdata)
         .enter()
         .insert("rect", "#" + this.lines.node().parentNode.id)
-        .attr("x", d => {
+        .attr("x", (d) => {
           return (
             this.X.scale(new Date(d.x, 0)) +
             (this.chartWidth /
@@ -834,7 +835,7 @@ class D3Chart {
                 padding)
           );
         })
-        .attr("y", d => {
+        .attr("y", (d) => {
           return yScale(d.y);
         })
         .attr(
@@ -847,7 +848,7 @@ class D3Chart {
               values.length) *
               padding
         )
-        .attr("height", d => {
+        .attr("height", (d) => {
           return this.chartHeight - yScale(d.y);
         })
         .attr("fill", d3.schemeCategory10[value])
@@ -871,7 +872,7 @@ class D3Chart {
       .ease(d3.easeLinear)
       .duration(1000)
       .attr("width", 0.005 * this.width)
-      .on("end", function() {
+      .on("end", function () {
         curtain.remove();
       });
   }
@@ -967,7 +968,7 @@ class D3Chart {
   }
   scale(scale) {
     this.setBaseWidth(this.width * scale);
-    this.setBaseHeight(this.width * scale);
+    this.setBaseHeight(this.height * scale);
   }
   /**
    * Returns base height
@@ -1055,7 +1056,7 @@ class D3Chart {
     for (let i = 0; i < offset; i++) {
       result.push({
         x: line.rawdata[i + (line.rawdata.length - offset)].x,
-        y: line.rawdata[i].y
+        y: line.rawdata[i].y,
       });
     }
     return result;
@@ -1071,7 +1072,7 @@ class D3Chart {
       let offsetLine = this.shift(this.data[0], offset);
       this.updateLines([
         { name: this.data[0].name, data: offsetLine, rawdata: offsetLine },
-        this.data[1]
+        this.data[1],
       ]);
     } else {
       this.updateLines(this.dataCache);
@@ -1091,8 +1092,8 @@ function postJSON(url, data, callback) {
     method: "POST",
     body: JSON.stringify(data),
     headers: {
-      "Content-type": "application/json; charset=UTF-8"
-    }
+      "Content-type": "application/json; charset=UTF-8",
+    },
   }).then(callback);
 }
 
@@ -1114,10 +1115,10 @@ function postJSON(url, data, callback) {
 function movingAverage(
   dataset,
   window = 2,
-  accessor = id => dataset[id].y,
+  accessor = (id) => dataset[id].y,
   writer = (id, val) => ({
     x: dataset[id].x,
-    y: val
+    y: val,
   })
 ) {
   // Round window value to closest even number and divide by two (because it goes both ways)
@@ -1125,7 +1126,7 @@ function movingAverage(
 
   // A window of size '<1' means no smoothing, return copy of original data
   if (window < 1) {
-    return dataset.map(data => Object.assign({}, data));
+    return dataset.map((data) => Object.assign({}, data));
   }
 
   let smoothVals = [];

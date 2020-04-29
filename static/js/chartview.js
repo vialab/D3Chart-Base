@@ -5,7 +5,7 @@ class ChartView {
   charts = {};
   mainView = {
     element_id: null,
-    minViewSize: { x: null, y: null }
+    minViewSize: { x: null, y: null },
   };
 
   shiftData = {};
@@ -27,7 +27,7 @@ class ChartView {
    * @param  {Response} data - The reponse data from the query. It can already be in the D3Chart format: {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
    * @param  {function(data)} formatFunction=null - function to format data to the correct D3Chart format: {chartName:'', xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
    */
-  addChart(view, data, formatFunction = null) {
+  addChart(view, data, formatFunction = null, drawLineNames = true) {
     if (formatFunction != null) {
       formatFunction(data);
     }
@@ -61,7 +61,8 @@ class ChartView {
       "#" + elementId,
       true,
       data.chartName,
-      { x: uniformSize, y: uniformSize }
+      { x: uniformSize, y: uniformSize },
+      drawLineNames
     );
     //this.charts[view][elementId].chart.getParentOnClick(
     //  this.chartClicked.bind(this)
@@ -85,7 +86,7 @@ class ChartView {
     this.charts[view][elementId].data = {
       xdomain: [new Date(data.xdomain[0], 0), new Date(data.xdomain[1], 0)],
       ydomain: [data.ydomain[0], data.ydomain[1]],
-      lines: data.lines
+      lines: data.lines,
     };
   }
   getChart(view, chartName) {
@@ -246,7 +247,7 @@ class ChartView {
     this.viewList = {};
     this.mainView = {
       element_id: null,
-      minViewSize: { x: null, y: null }
+      minViewSize: { x: null, y: null },
     };
   }
   leadLag() {
@@ -283,7 +284,7 @@ class ChartView {
 
       this.scaleCharts([
         this.viewList[this.mainView.element_id],
-        this.viewList[parent_id]
+        this.viewList[parent_id],
       ]);
       //curtain animation for the exchanged graphs
       this.getChart(this.mainView.element_id, node_id).curtainAnimation();
@@ -297,7 +298,7 @@ class ChartView {
     if (graphInfo.parent.node().parentNode.id == this.mainView.element_id) {
       let key = Object.keys(this.charts[this.mainView.element_id]);
       this.charts[this.mainView.element_id][key].chart.updateLines([
-        ...this.charts[this.mainView.element_id][key].data.lines
+        ...this.charts[this.mainView.element_id][key].data.lines,
       ]);
       for (let i = 0; i < this.contributingGraphs.length; i++) {
         $(this.contributingGraphs[i]).css("border-width", "0px");
@@ -323,7 +324,7 @@ class ChartView {
       if (this.contributingGraphs.length == 0) {
         let key = Object.keys(this.charts[this.mainView.element_id]);
         this.charts[this.mainView.element_id][key].chart.updateLines([
-          ...this.charts[this.mainView.element_id][key].data.lines
+          ...this.charts[this.mainView.element_id][key].data.lines,
         ]);
         this.shiftData = {};
         return;
@@ -362,7 +363,7 @@ class ChartView {
     }
     let key = Object.keys(this.charts[this.mainView.element_id]);
     let aggregateData = [];
-    const checkA = name => {
+    const checkA = (name) => {
       if (name.includes("a_")) {
         return name;
       }
@@ -374,18 +375,18 @@ class ChartView {
       for (let i = 0; i < keys.length; i++) {
         temp.rawdata.push({
           x: keys[i],
-          y: this.shiftData[name].get(keys[i])
+          y: this.shiftData[name].get(keys[i]),
         });
         temp.data.push({
           x: keys[i],
-          y: this.shiftData[name].get(keys[i])
+          y: this.shiftData[name].get(keys[i]),
         });
       }
       aggregateData.push(temp);
     }
     this.charts[this.mainView.element_id][key].chart.updateLines([
       ...this.charts[this.mainView.element_id][key].data.lines,
-      ...aggregateData
+      ...aggregateData,
     ]);
   }
 }

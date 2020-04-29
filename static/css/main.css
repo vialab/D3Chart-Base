@@ -60,7 +60,7 @@
 .line {
   fill: none;
   /* stroke: #ffab00; */
-  stroke-width: 1;
+  stroke-width: 4;
 }
 
 .overlay {
@@ -158,4 +158,10 @@
   font-size: 30;
   cursor: pointer;
   text-align: left;
+}
+
+#graph-holder {
+  margin: auto;
+  width: 90%;
+  height: 90%;
 }

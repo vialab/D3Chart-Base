@@ -103,25 +103,26 @@ let cmp = {
       let titleBBox = this.title.node().getBBox();
       this.colorVis.attr(
         "transform",
-        `translate(${boxPadding +
-          lagTxt.node().getBBox().width +
-          leadLagPadding},${boxPadding + titleBBox.height + titlePadding})`
+        `translate(${
+          boxPadding + lagTxt.node().getBBox().width + leadLagPadding
+        },${boxPadding + titleBBox.height + titlePadding})`
       );
 
       lagTxt.attr(
         "transform",
-        `translate(${boxPadding},${boxPadding +
-          titleBBox.height +
-          titlePadding +
-          12})`
+        `translate(${boxPadding},${
+          boxPadding + titleBBox.height + titlePadding + 12
+        })`
       );
 
       leadTxt.attr(
         "transform",
-        `translate(${boxPadding +
+        `translate(${
+          boxPadding +
           lagTxt.node().getBBox().width +
           leadLagPadding +
-          visBBox.width}, ${boxPadding + titleBBox.height + titlePadding + 12})`
+          visBBox.width
+        }, ${boxPadding + titleBBox.height + titlePadding + 12})`
       );
 
       background.attr(
@@ -138,19 +139,24 @@ let cmp = {
       this.title.attr("text-anchor", "middle");
       this.title.attr(
         "transform",
-        `translate(${background.node().getBBox().width / 2}, ${boxPadding +
-          titleBBox.height})`
+        `translate(${background.node().getBBox().width / 2}, ${
+          boxPadding + titleBBox.height
+        })`
       );
       let misc = cmp.misclegend;
       let visMisc = misc.visualize(size, this.group);
       visMisc.attr(
         "transform",
-        `translate(${background.node().getBBox().width / 2 -
-          visMisc.node().getBBox().width / 2}, ${boxPadding +
+        `translate(${
+          background.node().getBBox().width / 2 -
+          visMisc.node().getBBox().width / 2
+        }, ${
+          boxPadding +
           titleBBox.height +
           titlePadding +
           visBBox.height +
-          titlePadding})`
+          titlePadding
+        })`
       );
 
       background.attr(
@@ -180,7 +186,7 @@ let cmp = {
           self.colorScale.scale,
           size,
           self.colorScale,
-          function() {
+          function () {
             let matrix = self.colorVis
               .attr("transform")
               .replace(/[^0-9\-.,]/g, "")
@@ -202,11 +208,11 @@ let cmp = {
         console.log(self.title.node().getBoundingClientRect().y);
         this.swatch.attr(
           "transform",
-          `translate(${
-            self.colorVis.node().getBoundingClientRect().x
-          },${self.title.node().getBoundingClientRect().y -
+          `translate(${self.colorVis.node().getBoundingClientRect().x},${
+            self.title.node().getBoundingClientRect().y -
             this.swatch.node().getBoundingClientRect().height -
-            40})`
+            40
+          })`
         );
         this.isSwatch = true;
       }
@@ -222,7 +228,7 @@ let cmp = {
       let box = this.group.node().getBoundingClientRect();
       let x = $(window).width() - box.width - 30;
       this.group.attr("transform", `translate(${x}, ${y})`);
-    }
+    },
   },
 
   colorScale: {
@@ -277,7 +283,7 @@ let cmp = {
         .enter()
         .append("rect")
         .attr("class", "rect.scale")
-        .attr("x", function(d, i) {
+        .attr("x", function (d, i) {
           return i * size.width;
         })
         .attr("y", 0)
@@ -285,7 +291,7 @@ let cmp = {
         .attr("height", size.height)
         .attr(
           "fill",
-          function(d, i) {
+          function (d, i) {
             return this.gradient(i / end);
           }.bind(this)
         );
@@ -310,10 +316,10 @@ let cmp = {
           .data(this.scale)
           .enter()
           .append("text")
-          .text(function(d, i) {
+          .text(function (d, i) {
             return d;
           })
-          .attr("x", function(d, i) {
+          .attr("x", function (d, i) {
             return i * size.width + size.width / 2;
           });
         let textBBox = text.node().getBBox();
@@ -331,7 +337,7 @@ let cmp = {
       }
       const end = this.scale.length - 1;
       return this.gradient(index / end);
-    }
+    },
   },
 
   swatch: {
@@ -356,7 +362,7 @@ let cmp = {
       d3.interpolateRdYlBu,
       d3.interpolateViridis,
       d3.interpolatePlasma,
-      d3.interpolateCividis
+      d3.interpolateCividis,
     ],
 
     visualize(svg, yearScale, size, colorScale, callback) {
@@ -374,7 +380,7 @@ let cmp = {
           .attr("transform", `translate(0, ${i * size.height + padding * i})`)
           .on(
             "click",
-            function() {
+            function () {
               colorScale.setGradient(this.colorList[i]);
               group.remove();
               callback();
@@ -391,7 +397,7 @@ let cmp = {
           .attr("transform", `translate(0, ${i * size.height + padding * i})`)
           .on(
             "click",
-            function() {
+            function () {
               colorScale.setGradient(this.colorList[i]);
               group.remove();
               callback();
@@ -408,7 +414,7 @@ let cmp = {
           .attr("transform", `translate(0, ${i * size.height + padding * i})`)
           .on(
             "click",
-            function() {
+            function () {
               colorScale.setGradient(this.colorList[i]);
               group.remove();
               callback();
@@ -417,7 +423,7 @@ let cmp = {
       }
 
       return group;
-    }
+    },
   },
   misclegend: {
     visualize(size, svg) {
@@ -477,7 +483,7 @@ let cmp = {
         .attr("font-size", "12px");
       text2.attr("y", text2.node().getBBox().height - textHeightPadding);
       return group;
-    }
+    },
   },
   graphwindow: {
     graph: null,
@@ -499,7 +505,7 @@ let cmp = {
           await this.getCategory({
             keyword: keyword,
             year: i,
-            country_name: otherName
+            country_name: otherName,
           })
         );
       }
@@ -510,7 +516,7 @@ let cmp = {
             await this.getCategory({
               keyword: keyword,
               year: i,
-              country_name: "Canada"
+              country_name: "Canada",
             })
           );
         }
@@ -573,23 +579,20 @@ let cmp = {
         }
       }
       var self = this;
-      $("#graph-holder").remove();
-      $("#map-holder").append(
-        `<div class="graph-window" id="graph-holder"></div>`
-      );
-      $(document).on("click", function(e) {
+      $(".graph-window").remove();
+      $("#map-holder").append(`<div class="graph-window"></div>`);
+      $(".graph-window").append(`<div id="graph-holder"></div>`);
+      $(document).on("click", function (e) {
         let check = $.contains($("#graph-holder")[0], $(e.target)[0]);
         if ($(e.target).is("#graph-holder") === false && !check) {
-          $("#graph-holder").remove();
-          $(document)
-            .prop("onclick", null)
-            .off("click");
+          $(".graph-window").remove();
+          $(document).prop("onclick", null).off("click");
           e.stopPropagation();
         }
       });
-      $("#graph-holder").on(
+      $(".graph-window").on(
         "animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
-        function() {
+        function () {
           self.chartView = new ChartView("graph-holder");
           self.chartView.addView("main-view");
           self.chartView.addView("recommended-view");
@@ -610,7 +613,7 @@ let cmp = {
                   }),
                   data: Array.from(canada, (d, i) => {
                     return { x: year.min + i, y: d };
-                  })
+                  }),
                 },
                 {
                   name: otherName,
@@ -619,11 +622,11 @@ let cmp = {
                   }),
                   data: Array.from(other, (d, i) => {
                     return { x: year.min + i, y: d };
-                  })
-                }
-              ]
+                  }),
+                },
+              ],
             },
-            data => {
+            (data) => {
               data.chartName = "Total";
             }
           );
@@ -632,10 +635,11 @@ let cmp = {
           $("#main-view").css({ "overflow-y": "hidden" });
 
           $("#category-view").append(
-            `<div id=${"total"} display="block" class="category" name=${"total"}><div display="block" style='background-color:#ffffff' id=${"head" +
-              "total"}><p style="font-family:helvetica">${"\t\tTotal"}</p></div></div>`
+            `<div id=${"total"} display="block" class="category" name=${"total"}><div display="block" style='background-color:#ffffff' id=${
+              "head" + "total"
+            }><p style="font-family:helvetica">${"\t\tTotal"}</p></div></div>`
           );
-          $("#" + "total").on("click", function() {
+          $("#" + "total").on("click", function () {
             self.chartView.clearView("main-view");
 
             self.chartView.addChart(
@@ -651,7 +655,7 @@ let cmp = {
                     }),
                     data: Array.from(canada, (d, i) => {
                       return { x: year.min + i, y: d };
-                    })
+                    }),
                   },
                   {
                     name: otherName,
@@ -660,11 +664,11 @@ let cmp = {
                     }),
                     data: Array.from(other, (d, i) => {
                       return { x: year.min + i, y: d };
-                    })
-                  }
-                ]
+                    }),
+                  },
+                ],
               },
-              data => {
+              (data) => {
                 data.chartName = "Total";
               }
             );
@@ -707,7 +711,7 @@ let cmp = {
                           (d, i) => {
                             return { x: year.min + i, y: d };
                           }
-                        )
+                        ),
                       },
                       {
                         name: otherName,
@@ -716,13 +720,14 @@ let cmp = {
                         }),
                         data: Array.from(categories[category], (d, i) => {
                           return { x: year.min + i, y: d };
-                        })
-                      }
-                    ]
+                        }),
+                      },
+                    ],
                   },
-                  data => {
+                  (data) => {
                     data.chartName = category;
-                  }
+                  },
+                  false
                 );
                 continue;
               }
@@ -734,11 +739,13 @@ let cmp = {
                 space += " ";
               }
               $("#category-view").append(
-                `<div id=${category_id} display="block" class="category" name=${category}><div display="block" style='background-color:#ffffff' id=${"head" +
-                  category_id}><p style="font-family:helvetica">${"    " +
-                  category.replace(" ", space + "\t\t")} </p></div></div>`
+                `<div id=${category_id} display="block" class="category" name=${category}><div display="block" style='background-color:#ffffff' id=${
+                  "head" + category_id
+                }><p style="font-family:helvetica">${
+                  "    " + category.replace(" ", space + "\t\t")
+                } </p></div></div>`
               );
-              $("#" + category_id).on("click", function() {
+              $("#" + category_id).on("click", function () {
                 if ($("#" + category_id).find("svg").length == 0) {
                   self.chartView.clearView("main-view");
                   let name = self.categories[category_id];
@@ -762,7 +769,7 @@ let cmp = {
                             (d, i) => {
                               return { x: year.min + i, y: d };
                             }
-                          )
+                          ),
                         },
                         {
                           name: otherName,
@@ -771,11 +778,11 @@ let cmp = {
                           }),
                           data: Array.from(categories[name], (d, i) => {
                             return { x: year.min + i, y: d };
-                          })
-                        }
-                      ]
+                          }),
+                        },
+                      ],
                     },
-                    data => {
+                    (data) => {
                       data.chartName = category;
                     }
                   );
@@ -790,6 +797,7 @@ let cmp = {
         }
       );
       dataObject.unpauseLoading();
+      $("#main-view").attr("width", "30%");
     },
     parse(res) {
       let result = {};
@@ -813,11 +821,11 @@ let cmp = {
         body: JSON.stringify({
           keyword: params.keyword,
           year: params.year,
-          country_name: params.country_name
+          country_name: params.country_name,
         }),
         headers: {
-          "Content-type": "application/json; charset=UTF-8"
-        }
+          "Content-type": "application/json; charset=UTF-8",
+        },
       });
       return response;
     },
@@ -854,8 +862,8 @@ let cmp = {
         }
       }
       return false;
-    }
-  }
+    },
+  },
 };
 class LoadingSpinner {
   /**
@@ -921,14 +929,11 @@ class Scrubber {
       .brushX()
       .extent([
         [0, -5],
-        [size.width, size.height]
+        [size.width, size.height],
       ])
       .on("brush", this.brushed.bind(this))
       .on("end", this.endCallbacks.bind(this));
-    this.brushVis = parent
-      .append("g")
-      .attr("class", "brush")
-      .call(this.brush);
+    this.brushVis = parent.append("g").attr("class", "brush").call(this.brush);
 
     this.parent = parent;
     this.scales = scales;
@@ -938,7 +943,7 @@ class Scrubber {
     //move brush to default position
     this.brushVis.call(this.brush.move, [
       scales.x(this.currentSelection.min),
-      scales.x(this.currentSelection.max)
+      scales.x(this.currentSelection.max),
     ]);
   }
 
@@ -949,7 +954,7 @@ class Scrubber {
   setExtent(extent) {
     this.brush.extent([
       [this.scales.x(extent.min), -5],
-      [this.scales.x(extent.max), this.scales.y(1)]
+      [this.scales.x(extent.max), this.scales.y(1)],
     ]);
     this.minYear = extent.min;
     this.maxYear = extent.max;
@@ -997,7 +1002,7 @@ class Scrubber {
     this.updateOnBrushed(d0);
     this.brushVis.call(this.brush.move, [
       this.scales.x(d0[0]),
-      this.scales.x(d0[1])
+      this.scales.x(d0[1]),
     ]);
     if (resize) {
       this.updateOnResize(d0);
@@ -1032,7 +1037,7 @@ class Scrubber {
   maxYear = new Date().getFullYear();
   currentSelection = {
     min: new Date().getFullYear() - 7,
-    max: new Date().getFullYear() - 4
+    max: new Date().getFullYear() - 4,
   };
   onBrushedCallbacks = [];
   /**
@@ -1123,11 +1128,11 @@ class STDGraph {
     }
     let self = this;
 
-    let maxY = Math.max(...data.map(val => val.y));
-    let minY = Math.min(...data.map(val => val.y));
+    let maxY = Math.max(...data.map((val) => val.y));
+    let minY = Math.min(...data.map((val) => val.y));
 
-    let minX = Math.min(...data.map(val => val.x));
-    let maxX = Math.max(...data.map(val => val.x));
+    let minX = Math.min(...data.map((val) => val.x));
+    let maxX = Math.max(...data.map((val) => val.x));
     if (maxY > this.scales.y.domain()[1]) {
       this.scales.y.domain([this.scales.y.domain()[0], maxY]);
 
@@ -1155,10 +1160,10 @@ class STDGraph {
         "d",
         d3
           .line()
-          .x(function(d) {
+          .x(function (d) {
             return self.scales.x(d.x);
           })
-          .y(function(d) {
+          .y(function (d) {
             return self.scales.y(d.y);
           })
       )
@@ -1197,8 +1202,8 @@ class STDGraph {
       .style("font-family", "helvetica-lite")
       .style("font-size", "12px");
 
-    let maxY = Math.max(...this.data.map(val => val.y));
-    let minY = Math.min(...this.data.map(val => val.y));
+    let maxY = Math.max(...this.data.map((val) => val.y));
+    let minY = Math.min(...this.data.map((val) => val.y));
     if (this.data.length == 0) {
       maxY = 0;
       minY = 0;
@@ -1208,10 +1213,7 @@ class STDGraph {
       .domain([minY, maxY])
       .range([this.size.height, 0]);
     this.axii.y = d3.axisLeft(this.scales.y);
-    this.svg
-      .append("g")
-      .attr("class", "y-axis")
-      .call(this.axii.y);
+    this.svg.append("g").attr("class", "y-axis").call(this.axii.y);
 
     let self = this;
     var u = this.svg.selectAll(".line-path").data([this.data]);
@@ -1227,10 +1229,10 @@ class STDGraph {
         "d",
         d3
           .line()
-          .x(function(d) {
+          .x(function (d) {
             return self.scales.x(d.x);
           })
-          .y(function(d) {
+          .y(function (d) {
             return self.scales.y(d.y);
           })
       )
@@ -1242,7 +1244,7 @@ class STDGraph {
     this.scrubber.onBrushed(this.onScrubberBrushed.bind(this));
     this.scrubber.hidden();
     this.loadingSpinner = new LoadingSpinner([
-      d3.select(this.parentID).select("svg")
+      d3.select(this.parentID).select("svg"),
     ]);
   }
   onScrubberResize(selection) {
@@ -1407,16 +1409,16 @@ class EventGraph {
       .enter()
       .append("line")
       .attr("class", this.eventName)
-      .attr("x1", function(d) {
+      .attr("x1", function (d) {
         return self.scales.x(d.x1);
       })
-      .attr("y1", function(d) {
+      .attr("y1", function (d) {
         return self.scales.y(0.5);
       })
-      .attr("y2", function(d) {
+      .attr("y2", function (d) {
         return self.scales.y(0.5);
       })
-      .attr("x2", function(d) {
+      .attr("x2", function (d) {
         console.log(d);
         return self.scales.x(d.x2);
       })
@@ -1436,11 +1438,11 @@ class EventGraph {
       .enter()
       .append("rect")
       .attr("class", "scrubber-rect")
-      .attr("x", function(d) {
+      .attr("x", function (d) {
         return self.scales.x(d.x);
       })
       .attr("y", this.scales.y(1))
-      .attr("width", function(d) {
+      .attr("width", function (d) {
         return self.scales.x(d.width) - self.scales.x(d.x);
       })
       .attr("height", this.scales.y(0))
@@ -1494,16 +1496,16 @@ class EventGraph {
       .enter()
       .append("rect")
       .attr("class", this.eventName)
-      .attr("x", function(d) {
+      .attr("x", function (d) {
         return self.scales.x(d.x1);
       })
-      .attr("y", function(d) {
+      .attr("y", function (d) {
         return self.scales.y(0.75);
       })
-      .attr("height", function(d) {
+      .attr("height", function (d) {
         return Math.abs((self.scales.y(0) - self.scales.y(1)) / 2);
       })
-      .attr("width", function(d) {
+      .attr("width", function (d) {
         console.log(d);
         return self.scales.x(d.x2) - self.scales.x(d.x1);
       })
@@ -1921,7 +1923,7 @@ class DataObject {
     }
     let self = this;
     this.currentKeyword = keyword;
-    this.intervalVar = setInterval(function() {
+    this.intervalVar = setInterval(function () {
       self.queryPapers(keyword);
     }, this.intervalRate);
   }
@@ -1974,13 +1976,13 @@ class DataObject {
       method: "POST",
       body: JSON.stringify({ keyword: keyword, year: year }),
       headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
+        "Content-type": "application/json; charset=UTF-8",
+      },
     })
-      .then(function(data) {
+      .then(function (data) {
         callback(data, year, keyword);
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.log(err);
       });
   }
@@ -1995,13 +1997,13 @@ class DataObject {
       method: "POST",
       body: JSON.stringify({ keyword: keyword, year: year }),
       headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
+        "Content-type": "application/json; charset=UTF-8",
+      },
     })
-      .then(function(data) {
+      .then(function (data) {
         callback(data, year, keyword);
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.log(err);
       });
   }
@@ -2023,7 +2025,7 @@ class DataObject {
     result = result.research_orgs;
     //sometimes there is collaborations, we have chosen to filters those out
     //essentially, we only look at the institutes that reside in canada
-    result = result.filter(function(x) {
+    result = result.filter(function (x) {
       return x.country_name == "Canada";
     });
     //add canada country to data object
@@ -2091,7 +2093,7 @@ class DataObject {
         continue;
       }
       this.getCountry(country).calculateTotal(year);
-      let contributions = result.filter(val => val.country_name == country);
+      let contributions = result.filter((val) => val.country_name == country);
       this.getCountry(country).addContributors(year, contributions.length);
     }
 
@@ -2135,23 +2137,20 @@ class Countries {
       .enter()
       .append("path")
       .attr("d", projection)
-      .attr("id", function(d, i) {
+      .attr("id", function (d, i) {
         return "country" + d.properties.iso_a3;
       })
-      .attr("name", function(d, i) {
+      .attr("name", function (d, i) {
         return d.properties.name;
       })
       .attr("class", "country")
-      .on("mouseover", function(d, i) {
+      .on("mouseover", function (d, i) {
         d3.select(this).raise();
         d3.select(this).style("stroke", "black");
         d3.select(this).style("stroke-width", "5px");
         if (self.onHoverCallback == null) {
           console.log(d3.mouse(d3.select("#main-svg").node())[0]);
-          let box = d3
-            .select(this)
-            .node()
-            .getBoundingClientRect();
+          let box = d3.select(this).node().getBoundingClientRect();
           box.x = d3.mouse(d3.select("#main-svg").node())[0];
           self.tooltip = new Tooltip(
             "#map-holder",
@@ -2160,22 +2159,19 @@ class Countries {
           );
         } else {
           self.tooltip = self.onHoverCallback(
-            d3
-              .select(this)
-              .node()
-              .getBoundingClientRect(),
+            d3.select(this).node().getBoundingClientRect(),
             d,
             d3.select(this).attr("leadlag")
           );
         }
       })
-      .on("mouseout", function(d, i) {
+      .on("mouseout", function (d, i) {
         d3.select(this).style("stroke", "white");
         d3.select(this).style("stroke-width", "1px");
         if (self.tooltip != null) self.tooltip.destroy();
         self.tooltip = null;
       })
-      .on("click", function(d, i) {
+      .on("click", function (d, i) {
         onclickCallback(d.properties.name);
       });
   }
@@ -2191,7 +2187,7 @@ class Countries {
       if (data[i].country_name in this.countryNames) {
         let acronym = this.countryNames[data[i].country_name];
         $(`#country${acronym}`).css({
-          fill: colorScale.get(data[i].leadlag)
+          fill: colorScale.get(data[i].leadlag),
         });
         $(`#country${acronym}`).attr("leadlag", data[i].leadlag);
       } else {
@@ -2215,9 +2211,7 @@ class Countries {
     }
   }
   reset(color = "#f5f5f5") {
-    $(".country")
-      .removeAttr("leadlag")
-      .css("fill", color);
+    $(".country").removeAttr("leadlag").css("fill", color);
   }
   /**
    *
@@ -2250,9 +2244,9 @@ class Institutions {
     if (toolTipFunction != null) {
       this.tooltipFunction = toolTipFunction;
     }
-    let location_ids = Array.from(data, x => x.id);
+    let location_ids = Array.from(data, (x) => x.id);
     let self = this;
-    this.getLocations(location_ids, function(res) {
+    this.getLocations(location_ids, function (res) {
       let locations = res;
       for (const idx in locations) {
         let coords = projection([locations[idx].lng, locations[idx].lat]);
@@ -2274,11 +2268,11 @@ class Institutions {
       method: "POST",
       body: JSON.stringify({ grid_ids: grid_ids }),
       headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
+        "Content-type": "application/json; charset=UTF-8",
+      },
     })
       .then(callback)
-      .catch(function(err) {
+      .catch(function (err) {
         console.error(err);
       });
   }
@@ -2291,7 +2285,7 @@ class Institutions {
       "transform",
       `translate(${transform.translateX}, ${transform.translateY})scale(${transform.scale})`
     );
-    data = data.filter(x => {
+    data = data.filter((x) => {
       return !isNaN(x.scale);
     });
     let g = this.group
@@ -2299,12 +2293,12 @@ class Institutions {
       .data(data)
       .enter()
       .append("g")
-      .attr("transform", function(d, i) {
+      .attr("transform", function (d, i) {
         d.x = Number(d.lat);
         d.y = Number(d.lng);
         return `translate(${d.lat},${d.lng})`;
       });
-    g.each(function(d, i) {
+    g.each(function (d, i) {
       d3.select(this)
         .append("circle")
         .attr("class", "institution")
@@ -2316,7 +2310,7 @@ class Institutions {
         .attr("leadlag", d.lead)
         .attr("fill", colorScale.get(d.lead));
     });
-    g.each(function(d, i) {
+    g.each(function (d, i) {
       d3.select(this)
         .append("line")
         .attr("x1", d.scale)
@@ -2325,24 +2319,20 @@ class Institutions {
         .attr("y2", 0)
         .attr("stroke", "black")
         .attr("stroke-width", 5)
-        .attr("transform", function() {
+        .attr("transform", function () {
           let rotation = 0;
-          if (d.trend > 0.01) {
+          if (d.trend > 0.25) {
             rotation = -45;
           }
-          if (d.trend < -0.01) {
+          if (d.trend < -0.25) {
             rotation = 45;
           }
 
           return `rotate(${rotation},${0},${0})`;
         });
     });
-    g.on("mouseenter", function(d) {
-      let box = d3
-        .select(this)
-        .select("circle")
-        .node()
-        .getBoundingClientRect();
+    g.on("mouseenter", function (d) {
+      let box = d3.select(this).select("circle").node().getBoundingClientRect();
       if (self.tooltipFunction != null) {
         self.tooltip = self.tooltipFunction(box, d);
         return;
@@ -2352,10 +2342,10 @@ class Institutions {
         box,
         `<p>${d.country_name} total papers: ${d.country_total} <br>${d.name} total papers: ${d.total}</p>`
       );
-    }).on("mouseleave", function() {
+    }).on("mouseleave", function () {
       self.tooltip.destroy();
     });
-    this.collision = d3.forceCollide().radius(function(d) {
+    this.collision = d3.forceCollide().radius(function (d) {
       return d.scale;
     });
     mapInteraction.addElementToTransform(this.group);
@@ -2363,13 +2353,13 @@ class Institutions {
       .forceSimulation(data)
       .force(
         "x",
-        d3.forceX(function(d) {
+        d3.forceX(function (d) {
           return d.lat;
         })
       )
       .force(
         "y",
-        d3.forceY(function(d) {
+        d3.forceY(function (d) {
           return d.lng;
         })
       )
@@ -2379,10 +2369,10 @@ class Institutions {
   }
   setRadius(scale) {
     let g = this.group.selectAll("g");
-    g.each(function(d, i) {
+    g.each(function (d, i) {
       d3.select(this)
         .select("circle")
-        .attr("r", function(d) {
+        .attr("r", function (d) {
           if (d.name in scale) {
             d.scale = scale[d.name];
             return d.scale;
@@ -2390,12 +2380,12 @@ class Institutions {
         });
       d3.select(this)
         .select("line")
-        .attr("x1", function(d) {
+        .attr("x1", function (d) {
           if (d.name in scale) {
             return scale[d.name];
           }
         })
-        .attr("x2", function(d) {
+        .attr("x2", function (d) {
           if (d.name in scale) {
             return 0 - scale[d.name];
           }
@@ -2405,12 +2395,12 @@ class Institutions {
     this.simulation.alpha(1).restart();
   }
   tick() {
-    this.group.selectAll("g").attr("transform", function(d, i) {
+    this.group.selectAll("g").attr("transform", function (d, i) {
       return `translate(${d.x},${d.y})`;
     });
   }
   updateColor(colorScale) {
-    d3.selectAll(".institution").style("fill", function(d, i) {
+    d3.selectAll(".institution").style("fill", function (d, i) {
       return colorScale.get(d.lead);
     });
   }
@@ -2446,8 +2436,8 @@ class MapInteraction {
           top: NaN,
           right: NaN,
           bottom: NaN,
-          left: NaN
-        }
+          left: NaN,
+        },
       },
       ["SIMPLE_PAN", "WHEEL_ZOOM", "PINCH_ZOOM"]
     );
@@ -2455,7 +2445,7 @@ class MapInteraction {
       this.easyPZ.totalTransform = {
         scale: 0.1,
         translateX: $(window).width() / 2,
-        translateY: $(window).height() / 2 + 152
+        translateY: $(window).height() / 2 + 152,
       };
     } else {
       this.easyPZ.totalTransform = defaultPosition;
@@ -2643,10 +2633,10 @@ class ColorScale {
       .data(this.values)
       .enter()
       .append("rect")
-      .attr("x", function(d, i) {
+      .attr("x", function (d, i) {
         i * widthPerElement;
       })
-      .attr("width", function(d, i) {
+      .attr("width", function (d, i) {
         widthPerElement;
       })
       .attr("y", 0)
@@ -2827,7 +2817,7 @@ class MetricButtonGroup {
           let slope = sequence[next] - sequence[i];
           slopes.push(slope);
         }
-        let sum = slopes.reduce(function(acc, val) {
+        let sum = slopes.reduce(function (acc, val) {
           return acc + val;
         }, 0);
         let avg = sum / slopes.length;
@@ -2872,7 +2862,7 @@ class MetricButtonGroup {
       results.push(
         await this.query("/funding-can", {
           year: i,
-          keyword: this.dataObject.currentKeyword
+          keyword: this.dataObject.currentKeyword,
         })
       );
     }
@@ -2880,7 +2870,7 @@ class MetricButtonGroup {
       results.push(
         await this.query("/funding", {
           year: i,
-          keyword: this.dataObject.currentKeyword
+          keyword: this.dataObject.currentKeyword,
         })
       );
     }
@@ -2919,7 +2909,7 @@ class MetricButtonGroup {
         await this.query("/institute-citations", {
           country: "Canada",
           year: i,
-          keyword: this.dataObject.currentKeyword
+          keyword: this.dataObject.currentKeyword,
         })
       );
     }
@@ -2928,7 +2918,7 @@ class MetricButtonGroup {
         await this.query("/institute-citations-not", {
           country: "Canada",
           year: i,
-          keyword: this.dataObject.currentKeyword
+          keyword: this.dataObject.currentKeyword,
         })
       );
     }
@@ -2956,11 +2946,11 @@ class MetricButtonGroup {
       body: JSON.stringify({
         country_name: params.country,
         keyword: params.keyword,
-        year: params.year
+        year: params.year,
       }),
       headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
+        "Content-type": "application/json; charset=UTF-8",
+      },
     });
     return response;
   }
@@ -2987,10 +2977,7 @@ class Tooltip {
         .style("box-shadow", "0 0 3px")
         .style("stroke", "black");
     } else {
-      this.vis = d3
-        .select(parent)
-        .append("div")
-        .style(style);
+      this.vis = d3.select(parent).append("div").style(style);
     }
     this.vis
       .style("visibility", "visible")
@@ -3013,7 +3000,7 @@ class RecommendedKeywords {
    * @param {function(null)} submission
    */
   constructor(parent, submission) {
-    this.getRecommended(function(result) {
+    this.getRecommended(function (result) {
       let filteredResult = result.slice(0, 6);
       d3.select(parent)
         .selectAll("input")
@@ -3021,11 +3008,12 @@ class RecommendedKeywords {
         .enter()
         .append("button")
         .attr("class", "recommend-button")
-        .html(function(d, i) {
-          return `<b>${i +
-            1}. </b> <span style="color:#b46e46;"><b>${d.keyword}, ${d.selection} years</b></span>`;
+        .html(function (d, i) {
+          return `<b>${
+            i + 1
+          }. </b> <span style="color:#b46e46;"><b>${d.keyword}, ${d.selection} years</b></span>`;
         })
-        .on("click", function(d) {
+        .on("click", function (d) {
           d3.event.stopPropagation();
           d3.event.preventDefault();
           d3.select("#search-field").attr("value", d.keyword);
@@ -3039,9 +3027,9 @@ class RecommendedKeywords {
       method: "POST",
       body: "",
       headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
-    }).then(function(res) {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+    }).then(function (res) {
       callback(res);
     });
   }
@@ -3053,12 +3041,12 @@ class RecommendedKeywords {
     d3.json("/recommended-list", {
       method: "POST",
       body: JSON.stringify({
-        recommended: recommended
+        recommended: recommended,
       }),
       headers: {
-        "Content-type": "application/json; charset=UTF-8"
-      }
-    }).catch(function(err) {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+    }).catch(function (err) {
       console.log(err);
     });
   }
@@ -3120,10 +3108,10 @@ class MapObj {
 
   constructor(submission) {
     d3.json("./resources/countryTotals.json")
-      .then(res => {
+      .then((res) => {
         this.dataObject.setYearTotals(JSON.parse(JSON.stringify(res)));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
       });
     this.dataObject.onData(this.onDataUpdateSTDGraph.bind(this));
@@ -3277,7 +3265,7 @@ class MapObj {
       this.legend.colorScale,
       this.interaction,
       this.projection,
-      function() {
+      function () {
         this.legend.raise();
       }.bind(this),
       this.onHoverToolTip.bind(this)
@@ -3332,21 +3320,25 @@ class MapObj {
           dev /= otherInstitutions.length;
           dev = Math.sqrt(dev);
           let scale = 14 + ((total - avg) / dev) * 4;
-
+          let trendAverage = currentInstituteData.reduce((cur, acc) => {
+            return cur + acc;
+          }, 0);
+          trendAverage /= currentInstituteData.length;
           otherData.push({
             country_name: country,
             name: institute,
             lead: result.bestOffset,
             data: currentInstituteData,
             trend:
-              currentInstituteData[leadLagWindow] -
-              currentInstituteData[
-                currentInstituteData.length - 1 - leadLagWindow
-              ],
+              (currentInstituteData[leadLagWindow] -
+                currentInstituteData[
+                  currentInstituteData.length - 1 - leadLagWindow
+                ]) /
+              trendAverage,
             total: total,
             country_total: countryTotal,
             scale: scale,
-            id: otherCountry.getInstitute(institute).getGridID()
+            id: otherCountry.getInstitute(institute).getGridID(),
           });
         }
       }
@@ -3475,7 +3467,7 @@ class MapObj {
           country_name: country,
           leadlag: result.bestOffset,
           data: currentCountryData,
-          distance: distance
+          distance: distance,
         });
       }
     }
@@ -3483,13 +3475,13 @@ class MapObj {
       country_name: "Canada",
       leadlag: 0,
       data: canadaData,
-      distance: 0
+      distance: 0,
     }); // leadlag and distance are both 0 because they are compared with itself.
 
     return {
       data: otherData,
       missingData: missingData,
-      canadaData: canadaData
+      canadaData: canadaData,
     };
   }
   mostLead(dateObject) {
@@ -3501,7 +3493,7 @@ class MapObj {
     let mostLead = 0;
     let eventRange = {
       max: new Date().getFullYear() - leadLagWindow,
-      min: new Date().getFullYear() - (leadLagWindow * 2 - 1)
+      min: new Date().getFullYear() - (leadLagWindow * 2 - 1),
     };
     for (
       let max = new Date().getFullYear() - leadLagWindow,
@@ -3530,7 +3522,7 @@ class MapObj {
     let mostLag = 0;
     let eventRange = {
       max: new Date().getFullYear() - leadLagWindow,
-      min: new Date().getFullYear() - (leadLagWindow * 2 - 1)
+      min: new Date().getFullYear() - (leadLagWindow * 2 - 1),
     };
     for (
       let max = new Date().getFullYear() - leadLagWindow,
@@ -3645,10 +3637,10 @@ class MapObj {
       .getCountry(countryName)
       .getPapersAtYears(this.stdGraph.scrubber.getSelected());
     if (canada.length && other.length) {
-      canada = canada.map(function(d, i) {
+      canada = canada.map(function (d, i) {
         return d / self.dataObject.getYearTotal("Canada", selection.min + i);
       });
-      other = other.map(function(d, i) {
+      other = other.map(function (d, i) {
         return d / self.dataObject.getYearTotal(countryName, selection.min + i);
       });
       temp.visualize(
@@ -3677,21 +3669,21 @@ class MapObj {
     for (let i = selection.min; i <= selection.max; ++i) {
       insLine.push({
         x: i,
-        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i)
+        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i),
       });
       canLine.push({
         x: i,
-        y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+        y: canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i),
       });
     }
     let leadLagSelection = {
       min: selection.min + Number(leadlag),
-      max: selection.max + Number(leadlag)
+      max: selection.max + Number(leadlag),
     };
     for (let i = leadLagSelection.min; i <= leadLagSelection.max; ++i) {
       insLine2.push({
         x: i - Number(leadlag),
-        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i)
+        y: ins.getTotal(i) / this.dataObject.getYearTotal(d.properties.name, i),
       });
     }
     let distance = insLine2.reduce((acc, cur, idx) => {
@@ -3737,22 +3729,22 @@ class MapObj {
 
     let minY = Math.min(
       ...insLine
-        .map(function(d) {
+        .map(function (d) {
           return d.y;
         })
         .concat(
-          canLine.map(function(d) {
+          canLine.map(function (d) {
             return d.y;
           })
         )
     );
     let maxY = Math.max(
       ...canLine
-        .map(function(d) {
+        .map(function (d) {
           return d.y;
         })
         .concat(
-          insLine.map(function(d) {
+          insLine.map(function (d) {
             return d.y;
           })
         )
@@ -3773,10 +3765,10 @@ class MapObj {
         "d",
         d3
           .line()
-          .x(function(e) {
+          .x(function (e) {
             return xScale(e.x);
           })
-          .y(function(e) {
+          .y(function (e) {
             return yScale(e.y);
           })
       )
@@ -3792,10 +3784,10 @@ class MapObj {
         "d",
         d3
           .line()
-          .x(function(e) {
+          .x(function (e) {
             return xScale(e.x);
           })
-          .y(function(e) {
+          .y(function (e) {
             return yScale(e.y);
           })
       )
@@ -3841,22 +3833,22 @@ class MapObj {
     console.log(leadlag);
     minY = Math.min(
       ...insLine2
-        .map(function(d) {
+        .map(function (d) {
           return d.y;
         })
         .concat(
-          canLine.map(function(d) {
+          canLine.map(function (d) {
             return d.y;
           })
         )
     );
     maxY = Math.max(
       ...canLine
-        .map(function(d) {
+        .map(function (d) {
           return d.y;
         })
         .concat(
-          insLine2.map(function(d) {
+          insLine2.map(function (d) {
             return d.y;
           })
         )
@@ -3877,10 +3869,10 @@ class MapObj {
         "d",
         d3
           .line()
-          .x(function(e) {
+          .x(function (e) {
             return xScale(e.x);
           })
-          .y(function(e) {
+          .y(function (e) {
             return yScale(e.y);
           })
       )
@@ -3896,10 +3888,10 @@ class MapObj {
         "d",
         d3
           .line()
-          .x(function(e) {
+          .x(function (e) {
             return xScale(e.x);
           })
-          .y(function(e) {
+          .y(function (e) {
             return yScale(e.y);
           })
       )
@@ -3957,23 +3949,23 @@ class MapObj {
     let mostLead = {
       selection: {
         min: this.eventGraph.selection.x1,
-        max: this.eventGraph.selection.x2
+        max: this.eventGraph.selection.x2,
       },
-      value: this.eventGraph.value
+      value: this.eventGraph.value,
     };
     let mostLag = {
       selection: {
         min: this.eventGraph2.selection.x1,
-        max: this.eventGraph2.selection.x2
+        max: this.eventGraph2.selection.x2,
       },
-      value: this.eventGraph2.value
+      value: this.eventGraph2.value,
     };
     let largestTotalLeadLag = {
       selection: {
         min: this.eventGraph4.selection.x1,
-        max: this.eventGraph4.selection.x2
+        max: this.eventGraph4.selection.x2,
       },
-      value: this.eventGraph4.value
+      value: this.eventGraph4.value,
     };
     let numOfCountries = { mostLead: 0, mostLag: 0, largestTotalLeadLag: 0 };
     let recommendedValue = 0;
@@ -4007,16 +3999,16 @@ class MapObj {
         canData.length + offset,
         canData.length + offset + canData.length
       );
-      let sum = currentCountry.reduce(function(acc, cur) {
+      let sum = currentCountry.reduce(function (acc, cur) {
         return acc + cur;
       }, 0);
-      currentCountry = currentCountry.map(function(x) {
+      currentCountry = currentCountry.map(function (x) {
         return x / sum;
       });
-      sum = canData.reduce(function(acc, cur) {
+      sum = canData.reduce(function (acc, cur) {
         return acc + cur;
       }, 0);
-      canData = canData.map(function(x) {
+      canData = canData.map(function (x) {
         return x / sum;
       });
 
@@ -4036,16 +4028,16 @@ class MapObj {
         canData.length + offset,
         canData.length + offset + canData.length
       );
-      let sum = currentCountry.reduce(function(acc, cur) {
+      let sum = currentCountry.reduce(function (acc, cur) {
         return acc + cur;
       }, 0);
-      currentCountry = currentCountry.map(function(x) {
+      currentCountry = currentCountry.map(function (x) {
         return x / sum;
       });
-      sum = canData.reduce(function(acc, cur) {
+      sum = canData.reduce(function (acc, cur) {
         return acc + cur;
       }, 0);
-      canData = canData.map(function(x) {
+      canData = canData.map(function (x) {
         return x / sum;
       });
       for (let j = 0; j < currentCountry.length; ++j) {
@@ -4064,16 +4056,16 @@ class MapObj {
         canData.length + offset,
         canData.length + offset + canData.length
       );
-      let sum = currentCountry.reduce(function(acc, cur) {
+      let sum = currentCountry.reduce(function (acc, cur) {
         return acc + cur;
       }, 0);
-      currentCountry = currentCountry.map(function(x) {
+      currentCountry = currentCountry.map(function (x) {
         return x / sum;
       });
-      sum = canData.reduce(function(acc, cur) {
+      sum = canData.reduce(function (acc, cur) {
         return acc + cur;
       }, 0);
-      canData = canData.map(function(x) {
+      canData = canData.map(function (x) {
         return x / sum;
       });
       for (let j = 0; j < currentCountry.length; ++j) {
@@ -4089,7 +4081,7 @@ class MapObj {
     this.recommendedList.putRecommended({
       keyword: this.dataObject.currentKeyword,
       val: recommendedValue,
-      selection: leadLagWindow
+      selection: leadLagWindow,
     });
   }
   reset() {
@@ -4102,10 +4094,10 @@ class MapObj {
     this.dataObject.reset();
     this.dataObject = new DataObject();
     d3.json("./resources/countryTotals.json")
-      .then(res => {
+      .then((res) => {
         this.dataObject.setYearTotals(JSON.parse(JSON.stringify(res)));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
       });
     this.stdGraph.reset();

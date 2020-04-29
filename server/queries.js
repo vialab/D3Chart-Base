@@ -9,7 +9,6 @@ var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
 
 let jwt_token = JSON.parse(process.env.KEY);
-
 let recommended = JSON.parse(process.env.RECOMMEND_LIST);
 
 let geoData = require("./resources/custom.geo.json");
@@ -21,9 +20,9 @@ var timer = new callLimit();
  * @param  {JSON} date - JSON object containing date
  * @returns {boolean} - returns false if authorization has not expired, returns true if it has expired and writes to file the current date(it assumes one will get new credentials immediately)
  */
-const getAPIKey = async function() {
-  return new Promise(function(resolve, reject) {
-    request.post(api_url_auth, function(error, resp) {
+const getAPIKey = async function () {
+  return new Promise(function (resolve, reject) {
+    request.post(api_url_auth, function (error, resp) {
       if (error) {
         reject(error);
       }
@@ -40,7 +39,7 @@ const getAPIKey = async function() {
   });
 };
 
-const checkKey = async function() {
+const checkKey = async function () {
   let date = new Date(process.env.LAST_AUTHORIZED);
   let oneDay = 60 * 60 * 1000 * 24;
   if (new Date() - date > oneDay) {
@@ -61,9 +60,9 @@ const queryDimensions = async (req, resp) => {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: req.body.query
+    body: req.body.query,
   };
 
   request.post(options, (error, res) => {
@@ -82,7 +81,7 @@ function sleepFor(sleepDuration) {
   }
 }
 
-const queryNotCanada = async function(req, resp) {
+const queryNotCanada = async function (req, resp) {
   if (!("keyword" in req.body) && !("year" in req.body)) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
@@ -93,9 +92,9 @@ const queryNotCanada = async function(req, resp) {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names!="Canada" and year=${req.body.year} return research_orgs limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names!="Canada" and year=${req.body.year} return research_orgs limit 1000`,
   };
   console.log(options);
   request.post(options, (error, res) => {
@@ -108,7 +107,7 @@ const queryNotCanada = async function(req, resp) {
   });
 };
 
-const queryCanada = async function(req, resp) {
+const queryCanada = async function (req, resp) {
   if (!("keyword" in req.body) && !("year" in req.body)) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
@@ -119,9 +118,9 @@ const queryCanada = async function(req, resp) {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names="Canada" and year=${req.body.year} return research_orgs limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="Canada" and year=${req.body.year} return research_orgs limit 1000`,
   };
 
   console.log(options);
@@ -134,16 +133,16 @@ const queryCanada = async function(req, resp) {
   });
 };
 
-const queryCategory = async function(req, resp) {
+const queryCategory = async function (req, resp) {
   await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return category_for limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return category_for limit 1000`,
   };
   console.log(options);
   request.post(options, (error, res) => {
@@ -156,16 +155,16 @@ const queryCategory = async function(req, resp) {
   });
 };
 
-const queryInstituteCitationsCan = async function(req, resp) {
+const queryInstituteCitationsCan = async function (req, resp) {
   await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`,
   };
   request.post(options, (error, res) => {
     if (error) {
@@ -175,16 +174,16 @@ const queryInstituteCitationsCan = async function(req, resp) {
     resp.status(200).send(res);
   });
 };
-const queryInstituteCitationsNotCan = async function(req, resp) {
+const queryInstituteCitationsNotCan = async function (req, resp) {
   await checkKey();
   timer.incrementCalls();
   const options = {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications for "${req.body.keyword}" where research_org_country_names!="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`
+    body: `search publications for "${req.body.keyword}" where research_org_country_names!="${req.body.country_name}" and year=${req.body.year} return publications[research_orgs + times_cited] limit 1000`,
   };
   request.post(options, (error, res) => {
     if (error) {
@@ -195,7 +194,7 @@ const queryInstituteCitationsNotCan = async function(req, resp) {
   });
 };
 
-const queryCanadaFunding = async function(req, resp) {
+const queryCanadaFunding = async function (req, resp) {
   if (!("keyword" in req.body) && !("year" in req.body)) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
@@ -206,9 +205,9 @@ const queryCanadaFunding = async function(req, resp) {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search grants for "${req.body.keyword}" where research_org_countries.name="Canada" and active_year=${req.body.year} return research_orgs aggregate funding limit 1000`
+    body: `search grants for "${req.body.keyword}" where research_org_countries.name="Canada" and active_year=${req.body.year} return research_orgs aggregate funding limit 1000`,
   };
 
   console.log(options);
@@ -220,7 +219,7 @@ const queryCanadaFunding = async function(req, resp) {
     resp.status(200).send(res);
   });
 };
-const queryFunding = async function(req, resp) {
+const queryFunding = async function (req, resp) {
   if (!("keyword" in req.body) && !("year" in req.body)) {
     resp.status(400).send({ error: "Must contain keyword and year" });
     return;
@@ -231,9 +230,9 @@ const queryFunding = async function(req, resp) {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search grants for "${req.body.keyword}" where research_org_countries.name!="Canada" and active_year=${req.body.year} return research_orgs aggregate funding limit 1000`
+    body: `search grants for "${req.body.keyword}" where research_org_countries.name!="Canada" and active_year=${req.body.year} return research_orgs aggregate funding limit 1000`,
   };
 
   console.log(options);
@@ -246,10 +245,10 @@ const queryFunding = async function(req, resp) {
   });
 };
 
-const recommendedList = async function(req, res) {
+const recommendedList = async function (req, res) {
   if ("recommended" in req.body) {
     let min = Math.min(
-      ...recommended.map(function(x) {
+      ...recommended.map(function (x) {
         return x.val;
       })
     );
@@ -265,7 +264,7 @@ const recommendedList = async function(req, res) {
         }
       }
       let idx = recommended
-        .map(function(x) {
+        .map(function (x) {
           return x.val;
         })
         .indexOf(min);
@@ -277,14 +276,14 @@ const recommendedList = async function(req, res) {
     res.status(200).send();
   }
 };
-const query = async function(req, res) {
+const query = async function (req, res) {
   const options = {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications where id = "pub.1123731914" return publications[concepts] limit 1000`
+    body: `search publications where id = "pub.1123731914" return publications[concepts] limit 1000`,
   };
   request.post(options, (error, res) => {
     console.log(res);
@@ -293,17 +292,17 @@ const query = async function(req, res) {
     //fs.writeFileSync("concept.json", JSON.stringify(data));
   });
 };
-const getCountryTotalPapers = async function(req, resp) {
+const getCountryTotalPapers = async function (req, resp) {
   const options = {
     url: api_url,
     method: "POST",
     headers: {
-      Authorization: jwt_token.Authorization
+      Authorization: jwt_token.Authorization,
     },
-    body: `search publications where research_org_country_names="${req.body.country}" and year=${req.body.year} return publications`
+    body: `search publications where research_org_country_names="${req.body.country}" and year=${req.body.year} return publications`,
   };
   await checkKey();
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     request.post(options, (error, res) => {
       if (error) {
         console.error(error);
@@ -313,12 +312,12 @@ const getCountryTotalPapers = async function(req, resp) {
     });
   });
 };
-const getRecommendedList = async function(req, res) {
+const getRecommendedList = async function (req, res) {
   res.status(200).send(recommended);
 };
 
 function sleep(ms) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }
@@ -330,7 +329,7 @@ async function getCountries() {
     console.log(countryNames[i], i, countryNames.length);
     for (let j = 1950; j <= 2020; ++j) {
       let data = await getCountryTotalPapers({
-        body: { country: countryNames[i], year: j }
+        body: { country: countryNames[i], year: j },
       });
       await sleep(2000);
       data = JSON.parse(data);
@@ -357,5 +356,5 @@ module.exports = {
   queryCanadaFunding,
   queryFunding,
   recommendedList,
-  getRecommendedList
+  getRecommendedList,
 };
