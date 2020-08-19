@@ -32,7 +32,13 @@ function leadlag(data1, data2) {
   let leadLagValues = [];
   let highestRelation = 0;
   let bestOffset = 0;
+  //diff 10
+  //d2 15
+  //d1 5
+  //123456789a
 
+  //i->0-10
+  //j->0-5
   for (let i = 0; i < d2.length - d1.length + 1; ++i) {
     let currentLeadLag = 0;
     for (let j = 0; j < d1.length; ++j) {
@@ -47,6 +53,49 @@ function leadlag(data1, data2) {
   }
   return { values: leadLagValues, bestOffset: bestOffset };
 }
+/**
+ *
+ * @param {Array.<number>} data1
+ * @param {Array.<number>} data2 - data2.length  must = data1.length * 3
+ */
+//function leadlag(data1, data2) {
+//  if (data1.length * 3 != data2.length) {
+//    return 0;
+//  }
+//  let d1 = data1;
+//  let d2 = data2;
+//  let d1Mean = mean(d1);
+//  let d2Mean = mean(d2);
+//  let d1STD = standardDeviation(d1, d1Mean);
+//  let d2STD = standardDeviation(d2, d2Mean);
+//  let leadLagValues = [];
+//  let highestRelation = 0;
+//  let bestOffset = 0;
+//  //diff 10
+//  //d2 15
+//  //d1 5
+//  //123456789a
+//
+//  //i->0-10
+//  //j->0-5
+//  for (let i = 0; i < d2.length - d1.length + 1; ++i) {
+//    let currentLeadLag = 0;
+//    for (let j = 0; j < d1.length; ++j) {
+//      currentLeadLag += Math.abs(
+//        (d1[j] - d1Mean) / d1STD - (d2[i + j] - d2Mean) / d2STD
+//      );
+//    }
+//    if (i == 0) {
+//      highestRelation = currentLeadLag;
+//    }
+//    leadLagValues.push(currentLeadLag);
+//    if (highestRelation > currentLeadLag) {
+//      highestRelation = currentLeadLag;
+//      bestOffset = i - d1.length;
+//    }
+//  }
+//  return { values: leadLagValues, bestOffset: bestOffset };
+//}
 ///**
 // * @param  {Array} data1 - [{y:}] requires y value
 // * @param  {Array} data2 - [{y:}] requires y value

@@ -2,8 +2,10 @@ const bodyParser = require("body-parser");
 const queryDimensions = require("./queries");
 const defaultData = require("./resources/defaultData.json");
 const locations = require("./geolocation");
+const eruditRoutes = require("./erudit");
+const erudit = require("./erudit");
 
-module.exports = app => {
+module.exports = (app) => {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -49,4 +51,8 @@ module.exports = app => {
   app.post("/default-view", (req, res) => {
     res.json(defaultData);
   });
+
+  app.get("/erudit/total-years", eruditRoutes.loadYearTotals);
+
+  app.post("/erudit/search", eruditRoutes.search);
 };

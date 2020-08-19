@@ -1,59 +1,65 @@
 <!DOCTYPE html>
+
 <head>
-<meta name="viewport" content="width=device-width">
-<link href="./css/index.css" rel="stylesheet" />
-<link href="./css/main.css" rel="stylesheet" />
-<link
-rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-/>
+  <meta name="viewport" content="width=device-width">
+  <link href="./css/index.css" rel="stylesheet" />
+  <link href="./css/main.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 </head>
 <html>
-  <body>
-    <div id="map-holder"></div>
-    <div id= "analytics-panel"> 
-      <div id="scrollable">
-        <div class="searchbar">
-            <form action="" id='form'>
-              <input type="search" id='search-field'>
-                <i class="fa fa-search"></i>
-              </input>
-            </form>
-          </div>
-          <div class="title"><h4>Publishing output by year for Canada</h4></div>
-        <div id="timeline"></div>
-        <div style="margin-top: 150px;">
-          <h4 class="title">Institution Filters</h4>
-        </div>
-        <div style="display:flex;">
-          <svg id="glyph-legend" style="width:49%; height:50%; align-items:stretch;"></svg>
-        <div class="btn-group" >
-            <button class="metric-button" id="deviation-country">Institute -> Country</button>
-            <button class="metric-button" id="deviation-world">Institute -> World</button>
-            <button class="metric-button" id="paper-citations">Paper Citations</button>
-            <button class="metric-button" id="consistency">Consistency</button>
-            <button class="metric-button" id="funding">Funding</button>
-          </div>
-        </div>
-        <div style="display:flex;justify-content: center;">
-          <input type="range" min="0" max="100" value="100" class="slider" id="myRange">
-          <label for="myRange" id="label-myRange" class="label-class">2.0</label>
-        </div>
-        <div style="text-align: center;margin-top: 150px;" id="recommended-list">
-          <h4 style="font-family: Arial, Helvetica, sans-serif">Recommended Keywords</h4>
+
+<body>
+  <div id="map-holder"></div>
+  <div id="analytics-panel">
+    <div id="scrollable">
+      <div class="searchbar">
+        <form action="" id='form'>
+          <input type="search" id='search-field'>
+          <i class="fa fa-search"></i>
+          </input>
+        </form>
+      </div>
+      <div class="title">
+        <h4>Publishing output by year for Canada</h4>
+      </div>
+      <div id="timeline"></div>
+      <div style="width:100%; justify-content: center;display:flex">
+        <div class="erudit-logo">
         </div>
       </div>
+      <div style="margin-top: 58px;">
+        <h4 class="title">Institution Filters</h4>
+      </div>
+      <div style="display:flex;">
+        <svg id="glyph-legend" style="width:49%; height:50%; align-items:stretch;"></svg>
+        <div class="btn-group">
+          <button class="metric-button" id="deviation-country">Institute -> Country</button>
+          <button class="metric-button" id="deviation-world">Institute -> World</button>
+          <button class="metric-button" id="paper-citations">Paper Citations</button>
+          <button class="metric-button" id="consistency">Consistency</button>
+          <button class="metric-button" id="funding">Funding</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content: center;">
+        <input type="range" min="0" max="100" value="100" class="slider" id="myRange">
+        <label for="myRange" id="label-myRange" class="label-class">2.0</label>
+      </div>
+      <div style="text-align: center;margin-top: 58px;" id="recommended-list">
+        <h4 style="font-family: Arial, Helvetica, sans-serif">Recommended Keywords</h4>
+      </div>
+    </div>
   </div>
-  </body>
-  <script src="./js/leadlag.js"></script>
-  <script src="https://code.easypz.io/easypz.latest.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.12.0/d3.min.js"></script>
-  <script src="https://d3js.org/d3-brush.v1.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-force/1.1.0/d3-force.min.js"></script>
-  <script src="./js/components.js"></script>
-  <script src="./js/ngram.js"></script>
-  <script src="./js/chartview.js"></script>
-  <script src="./js/map.js"></script>
+</body>
+<script src="./js/leadlag.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/easypz@1.1.8/easypz.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.12.0/d3.min.js"></script>
+<script src="https://d3js.org/d3-brush.v1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-force/1.1.0/d3-force.min.js"></script>
+<script src="./js/components.js"></script>
+<script src="./js/ngram.js"></script>
+<script src="./js/chartview.js"></script>
+<script src="./js/map.js"></script>
+
 </html>

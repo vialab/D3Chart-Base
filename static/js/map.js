@@ -1,4 +1,4 @@
-$(function() {
+$(function () {
   //These are all cmp objects see components.js
   let cmpCountries = cmp.countries;
   let cmpInstitutes = cmp.glyphs;
@@ -15,13 +15,15 @@ $(function() {
   let currentKeyword;
   let pz;
   let mapObj = new MapObj(keywordSubmission.bind(this));
+  //get the total for each year in erudit
+  mapObj.erudit.init();
   //test.dataObject.getAllPapers("Video cassette recorder");
   let colorScale = cmp.colorScale;
   //setting the color gradient to be the red->blue color scale
   colorScale.setGradient(d3.interpolateRdBu).setScale(yearScale);
   //this is the country/map data
   //once we receive the json we call the load function which creates the map, legend and timeline
-  $("#myRange").on("change", function() {
+  $("#myRange").on("change", function () {
     let currentVal = $("#myRange").val();
     currentVal /= 100;
     currentVal *= 2.0;
@@ -29,23 +31,23 @@ $(function() {
     mapObj.onLeadLagThresholdChange(currentVal);
   });
 
-  d3.json("./custom.geo.json").then(function(json) {
+  d3.json("./custom.geo.json").then(function (json) {
     onLoad(json);
   });
 
-  $("#metric-selection").on("change", async function() {
+  $("#metric-selection").on("change", async function () {
     if (!cmp.dataObject.hasData()) {
       return;
     }
     let selection = $("#metric-selection").val();
     let result = await cmp.metricSelection.getMetric(selection);
-    cmpInstitutes.updateScale(result, function(x) {
+    cmpInstitutes.updateScale(result, function (x) {
       return x;
     });
   });
   $("#form").on("submit", keywordSubmission);
 
-  function keywordSubmission(event) {
+  async function keywordSubmission(event) {
     if (event != null) {
       event.preventDefault();
     }
@@ -55,6 +57,7 @@ $(function() {
     let keyword = $("#search-field").val();
     legend.setKeyword(keyword);
     mapObj.dataObject.getAllPapers(keyword);
+    await mapObj.erudit.search(keyword);
   }
 
   /**
@@ -86,9 +89,11 @@ $(function() {
       .visualize(colorScale, group);
     legendVis.attr(
       "transform",
-      `translate(${$(window).width() -
+      `translate(${
+        $(window).width() -
         legendVis.node().getBoundingClientRect().width -
-        padding},${y - legendVis.node().getBBox().height - padding})`
+        padding
+      },${y - legendVis.node().getBBox().height - padding})`
     );
     return group;
   }
@@ -207,8 +212,9 @@ $(function() {
     //translating the countries into the center of the viewport
     $("#map").attr(
       "transform",
-      `translate(${$(window).width() / 2}, ${$(window).height() / 2 +
-        152})scale(0.1)`
+      `translate(${$(window).width() / 2}, ${
+        $(window).height() / 2 + 152
+      })scale(0.1)`
     );
     mapObj.createInteraction(svg.node());
     mapObj.svg = svg;

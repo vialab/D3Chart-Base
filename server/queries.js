@@ -102,7 +102,7 @@ const queryNotCanada = async function (req, resp) {
       console.log(error);
     }
 
-    console.log(res.body);
+    //console.log(res.body);
     resp.status(200).send(res);
   });
 };
@@ -128,7 +128,7 @@ const queryCanada = async function (req, resp) {
     if (error) {
       console.log(error);
     }
-    console.log(res.body);
+    //console.log(res.body);
     resp.status(200).send(res);
   });
 };
@@ -150,7 +150,7 @@ const queryCategory = async function (req, resp) {
       console.log(error);
     }
 
-    console.log(res.body);
+    //console.log(res.body);
     resp.status(200).send(res);
   });
 };
@@ -170,7 +170,7 @@ const queryInstituteCitationsCan = async function (req, resp) {
     if (error) {
       console.log(error);
     }
-    console.log(res);
+    //console.log(res);
     resp.status(200).send(res);
   });
 };
@@ -189,7 +189,7 @@ const queryInstituteCitationsNotCan = async function (req, resp) {
     if (error) {
       console.log(error);
     }
-    console.log(res);
+    //console.log(res);
     resp.status(200).send(res);
   });
 };
@@ -215,7 +215,7 @@ const queryCanadaFunding = async function (req, resp) {
     if (error) {
       console.log(error);
     }
-    console.log(res);
+    //console.log(res);
     resp.status(200).send(res);
   });
 };
@@ -240,7 +240,7 @@ const queryFunding = async function (req, resp) {
     if (error) {
       console.log(error);
     }
-    console.log(res);
+    //console.log(res);
     resp.status(200).send(res);
   });
 };
@@ -286,7 +286,7 @@ const query = async function (req, res) {
     body: `search publications where id = "pub.1123731914" return publications[concepts] limit 1000`,
   };
   request.post(options, (error, res) => {
-    console.log(res);
+    //console.log(res);
     let data = JSON.parse(res.body);
     let countryNames = [];
     //fs.writeFileSync("concept.json", JSON.stringify(data));

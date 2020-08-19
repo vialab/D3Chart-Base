@@ -30,7 +30,7 @@
   padding: 5px;
   pointer-events: all;
   display: block;
-  margin-top: 200px;
+  margin-top: 30px;
 }
 
 input {
@@ -419,4 +419,15 @@ body {
     margin: 0;
     size: 2560px 1297px;
   }
+}
+
+.erudit-logo {
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  padding: 1%;
+  margin-top: 58px;
+  background-color: red;
+  -webkit-mask: url("../resources/erudit-logotype-blanc.svg") no-repeat center;
+  mask: url("../resources/erudit-logotype-blanc.svg") no-repeat center;
 }

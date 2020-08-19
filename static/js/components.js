@@ -3051,6 +3051,46 @@ class RecommendedKeywords {
     });
   }
 }
+
+class Erudit {
+  constructor() {
+    this.yearTotals = {};
+    this.data = {};
+  }
+  static setEruditColor(color) {
+    $(".erudit-logo").css({ backgroundColor: color });
+  }
+  async init() {
+    try {
+      this.yearTotals = await d3.json("/erudit/total-years", {
+        method: "GET",
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  /**
+   *
+   * @param {string} term
+   */
+  async search(term) {
+    try {
+      let result = await d3.json("/erudit/search", {
+        method: "POST",
+        body: JSON.stringify({ term }),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8",
+        },
+      });
+      for (const x of result) {
+        this.data[x.year] = x.count / this.yearTotals[x.year];
+      }
+      console.log(this.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
 class MapObj {
   leadLagThreshold = 2.0;
   countries = null;
@@ -3103,7 +3143,7 @@ class MapObj {
     "testEvent4",
     "Largest Total Lead Lag"
   );
-
+  erudit = new Erudit();
   recommendedList = null;
 
   constructor(submission) {
@@ -3249,6 +3289,29 @@ class MapObj {
         result.data[el].leadlag = 0;
       }
     }
+    //erudit bit hard coded
+    let canada = this.dataObject.getCountry("Canada");
+    let canadaData = [];
+    let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
+
+    for (let i = selection.min; i <= selection.max; ++i) {
+      if (!canada.hasTotal(i)) {
+        console.error("Canada does not have data for year: " + i);
+        return;
+      }
+      canadaData.push(
+        canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
+      );
+    }
+    const minWindow = selection.min - leadLagWindow;
+    const maxWindow = selection.max + leadLagWindow;
+    let eruditData = [];
+    for (let i = minWindow; i <= maxWindow; ++i) {
+      eruditData.push(this.erudit.data[i]);
+    }
+    let eruditLeadLag = leadlag(canadaData, eruditData);
+    Erudit.setEruditColor(this.legend.colorScale.get(eruditLeadLag.bestOffset));
+    //end of erudit
     this.countries.color(
       result.data,
       this.legend.colorScale,
@@ -3424,7 +3487,6 @@ class MapObj {
     let canada = this.dataObject.getCountry("Canada");
     let canadaData = [];
     let leadLagWindow = this.stdGraph.scrubber.getNumYearsSelected();
-
     for (let i = selection.min; i <= selection.max; ++i) {
       if (!canada.hasTotal(i)) {
         console.error("Canada does not have data for year: " + i);
@@ -3434,14 +3496,15 @@ class MapObj {
         canada.getTotal(i) / this.dataObject.getYearTotal("Canada", i)
       );
     }
+
     let otherData = [];
     let missingData = [];
+    const minWindow = selection.min - leadLagWindow;
+    const maxWindow = selection.max + leadLagWindow;
     for (const country in this.dataObject.countries) {
       if (country == "Canada") {
         continue;
       }
-      const minWindow = selection.min - leadLagWindow;
-      const maxWindow = selection.max + leadLagWindow;
       let currentCountry = this.dataObject.getCountry(country);
       let currentCountryData = [];
       for (let i = minWindow; i <= maxWindow; ++i) {
@@ -3690,7 +3753,61 @@ class MapObj {
       return acc + Math.pow(cur.y - canLine[idx].y, 2);
     }, 0);
     distance = Math.sqrt(distance);
+
+    let distance2 = insLine.reduce((acc, cur, idx) => {
+      return acc + Math.pow(cur.y - canLine[idx].y, 2);
+    }, 0);
+    distance2 = Math.sqrt(distance2);
+    console.log(`original distance: ${distance2}, new distance: ${distance}`);
     result.vis.append("div").html(`Distance: ${distance.toPrecision(3)}`);
+    let maxY = Math.max(
+      ...canLine
+        .map(function (d) {
+          return d.y;
+        })
+        .concat(
+          insLine.map(function (d) {
+            return d.y;
+          })
+        )
+    );
+    let max2Y = Math.max(
+      ...canLine
+        .map(function (d) {
+          return d.y;
+        })
+        .concat(
+          insLine2.map(function (d) {
+            return d.y;
+          })
+        )
+    );
+    let minY = Math.min(
+      ...canLine
+        .map(function (d) {
+          return d.y;
+        })
+        .concat(
+          insLine.map(function (d) {
+            return d.y;
+          })
+        )
+    );
+    let min2Y = Math.min(
+      ...canLine
+        .map(function (d) {
+          return d.y;
+        })
+        .concat(
+          insLine2.map(function (d) {
+            return d.y;
+          })
+        )
+    );
+    maxY = Math.max(maxY, max2Y);
+    minY = Math.min(minY, min2Y);
+
+    const scale = 1;
     result.vis
       .append("div")
       .style("width", `${visBox.width}px`)
@@ -3723,39 +3840,16 @@ class MapObj {
       .text(0);
     let svg = result.vis
       .append("svg")
-      .attr("width", visBox.width)
+      .attr("width", visBox.width * scale)
       .attr("height", visBox.height / 2)
       .attr("display", "inline-block");
-
-    let minY = Math.min(
-      ...insLine
-        .map(function (d) {
-          return d.y;
-        })
-        .concat(
-          canLine.map(function (d) {
-            return d.y;
-          })
-        )
-    );
-    let maxY = Math.max(
-      ...canLine
-        .map(function (d) {
-          return d.y;
-        })
-        .concat(
-          insLine.map(function (d) {
-            return d.y;
-          })
-        )
-    );
     let xScale = d3
       .scaleLinear()
       .domain([selection.min, selection.max])
       .range([0, visBox.width]);
     let yScale = d3
       .scaleLinear()
-      .domain([0, maxY])
+      .domain([minY, maxY])
       .range([visBox.height / 4, 0]);
     svg
       .append("path")
@@ -3827,39 +3921,17 @@ class MapObj {
 
     let svg2 = result.vis
       .append("svg")
-      .attr("width", visBox.width)
+      .attr("width", visBox.width * scale)
       .attr("height", visBox.height / 2)
       .attr("display", "inline-block");
     console.log(leadlag);
-    minY = Math.min(
-      ...insLine2
-        .map(function (d) {
-          return d.y;
-        })
-        .concat(
-          canLine.map(function (d) {
-            return d.y;
-          })
-        )
-    );
-    maxY = Math.max(
-      ...canLine
-        .map(function (d) {
-          return d.y;
-        })
-        .concat(
-          insLine2.map(function (d) {
-            return d.y;
-          })
-        )
-    );
     xScale = d3
       .scaleLinear()
       .domain([selection.min, selection.max])
       .range([0, visBox.width]);
     yScale = d3
       .scaleLinear()
-      .domain([0, maxY])
+      .domain([minY, maxY])
       .range([visBox.height / 4, 0]);
     svg2
       .append("path")
