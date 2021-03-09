@@ -1,0 +1,84 @@
+<div class="row">
+	<div class="col-lg-1 mt-3">
+	</div>
+
+	<div class="col-lg-10 mt-3">
+
+		<div class="text-center" id="title">
+			<h4>N-Gram Viewer Demo</h4>
+			<!-- <div id="ngramchart2"></div> -->
+		</div>
+		<div id="graph-container" class="row"></div>
+		<!-- <div id="ngramchart"></div> -->
+		<!--<div id="multicharts"></div> -->
+		<!-- <hr> -->
+	</div>
+
+	<div class="col-lg-1 mt-3">
+		<!-- <p>tes</p> -->
+	</div>
+
+	<!-- <div class="col-lg-4 mt-3">
+		<p>tes</p>
+	</div> -->
+</div>
+<!-- <hr class='mb-3 mt-0'>   -->
+
+<div class="row">
+	<div class='col-lg-1'></div>
+	<!-- <div class="w-25"></div> -->
+	<!-- <div class='col'></div> -->
+	<!-- <div class='col-lg'></div> -->
+	<div class="col-lg-5 mt-3" style="width: 800px">
+		<!-- Checkbox for absolute vs percentage relative -->
+	</div>
+
+	<div class="col-lg-5 mt-1">
+		<!-- <div class="card bg-light">
+			<div class="card-body">
+				This is some text within a card body.
+			</div>
+		</div> -->
+	</div>
+
+	<div class='col-lg-1'></div>
+</div>
+<div id="query-div">
+	<form id="newsearch">
+		<div class="input-group mb-3">
+			<div class="input-group-prepend">
+				<span class="input-group-text" id="inputGroup-sizing">Lead Lag</span>
+			</div>
+			<div style="width:70%">
+				<input id="query-field" type="text" class="form-control", aria-label="Small" aria-label="LeadLag Query" placeholder="Query">
+			</div>
+			<div class="input-group-append">
+				<button id="query-search" class="btn btn-primary" type="submit">Query</button>
+			</div>
+			<label class="switch">
+				<input type="checkbox" id="leadLagToggle">
+				<span class="slider"></span>
+			  </label>
+			<div>
+				<label class="switch">
+					<input type="checkbox" id="normalize-scale">
+					<span class="slider"></span>
+				  </label>
+			</div>
+	</form>
+	</div>
+<!-- Load in the d3 library -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+type="text/css" />
+<link href="./css/main.css" rel="stylesheet">
+<!--<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+</script>-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="./js/leadlag.js"></script>
+<script src="./js/ngram.js"></script>
+<script src="./js/queryobject.js"></script>
+<script src="./js/chartview.js"></script>
+<script src="./js/main.js"></script>

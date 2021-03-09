@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+node_modules
+configlogin.json
+dimensionsmetricscreds.json
+
 # Distribution / packaging
 .Python
 build/
@@ -49,7 +53,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
-
+*.env
 # Translations
 *.mo
 *.pot

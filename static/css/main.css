@@ -1,59 +1,171 @@
 .centered {
-    display: inline-block;
-    margin: 0 auto;
-    text-align: center;
+  display: inline-block;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .slice {
-    font-size: 12pt;
-    font-family: Verdana;
-    fill: white;
-    font-weight: bold;
-    cursor: pointer;
+  font-size: 12pt;
+  font-family: Verdana;
+  fill: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+#query-field {
+  height: 100%;
+}
+#query-div {
+  width: 100%;
+  position: absolute;
+  bottom: 30px;
+}
+#newsearch {
+  margin-left: 15%;
+  width: 70%;
 }
 
 .legend-group {
-    fill: black;
+  fill: black;
 }
 
 #ngramchart {
-    /* width: 10px; */
-    width: auto;
-    height: 400px;
+  /* width: 10px; */
+  width: 70%;
+  height: 800px;
+  float: left;
 }
 
 #leadlag {
-    /* width: 10px; */
-    width: auto;
-    height: 400px;
+  /* width: 10px; */
+  width: auto;
+  height: 400px;
 }
 
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 100%;
+}
 
-
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
 
 /* 13. Basic Styling with CSS */
 
 /* Style the lines by removing the fill and applying a stroke */
 .line {
-    fill: none;
-    /* stroke: #ffab00; */
-    stroke-width: 1;
+  fill: none;
+  /* stroke: #ffab00; */
+  stroke-width: 4;
 }
 
 .overlay {
-    fill: none;
-    pointer-events: all;
+  fill: none;
+  pointer-events: all;
 }
 
 /* Style the dots by assigning a fill and stroke */
 .dot {
-    fill: #ffab00;
-    stroke: #fff;
-    width: 4px;
-    height: 4px;
+  fill: #ffab00;
+  stroke: #fff;
+  width: 4px;
+  height: 4px;
 }
 
 .focus circle {
-    fill: none;
-    stroke: steelblue;
+  fill: none;
+  stroke: steelblue;
+}
+
+.shake {
+  animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  20%,
+  80% {
+    transform: translate3d(1px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(1px, 0, 0);
+  }
+}
+
+#multicharts {
+  float: right;
+  width: 30%;
+  height: 800px;
+  overflow-y: scroll;
+}
+
+.multi-container {
+  display: inline-block;
+  height: 93%;
+  width: 100%;
+  top: 3%;
+  bottom: 3%;
+  overflow-y: auto;
+  position: relative;
+}
+
+.multi-container::-webkit-scrollbar {
+  display: none;
+}
+
+.row {
+  box-sizing: border-box;
+  display: inline-flex;
+  height: 90%;
+  width: 100%;
+}
+
+.chart {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.recommend-button {
+  margin-left: 8px;
+  margin-top: 3px;
+  position: relative;
+  display: inline-block;
+  width: 45%;
+  outline: none;
+  stroke: none;
+  border: none;
+  background-color: rgba(0, 0, 0, 0);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 30;
+  cursor: pointer;
+  text-align: left;
+}
+
+#graph-holder {
+  margin: auto;
+  width: 90%;
+  height: 90%;
+}
+
+#Layer_1 {
+  fill: green;
 }

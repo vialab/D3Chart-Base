@@ -1,64 +1,89 @@
-var chartObj;
-var leadChart;
 $(function () {
+  //the chart object contains all of the d3 graphing
+  document.getElementById(
+    "query-field"
+  ).value = `{"source":"publications", "keywords":"cancer", "filters":{"country":["Canada", "!Canada"], "year":["2017","2018"]},"returns":["year","category_for"]}+{"source":"grants"}`;
+  let viewManager = new ChartView("graph-container");
+  viewManager.addView("main-view");
+  $("#leadLagToggle").change(function (event) {
+    viewManager.leadLag();
+  });
 
-	$('#newsearch').submit(function (event) {
-		event.stopPropagation();
-		event.preventDefault();
+  $("#normalize-scale").change((event) => {
+    viewManager.normalizeChartAxiiByView();
+  });
+  $("#newsearch").submit(function (event) {
+    let buttonID = "query-search";
+    let fieldID = "query-field";
+    event.stopPropagation();
+    event.preventDefault();
+    let tmpButton = document.getElementById(buttonID);
 
-		postJSON('unigramdata', {}, function (result) {
+    tmpButton.innerHTML = `<span class="spinner-grow spinner-grow-sm"></span>`;
+    tmpButton.disabled = true;
+    if (tmpButton.classList.contains("shake")) {
+      tmpButton.classList.remove("shake");
+    }
+    try {
+      viewManager.clear();
+      var query = document.getElementById(fieldID).value;
 
-			// result.lines[0].rawdata.push(
-			// 	// {x: 2020, y: 0.0000304810305345002}
-			// 	{
-			// 		x: 2020,
-			// 		y: Math.random() / 2000
-			// 	}
-			// );
-			var today = new Date();
+      let qObject = new QueryObject(query);
+      qObject.callbackWhenFinished((data) => {
+        for (let chart in data) {
+          viewManager.addChart(data[chart].viewName, data[chart]);
+        }
+        viewManager.setMainView("year");
+        tmpButton.disabled = false;
+        tmpButton.innerHTML = "Query";
+        if ("FOR" in viewManager.viewList) {
+          for (let chart in viewManager.charts["FOR"]) {
+            for (let catChart in viewManager.charts["category_for"]) {
+              if (
+                viewManager.charts["FOR"][chart].chart.legend.titleText ==
+                viewManager.charts["category_for"][catChart].chart.legend
+                  .titleText
+              ) {
+                viewManager.charts["category_for"][catChart].chart.addBars(
+                  viewManager.charts["FOR"][chart].chart.data,
+                  viewManager.charts["FOR"][chart].chart.Y.scale
+                );
+              }
+            }
+          }
+        }
+      });
+      qObject.analyzeQuery();
+    } catch (e) {
+      tmpButton.classList.add("shake");
+    }
+  });
 
-			var xmax = new Date(today.getFullYear() + 1, 0);
-			var xmin = new Date(1970, 0);
-
-			// chartObj.smoothing = 8;
-			// chartObj.updateXScale(xmin,xmax);
-
-			chartObj.updateLines(result.lines);
-		});
-
-	});
-
-
-
-
-	// Create chart on page & data load.
-	postJSON('unigramdata', {}, function (result) {
-		// console.log(result)
-
-		chartObj = new D3Chart('#ngramchart', true);
-
-		if (result.xdomain) {
-			var xmin = new Date(result.xdomain[0], 0);
-			var xmax = new Date(result.xdomain[1], 0);
-		}
-
-		chartObj.updateXScale(xmin, xmax);
-		chartObj.updateYScale(result.ydomain[0], result.ydomain[1]);
-
-
-
-		chartObj.updateLines(result.lines);
-
-		let yearlead = leadlag(result.lines[0].rawdata, result.lines[1].rawdata) + 1; // always seems to be 1 off. 
-
-		console.log('Test0 Leads Test1 by ', yearlead, 'years');
-
-		leadChart = new D3Chart('#leadlag', true);
-		leadChart.updateXScale(xmin, xmax);
-		leadChart.updateYScale(-0.0005, 0.0005);
-		// leadChart.updateYScale(result.ydomain[0], result.ydomain[1]);
-		leadChart.updateLines(result.lines);
-
-
-	});
+  /**
+   * gets default view for the graphs. The data being presented has no meaning.
+   * @inner
+   * @param {JSON} res - format {xdomain:[], ydomain:[], lines:[{name:, rawdata:[{x:,y:}], data:[{x:,y:}]}, {name:, rawdata:[{x:,y:}], data:[{x:,y:}]}]}
+   */
+  postJSON("/default-view", {}, function (res) {
+    result = res;
+    viewManager.addChart("main-view", result, (data) => {
+      data.chartName = "total";
+    });
+    viewManager.getChart("main-view", "main-view-total").addBars([
+      {
+        rawdata: [
+          { x: 2003, y: 0.00025 },
+          { x: 2004, y: 0.00035 },
+        ],
+      },
+      {
+        rawdata: [
+          { x: 2003, y: 0.0002 },
+          { x: 2004, y: 0.0003 },
+        ],
+      },
+    ]);
+    viewManager.setMainView("main-view");
+    viewManager.getChart("main-view", "main-view-total").curtainAnimation();
+  });
 });

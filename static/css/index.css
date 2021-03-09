@@ -1,0 +1,434 @@
+#map-holder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+.searchbar {
+  pointer-events: none;
+  position: relative;
+  height: 10%;
+  z-index: 2;
+  margin-top: 35px;
+}
+
+#form {
+  position: relative;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 1s;
+  width: 200px;
+  height: 50px;
+  background: white;
+  box-sizing: border-box;
+  border-radius: 25px;
+  border: 4px solid white;
+  padding: 5px;
+  pointer-events: all;
+  display: block;
+  margin-top: 30px;
+}
+
+input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 42.5px;
+  line-height: 30px;
+  display: block;
+  font-size: 1em;
+  border-radius: 20px;
+  padding: 0 20px;
+}
+
+.fa {
+  box-sizing: border-box;
+  padding: 10px;
+  width: 42.5px;
+  height: 42.5px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-radius: 50%;
+  color: #07051a;
+  text-align: center;
+  font-size: 1.2em;
+  transition: all 1s;
+  stroke: black;
+}
+
+#form:hover {
+  cursor: pointer;
+}
+
+input:focus {
+  outline: none;
+}
+
+.country {
+  fill: #f5f5f5;
+  stroke: white;
+}
+
+.group {
+  pointer-events: all;
+}
+
+svg {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Old versions of Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+.title {
+  top: 10%;
+  left: 50%;
+  width: 100%;
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.graph-window {
+  top: 30%;
+  left: 21%;
+  bottom: 30%;
+  right: 1%;
+  background-color: white;
+  border-radius: 25px;
+  position: fixed;
+  box-shadow: 0 0 3px;
+  animation-name: graph-window-animation;
+  animation-duration: 500ms;
+  display: flex;
+}
+
+@keyframes graph-window-animation {
+  from {
+    top: 50%;
+    left: 50%;
+    bottom: 50%;
+    right: 50%;
+  }
+  to {
+    top: 30%;
+    left: 21%;
+    bottom: 30%;
+    right: 1%;
+  }
+}
+
+.missing-data {
+  object-fit: cover;
+}
+
+.category {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  border-radius: 4px;
+  margin-left: 3px;
+  margin-right: 25px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Old versions of Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+.selection {
+  fill: steelblue;
+  fill-opacity: 0.5;
+}
+
+#metrics {
+  z-index: 2;
+  position: relative;
+}
+
+.loader {
+  color: #ffffff;
+  font-size: 90px;
+  text-indent: -9999em;
+  overflow: hidden;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  margin: 72px auto;
+  position: relative;
+  -webkit-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-animation: load6 1.7s infinite ease, round 1.7s infinite ease;
+  animation: load6 1.7s infinite ease, round 1.7s infinite ease;
+}
+
+@-webkit-keyframes load6 {
+  0% {
+    box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em,
+      0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+  }
+  5%,
+  95% {
+    box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em,
+      0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+  }
+  10%,
+  59% {
+    box-shadow: 0 -0.83em 0 -0.4em, -0.087em -0.825em 0 -0.42em,
+      -0.173em -0.812em 0 -0.44em, -0.256em -0.789em 0 -0.46em,
+      -0.297em -0.775em 0 -0.477em;
+  }
+  20% {
+    box-shadow: 0 -0.83em 0 -0.4em, -0.338em -0.758em 0 -0.42em,
+      -0.555em -0.617em 0 -0.44em, -0.671em -0.488em 0 -0.46em,
+      -0.749em -0.34em 0 -0.477em;
+  }
+  38% {
+    box-shadow: 0 -0.83em 0 -0.4em, -0.377em -0.74em 0 -0.42em,
+      -0.645em -0.522em 0 -0.44em, -0.775em -0.297em 0 -0.46em,
+      -0.82em -0.09em 0 -0.477em;
+  }
+  100% {
+    box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em,
+      0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+  }
+}
+@keyframes load6 {
+  0% {
+    box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em,
+      0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+  }
+  5%,
+  95% {
+    box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em,
+      0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+  }
+  10%,
+  59% {
+    box-shadow: 0 -0.83em 0 -0.4em, -0.087em -0.825em 0 -0.42em,
+      -0.173em -0.812em 0 -0.44em, -0.256em -0.789em 0 -0.46em,
+      -0.297em -0.775em 0 -0.477em;
+  }
+  20% {
+    box-shadow: 0 -0.83em 0 -0.4em, -0.338em -0.758em 0 -0.42em,
+      -0.555em -0.617em 0 -0.44em, -0.671em -0.488em 0 -0.46em,
+      -0.749em -0.34em 0 -0.477em;
+  }
+  38% {
+    box-shadow: 0 -0.83em 0 -0.4em, -0.377em -0.74em 0 -0.42em,
+      -0.645em -0.522em 0 -0.44em, -0.775em -0.297em 0 -0.46em,
+      -0.82em -0.09em 0 -0.477em;
+  }
+  100% {
+    box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em,
+      0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+  }
+}
+@-webkit-keyframes round {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@keyframes round {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+.progressBackground {
+  width: 100%;
+  background-color: grey;
+  border-radius: 15px;
+}
+
+.progressBar {
+  width: 1%;
+  height: 30px;
+  background-color: green;
+  border-radius: 15px;
+}
+
+#analytics-panel {
+  width: 20%;
+  height: 100%;
+  background-color: white;
+  box-shadow: 0 0 3px;
+  stroke: black;
+  position: absolute;
+  min-width: 380px;
+  max-width: 512px;
+}
+
+.btn-group {
+  width: 49%;
+  align-items: stretch;
+  position: relative;
+}
+.metric-button {
+  display: block;
+  margin: 5px;
+  height: 15%;
+  border-radius: 10px;
+  outline: none;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 5px rgba(0, 0, 0, 0.24);
+  cursor: pointer;
+  margin-left: 30px;
+}
+
+#scrollable {
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+}
+
+#legend {
+  height: 20%;
+  width: 100%;
+  bottom: 5px;
+  position: absolute;
+}
+
+.handle {
+  visibility: hidden;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  position: absolute; /* this is very important*/
+  bottom: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  overflow: -moz-hidden-unscrollable;
+  overflow: hidden;
+}
+
+.blur {
+  filter: blur(5px);
+}
+
+.lds-dual-ring {
+  display: inline-block;
+  width: 80px;
+  height: 80px;
+  position: absolute;
+  right: 45%;
+  left: 45%;
+  top: 45%;
+  bottom: 45%;
+}
+.lds-dual-ring:after {
+  content: " ";
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 8px;
+  border-radius: 50%;
+  border: 6px solid #fff;
+  border-color: #fff transparent #fff transparent;
+  animation: lds-dual-ring 1.2s linear infinite;
+}
+@keyframes lds-dual-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+#glyph-legend {
+  margin-left: 10px;
+}
+
+.slidecontainer {
+  width: 100%; /* Width of the outside container */
+  height: 40px;
+}
+
+/* The slider itself */
+.slider {
+  -webkit-appearance: none; /* Override default CSS styles */
+  appearance: none;
+  width: 70%; /* Full-width */
+  height: 25px; /* Specified height */
+  background: #d3d3d3; /* Grey background */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  -webkit-transition: 0.2s; /* 0.2 seconds transition on hover */
+  transition: opacity 0.2s;
+  flex: middle;
+  margin-left: 20px;
+  border-radius: 4px;
+  position: relative;
+  padding: 0 0;
+}
+/* Mouse-over effects */
+.slider:hover {
+  opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 25px; /* Set a specific slider handle width */
+  height: 25px; /* Slider handle height */
+  background: rgb(187, 208, 226); /* Green background */
+  cursor: pointer; /* Cursor on hover */
+  border-radius: 4px;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px; /* Set a specific slider handle width */
+  height: 25px; /* Slider handle height */
+  background: rgb(187, 208, 226); /* Green background */
+  cursor: pointer; /* Cursor on hover */
+  border-radius: 4px;
+}
+
+.label-class {
+  display: flex;
+  align-items: center;
+}
+
+@media screen {
+  @page {
+    margin: 0;
+    size: 2560px 1297px;
+  }
+}
+
+.erudit-logo {
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  padding: 1%;
+  margin-top: 58px;
+  background-color: red;
+  -webkit-mask: url("../resources/erudit-logotype-blanc.svg") no-repeat center;
+  mask: url("../resources/erudit-logotype-blanc.svg") no-repeat center;
+}

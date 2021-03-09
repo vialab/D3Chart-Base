@@ -15,5 +15,7 @@
     // "jshint.options": {"esversion": 6},
     "jshint.config": ".vscode/.jshintrc",
     "eslint.enable": true,
-    "colorHelper.disableGpu": 1
+    "colorHelper.disableGpu": 1,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
 }

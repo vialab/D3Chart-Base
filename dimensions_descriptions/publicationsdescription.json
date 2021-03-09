@@ -1,0 +1,432 @@
+{
+  "fields": {
+    "date": {
+      "type": "date",
+      "description": "The publication date of a document, eg \"2018-01-01\" (note: dates can sometimes be incomplete and include only the month or the year).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "research_org_cities": {
+      "type": "cities",
+      "description": "City of the GRID organisations authors are affiliated to, expressed as GeoNames ID and name.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "times_cited": {
+      "type": "count",
+      "description": "Number of citations (note: does not support emptiness filters).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "field_citation_ratio": {
+      "type": "float",
+      "description": "Relative citation performance of article when compared to similarly aged articles in its area of research (note: does not support emptiness filters).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "research_orgs": {
+      "type": "orgs",
+      "description": "GRID organisations associated to a publication. Identifiers are automatically extracted from author affiliations text, so they can be missing in some cases (note: this field supports :ref:`filter-functions`: ``count``).",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "linkout": {
+      "type": "text",
+      "description": "Original URL for a publication full text.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "publisher": {
+      "type": "label",
+      "description": "Name of the publisher as a string.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funder_countries": {
+      "type": "countries",
+      "description": "The country of the GRID organisation funding this publication.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "volume": {
+      "type": "string",
+      "description": "Publication volume.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "research_org_countries": {
+      "type": "countries",
+      "description": "Country of the GRID organisations authors are affiliated to, identified using GeoNames codes (note: this field supports :ref:`filter-functions`: ``count``).",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "mesh_terms": {
+      "type": "label",
+      "description": "Medical Subject Heading terms as used in PubMed.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "issue": {
+      "type": "string",
+      "description": "The issue number of a publication.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "open_access_categories": {
+      "type": "open_access",
+      "description": "Open Access categories for publications. See below for more examples.",
+      "long_description": "Open Access category data for publications values:\n\n        * `oa_all`: Article is freely available\n        * `gold_pure`: Version Of Record (VOR) is free under an open licence from a full OA journal\n        * `gold_hybrid`: Version Of Record (VOR) is free under an open licence in a paid-access journal\n        * `gold_bronze`: Freely available on publisher page, but without an open licence\n        * `green_pub`: Free copy of published version in an OA repository\n        * `green_acc`: Free copy of accepted version in an OA repository\n        * `green_sub`: Free copy of submitted version, or where version is unknown, in an OA repository\n        * `closed`: No freely available copy has been identified",
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "category_for": {
+      "type": "categories",
+      "description": "`ANZSRC Fields of Research classification <https://app.dimensions.ai/browse/publication/for>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "altmetric_id": {
+      "type": "integer",
+      "description": "AltMetric Publication ID",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "pmcid": {
+      "type": "identifier",
+      "description": "PubMed Central ID.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "issn": {
+      "type": "string",
+      "description": "International Standard Serial Number",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "recent_citations": {
+      "type": "integer",
+      "description": "Number of citations received in the last two years. Does not support emptiness filters",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "pmid": {
+      "type": "identifier",
+      "description": "PubMed ID.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "book_title": {
+      "type": "text",
+      "description": "The title of the book a chapter belongs to (note: this field is available only for chapters).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "category_hrcs_hc": {
+      "type": "categories",
+      "description": "`HRCS - Health Categories <https://app.dimensions.ai/browse/publication/hrcs_hc>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "pages": {
+      "type": "string",
+      "description": "The pages of the publication, as they would appear in a citation record.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "doi": {
+      "type": "identifier",
+      "description": "Digital object identifier.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "id": {
+      "type": "identifier",
+      "description": "Dimensions publication ID.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "reference_ids": {
+      "type": "identifier",
+      "description": "Dimensions publication ID for publications in the references list, i.e. outgoing citations (see also: :ref:`data-model` section).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funders": {
+      "type": "orgs",
+      "description": "The GRID organisation funding this publication.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "category_bra": {
+      "type": "categories",
+      "description": "`Broad Research Areas <https://app.dimensions.ai/browse/publication/broad_research_areas?redirect_path=/discover/publication>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "category_hrcs_rac": {
+      "type": "categories",
+      "description": "`HRCS \u2013 Research Activity Codes <https://app.dimensions.ai/browse/publication/hrcs_rac>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "research_org_country_names": {
+      "type": "string",
+      "description": "Country name of the GRID organisations authors are affiliated to, as a string.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "category_hra": {
+      "type": "categories",
+      "description": "`Health Research Areas <https://app.dimensions.ai/browse/publication/health_research_areas?redirect_path=/discover/publication>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "proceedings_title": {
+      "type": "text",
+      "description": "Title of the conference proceedings volume associated to a publication.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "category_rcdc": {
+      "type": "categories",
+      "description": "`Research, Condition, and Disease Categorization <https://app.dimensions.ai/browse/publication/rcdc>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "relative_citation_ratio": {
+      "type": "float",
+      "description": "Relative citation performance of an article when compared to others in its area of research (note: does not support emptiness filters).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "concepts": {
+      "type": "text",
+      "description": "Concepts describing the main topics of a publication (note: automatically derived from the publication text using machine learning).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "book_doi": {
+      "type": "identifier",
+      "description": "The DOI of the book a chapter belongs to (note: this field is available only for chapters).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "title": {
+      "type": "text",
+      "description": "Title of a publication.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "book_series_title": {
+      "type": "text",
+      "description": "The title of the book series book, belong to.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "researchers": {
+      "type": "researchers",
+      "description": "Researcher IDs matched to the publication's authors list. (note: this returns only the disambiguated authors of a publication; in order to get the full authors list, the field `author_affiliations` should be used). This field supports :ref:`filter-functions`: ``count``.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "journal_lists": {
+      "type": "string",
+      "description": "Independent grouping of journals outside of Dimensions, e.g. 'ERA 2015' or 'Norwegian register level 1'.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "supporting_grant_ids": {
+      "type": "identifier",
+      "description": "Grants supporting a publication, returned as a list of dimensions grants IDs  (see also: :ref:`data-model` section).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "research_org_state_names": {
+      "type": "string",
+      "description": "State name of the GRID organisations authors are affiliated to, as a string.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "altmetric": {
+      "type": "float",
+      "description": "Altmetric attention score.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "authors": {
+      "type": "json",
+      "description": "Ordered list of authors names and their affiliations, as they appear in the original publication. The list can include researcher and organization identifiers, when available (note: in order to search for disambiguated authors, use the `in researchers` syntax).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "journal": {
+      "type": "journals",
+      "description": "The journal a publication belongs to.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "research_org_state_codes": {
+      "type": "states",
+      "description": "State of the GRID organisations authors are affiliated to, expressed as GeoNames codes (ISO\u200c-3166-2).",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "year": {
+      "type": "integer",
+      "description": "The year of publication (note: when the `date` field is available, this is equal to the year part of the full date).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "type": {
+      "type": "label",
+      "description": "Publication type (one of: article, chapter, proceeding, monograph, preprint or book).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "date_inserted": {
+      "type": "timestamp",
+      "description": "Date when the record was inserted into Dimensions (note: this field does not support exact match on the data, only range filters e.g. `<=` or `>=').",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    }
+  },
+  "fieldsets": ["all", "basics", "extras", "book", "categories"],
+  "metrics": {
+    "count": { "name": "count", "description": "Total count" },
+    "altmetric_median": {
+      "name": "altmetric_median",
+      "description": "Median Altmetric attention score"
+    },
+    "altmetric_avg": {
+      "name": "altmetric_avg",
+      "description": "Altmetric attention score mean"
+    },
+    "citations_total": {
+      "name": "citations_total",
+      "description": "Aggregated number of citations"
+    },
+    "citations_avg": {
+      "name": "citations_avg",
+      "description": "Arithmetic mean of citations"
+    },
+    "citations_median": {
+      "name": "citations_median",
+      "description": "Median of citations"
+    },
+    "recent_citations_total": {
+      "name": "recent_citations_total",
+      "description": "For a given article, in a given year, the number of citations accrued in the last two year period. Single value stored per document, year window rolls over in July."
+    },
+    "rcr_avg": {
+      "name": "rcr_avg",
+      "description": "Arithmetic mean of `relative_citation_ratio` field."
+    },
+    "fcr_gavg": {
+      "name": "fcr_gavg",
+      "description": "Geometric mean of `field_citation_ratio` field (note: This field cannot be used for sorting results)."
+    }
+  },
+  "search_fields": [
+    "full_data_exact",
+    "title_only",
+    "full_data",
+    "concepts",
+    "authors",
+    "title_abstract_only"
+  ]
+}

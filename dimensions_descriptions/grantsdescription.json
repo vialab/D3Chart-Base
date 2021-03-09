@@ -1,0 +1,348 @@
+{
+  "fields": {
+    "funding_currency": {
+      "type": "label",
+      "description": "Original funding currency.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funding_usd": {
+      "type": "financial",
+      "description": "Funding amount awarded in USD.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "active_year": {
+      "type": "integer",
+      "description": "List of active years for a grant.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funding_aud": {
+      "type": "financial",
+      "description": "Funding amount awarded in AUD.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "research_org_state_codes": {
+      "type": "states",
+      "description": "State of the GRID organisations receiving the grant, expressed as GeoNames codes (ISO\u200c-3166-2).",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "end_date": {
+      "type": "timestamp",
+      "description": "Date when the grant ends.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "research_orgs": {
+      "type": "orgs",
+      "description": "GRID organisations receiving the grant (note: identifiers are automatically extracted from the source text and can be missing in some cases).",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "research_org_cities": {
+      "type": "cities",
+      "description": "City of the research organisations receiving the grant, expressed as GeoNames id and name.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "start_year": {
+      "type": "integer",
+      "description": "Year when the grant starts.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "grant_number": {
+      "type": "identifier",
+      "description": "Grant identifier, as provided by the source (e.g., funder, aggregator) the grant was derived from.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funding_chf": {
+      "type": "financial",
+      "description": "Funding amount awarded in CHF.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "original_title": {
+      "type": "text",
+      "description": "Title of the grant in its original language.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "funding_eur": {
+      "type": "financial",
+      "description": "Funding amount awarded in EUR.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "date_inserted": {
+      "type": "timestamp",
+      "description": "Date when the record was inserted into Dimensions (note: this field does not support exact match on the data, only range filters e.g. `<=` or `>=`).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funders": {
+      "type": "orgs",
+      "description": "The organisation funding the grant. This is normally a GRID organisation, but in very few cases a Dimensions funder ID is used.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "category_hra": {
+      "type": "categories",
+      "description": "`Health Research Areas <https://app.dimensions.ai/browse/publication/health_research_areas?redirect_path=/discover/publication>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funding_org_acronym": {
+      "type": "label",
+      "description": "Acronym for funding organisation.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funding_nzd": {
+      "type": "financial",
+      "description": "Funding amount awarded in NZD.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funding_jpy": {
+      "type": "financial",
+      "description": "Funding amount awarded in JPY.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "concepts": {
+      "type": "text",
+      "description": "Concepts describing the main topics of a grant (note: automatically derived from the grant text using machine learning).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "linkout": {
+      "type": "text",
+      "description": "Original URL for the grant.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "id": {
+      "type": "identifier",
+      "description": "Dimensions grant ID.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funding_org_name": {
+      "type": "label",
+      "description": "Name of funding organisation.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "FOR": {
+      "type": "categories",
+      "description": "`ANZSRC Fields of Research classification <https://app.dimensions.ai/browse/publication/for>`_ , second level or 4 digit codes.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "FOR_first": {
+      "type": "categories",
+      "description": "`ANZSRC Fields of Research classification <https://app.dimensions.ai/browse/publication/for>`_ , first level or 2 digit codes.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "category_rcdc": {
+      "type": "categories",
+      "description": "`Research, Condition, and Disease Categorization <https://app.dimensions.ai/browse/publication/rcdc>`_ .",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "title": {
+      "type": "text",
+      "description": "Title of the grant in English (if the grant language is not English, this field contains a translation of the title).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "investigator_details": {
+      "type": "json",
+      "description": "Additional details about investigators, including affiliations and roles e.g. 'PI' or 'Co-PI' (note: if the investigator has a Dimensions researcher ID, that is returned as well).",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funder_countries": {
+      "type": "countries",
+      "description": "The country linked to the organisation funding the grant, expressed as GeoNames codes.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "start_date": {
+      "type": "timestamp",
+      "description": "Date when the grant starts, in the format 'YYYY-MM-DD'.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "funding_cad": {
+      "type": "financial",
+      "description": "Funding amount awarded in CAD.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "abstract": {
+      "type": "text",
+      "description": "Abstract or summary from a grant proposal.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": false,
+      "is_facet": false
+    },
+    "category_bra": {
+      "type": "categories",
+      "description": "`Broad Research Areas <https://app.dimensions.ai/browse/publication/broad_research_areas?redirect_path=/discover/publication>`_",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "researchers": {
+      "type": "researchers",
+      "description": "Dimensions researchers IDs associated to the grant.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funding_org_city": {
+      "type": "label",
+      "description": "City name for funding organisation.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "funding_gbp": {
+      "type": "financial",
+      "description": "Funding amount awarded in GBP.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": false
+    },
+    "category_hrcs_hc": {
+      "type": "categories",
+      "description": "`HRCS - Health Categories <https://app.dimensions.ai/browse/publication/hrcs_hc>`_ .",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "title_language": {
+      "type": "label",
+      "description": "ISO 639-1 language code for the original grant title.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "research_org_countries": {
+      "type": "countries",
+      "description": "Country of the research organisations receiving the grant, expressed as GeoNames code and name.",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "language": {
+      "type": "label",
+      "description": "Grant original language, as ISO 639-1 language codes.",
+      "long_description": null,
+      "is_entity": false,
+      "is_filter": true,
+      "is_facet": true
+    },
+    "category_hrcs_rac": {
+      "type": "categories",
+      "description": "`HRCS \u2013 Research Activity Codes <https://app.dimensions.ai/browse/publication/hrcs_rac>`_ .",
+      "long_description": null,
+      "is_entity": true,
+      "is_filter": true,
+      "is_facet": true
+    }
+  },
+  "fieldsets": ["all", "basics", "extras", "categories"],
+  "metrics": {
+    "count": { "name": "count", "description": "Total count" },
+    "funding": {
+      "name": "funding",
+      "description": "Total funding amount, in USD."
+    }
+  },
+  "search_fields": [
+    "title_abstract_only",
+    "title_only",
+    "noun_phrases",
+    "concepts",
+    "investigators",
+    "full_data"
+  ]
+}

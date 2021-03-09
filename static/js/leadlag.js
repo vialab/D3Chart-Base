@@ -1,79 +1,160 @@
 /// Lead/Lag calculation
-
-// Equation (1) from the paper "Who Leads Whom Topical Lead-Lag Analysis across Corpora" is not implemented, because it's a topic aware proportion of documents in the corpus
-// this is data we hoped to get rom the dimenions analytics API, since the data coming from the server is random normal distributions, we'll pretend those numbers are n-gram occurence percentages
-// E.G: a value of "y=0.00006" where "x=2000" means that for this imaginary n-gram, it occurred 0.00006% of all n-grams for that year, in that corpus.
-
-
-// Equation (2), 'cross normalized correllation'
-function corr(data1, data2, yearOffset) {
-
-	let d1 = key => data1[key] || 0,
-		d1Mean = mean(data1),
-		d1Variance = mean(data1, key => ((data1[key] - d1Mean) ** 2)),
-		d1STD = Math.sqrt(d1Variance),
-		d1YearMin = 10000000,
-		d1YearMax = -1000000,
-
-		d2 = key => data2[key] || 0,
-		d2Mean = mean(data2),
-		d2Variance = mean(data2, key => ((data2[key] - d2Mean) ** 2)),
-		d2STD = Math.sqrt(d2Variance),
-		d2YearMin = 10000000,
-		d2YearMax = -1000000;
-
-	for (let key in data1) {
-		d1YearMin = Math.min(d1YearMin, key);
-		d1YearMax = Math.max(d1YearMax, key);
-	}
-
-	for (let key in data2) {
-		d2YearMin = Math.min(d2YearMin, key);
-		d2YearMax = Math.max(d2YearMax, key);
-	}
-
-	let yearMin = Math.min(d1YearMin, d2YearMin),
-		yearMax = Math.max(d1YearMax, d2YearMax),
-		relation = 0;
-
-	for (let yr = yearMin; yr < yearMax; yr++) {
-		relation += ((d1(yr + yearOffset) - d1Mean) / d1STD) * ((d2(yr) - d2Mean) / d2STD);
-	}
-
-	return relation;
+/**
+ * @param  {Array} array
+ * @param  {Number} offset - shifts the alignment of the array. For example if we shift this array [1,2,3] by 1 it becomes [3,1,2]
+ * @returns {Array} - a new array that is shifted based on the offset
+ */
+function shift(array, offset) {
+  result = [];
+  for (let i = offset; i < array.length; i++) {
+    result.push(array[i]);
+  }
+  for (let i = 0; i < offset; i++) {
+    result.push(array[i]);
+  }
+  return result;
 }
-
-
-// equation (3)
+/**
+ *
+ * @param {Array.<number>} data1
+ * @param {Array.<number>} data2 - data2.length  must = data1.length * 3
+ */
 function leadlag(data1, data2) {
-	let d1 = data1.reduce((map, obj) => (map[obj.x] = obj.y, map), {}),
-		d2 = data2.reduce((map, obj) => (map[obj.x] = obj.y, map), {});
+  if (data1.length * 3 != data2.length) {
+    return 0;
+  }
+  let d1 = data1;
+  let d2 = data2;
+  let d1Mean = mean(d1);
+  let d2Mean = mean(d2);
+  let d1STD = standardDeviation(d1, d1Mean);
+  let d2STD = standardDeviation(d2, d2Mean);
+  let leadLagValues = [];
+  let highestRelation = 0;
+  let bestOffset = 0;
+  //diff 10
+  //d2 15
+  //d1 5
+  //123456789a
 
-	let bestVal = -100000,
-		bestYr = 0;
-
-	for (let yr = -10; yr < 10; yr++) {
-		let rel = corr(d1, d2, yr);
-
-		if (rel > bestVal) {
-			bestVal = rel;
-			bestYr = yr;
-		}
-	}
-
-	return bestYr;
+  //i->0-10
+  //j->0-5
+  for (let i = 0; i < d2.length - d1.length + 1; ++i) {
+    let currentLeadLag = 0;
+    for (let j = 0; j < d1.length; ++j) {
+      currentLeadLag +=
+        ((d1[j] - d1Mean) / d1STD) * ((d2[i + j] - d2Mean) / d2STD);
+    }
+    leadLagValues.push(currentLeadLag);
+    if (highestRelation < currentLeadLag) {
+      highestRelation = currentLeadLag;
+      bestOffset = i - d1.length;
+    }
+  }
+  return { values: leadLagValues, bestOffset: bestOffset };
 }
+/**
+ *
+ * @param {Array.<number>} data1
+ * @param {Array.<number>} data2 - data2.length  must = data1.length * 3
+ */
+//function leadlag(data1, data2) {
+//  if (data1.length * 3 != data2.length) {
+//    return 0;
+//  }
+//  let d1 = data1;
+//  let d2 = data2;
+//  let d1Mean = mean(d1);
+//  let d2Mean = mean(d2);
+//  let d1STD = standardDeviation(d1, d1Mean);
+//  let d2STD = standardDeviation(d2, d2Mean);
+//  let leadLagValues = [];
+//  let highestRelation = 0;
+//  let bestOffset = 0;
+//  //diff 10
+//  //d2 15
+//  //d1 5
+//  //123456789a
+//
+//  //i->0-10
+//  //j->0-5
+//  for (let i = 0; i < d2.length - d1.length + 1; ++i) {
+//    let currentLeadLag = 0;
+//    for (let j = 0; j < d1.length; ++j) {
+//      currentLeadLag += Math.abs(
+//        (d1[j] - d1Mean) / d1STD - (d2[i + j] - d2Mean) / d2STD
+//      );
+//    }
+//    if (i == 0) {
+//      highestRelation = currentLeadLag;
+//    }
+//    leadLagValues.push(currentLeadLag);
+//    if (highestRelation > currentLeadLag) {
+//      highestRelation = currentLeadLag;
+//      bestOffset = i - d1.length;
+//    }
+//  }
+//  return { values: leadLagValues, bestOffset: bestOffset };
+//}
+///**
+// * @param  {Array} data1 - [{y:}] requires y value
+// * @param  {Array} data2 - [{y:}] requires y value
+// * @returns {Number} the alignment shift for data1 where it best aligns with data2
+// */
+//function leadlag(data1, data2) {
+//  let d1 = Object.values(data1);
+//  let d2 = Object.values(data2);
+//  //the length of the lines are not the same thefore, one line has a break in it.
+//  //if there is a break in the line they are not comparable in terms for frequency
+//  if (d1[0].x - d2[0].x || d1[d1.length - 1].x - d2[d2.length - 1].x) {
+//    return 0;
+//  }
+//  let d1Mean = mean(d1);
+//  let d2Mean = mean(d2);
+//  let d1STD = standardDeviation(d1, d1Mean);
+//  let d2STD = standardDeviation(d2, d2Mean);
+//  let highestRelation = 0;
+//  let bestOffset = 0;
+//
+//  for (let offset = 0; offset < d1.length; ++offset) {
+//    let shiftedArray = shift(d1, offset);
+//    let sum = 0;
+//    for (let i = 0; i < shiftedArray.length; ++i) {
+//      sum +=
+//        ((shiftedArray[i].y - d1Mean) / d1STD) * ((d2[i].y - d2Mean) / d2STD);
+//    }
+//    if (sum > highestRelation) {
+//      highestRelation = sum;
+//      bestOffset = offset;
+//    }
+//  }
+//  if (d1.length - 1 + -bestOffset > bestOffset) {
+//    return -bestOffset;
+//  }
+//
+//  return d1.length - 1 + -bestOffset;
+//}
+/**
+ * @param  {Array} array - expects [{y:}]
+ * @returns {Float} returns the mean of the set
+ */
+function mean(array) {
+  let result = 0;
+  for (let i = 0; i < array.length; ++i) {
+    result += array[i];
+  }
 
-
-function mean(data, accessor = key => data[key]) {
-	let elements = 0,
-		mean = 0;
-
-	for (let key in data) {
-		mean += accessor(key);
-		elements += 1;
-	}
-	mean /= elements;
-
-	return mean;
+  return result / array.length;
+}
+/**
+ * @param  {Array} array - expects [{y:}]
+ * @param  {Float} mean - the mean of the array set
+ * @return {Float} the standard deviation of the set
+ */
+function standardDeviation(array, mean) {
+  let sum = 0;
+  for (let i = 0; i < array.length; ++i) {
+    sum += (array[i] - mean) ** 2;
+  }
+  return Math.sqrt(sum);
 }
