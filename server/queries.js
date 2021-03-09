@@ -4,7 +4,7 @@ const callLimit = require("./apicallrestrict");
 const fs = require("fs");
 //use the exampleconfiglogin and input your credentials there
 const login = process.env.LOGIN_INFO;
-//var jwt_token;
+
 var api_url_auth = "https://app.dimensions.ai/api/auth.json";
 var api_url = "https://app.dimensions.ai/api/dsl.json";
 

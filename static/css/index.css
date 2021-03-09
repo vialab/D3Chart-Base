@@ -276,6 +276,7 @@ svg {
   box-shadow: 0 0 3px;
   stroke: black;
   position: absolute;
+  min-width: 380px;
   max-width: 512px;
 }
 
@@ -298,8 +299,8 @@ svg {
 
 #scrollable {
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  height: 100%;
+  overflow-y: scroll;
 }
 
 #legend {

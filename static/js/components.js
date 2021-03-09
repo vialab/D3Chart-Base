@@ -1334,7 +1334,7 @@ class EventGraph {
   data = [];
   value = 0;
   size = null;
-  xRange = [1950, new Date().getFullYear()];
+  xRange = [1950, new Date().getFullYear() - 1];
   scales = { x: null, y: null };
   events = null;
   eventName = null;
@@ -1834,7 +1834,7 @@ class CountryData {
   }
 }
 class DataObject {
-  currentYearLoading = new Date().getFullYear();
+  currentYearLoading = new Date().getFullYear() - 1;
   queryReturned = { canada: false, notCanada: false };
   minYearLoaded = 1950;
   intervalRate = 5000;
